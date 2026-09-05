@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-
 import { UserLayout } from './components/layout/UserLayout';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -9,16 +10,23 @@ import LiveThreat from './pages/LiveThreat';
 import AnalyzeEmail from './pages/AnalyzeEmail';
 import AnalysisResult from './pages/AnalysisResult';
 import Threats from './pages/Threats';
+import ThreatDetail from './pages/ThreatDetail';
 import Indicators from './pages/Indicators';
 import EmailHistory from './pages/EmailHistory';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+
 import AdminOverview from './pages/admin/AdminOverview';
+import Users from './pages/admin/Users';
+import Scans from './pages/admin/Scans';
+import ThreatIntelligence from './pages/admin/ThreatIntelligence';
+import SystemHealth from './pages/admin/SystemHealth';
+import AuditLogs from './pages/admin/AuditLogs';
 
 function ProtectedRoute({ children, adminOnly = false }: { children?: React.ReactElement, adminOnly?: boolean }) {
     const { isAuthenticated, user } = useAuth();
     if (!isAuthenticated) return <Navigate to="/login" />;
-    if (adminOnly && user?.role !== 'admin') return <Navigate to="/" />;
+    if (adminOnly && user?.role !== 'admin') return <Navigate to="/dashboard" />;
     return children ? children : <Outlet />;
 }
 
@@ -44,6 +52,7 @@ function AppContent() {
                     <Route path="/analysis/:id" element={<AnalysisResult />} />
                     <Route path="/live-threat" element={<LiveThreat />} />
                     <Route path="/threats" element={<Threats />} />
+                    <Route path="/threats/:id" element={<ThreatDetail />} />
                     <Route path="/indicators" element={<Indicators />} />
                     <Route path="/history" element={<EmailHistory />} />
                     <Route path="/reports" element={<Reports />} />
@@ -57,6 +66,11 @@ function AppContent() {
                     </ProtectedRoute>
                 }>
                     <Route path="" element={<AdminOverview />} />
+                    <Route path="users" element={<Users />} />
+                    <Route path="scans" element={<Scans />} />
+                    <Route path="threat-intelligence" element={<ThreatIntelligence />} />
+                    <Route path="system-health" element={<SystemHealth />} />
+                    <Route path="audit-logs" element={<AuditLogs />} />
                 </Route>
             </Route>
         </Routes>
@@ -67,7 +81,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </AuthProvider>
   );
 }
