@@ -7,3 +7,12 @@ pandas
 numpy
 scikit-learn
 joblib
+httpx
+python-multipart
+psycopg2-binary
+python-jose[cryptography]
+passlib[bcrypt]
+email-validator
+alembic
+pytest
+bcrypt==4.1.2
