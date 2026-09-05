@@ -1,0 +1,1 @@
+export default function Reports() { return <div className="text-white">Reports</div> }

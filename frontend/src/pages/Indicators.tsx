@@ -1,0 +1,1 @@
+export default function Indicators() { return <div className="text-white">Indicators</div> }
