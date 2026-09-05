@@ -22,6 +22,7 @@ import Scans from './pages/admin/Scans';
 import ThreatIntelligence from './pages/admin/ThreatIntelligence';
 import SystemHealth from './pages/admin/SystemHealth';
 import AuditLogs from './pages/admin/AuditLogs';
+import AdminSettings from './pages/admin/AdminSettings';
 
 function ProtectedRoute({ children, adminOnly = false }: { children?: React.ReactElement, adminOnly?: boolean }) {
     const { isAuthenticated, user } = useAuth();
@@ -71,6 +72,7 @@ function AppContent() {
                     <Route path="threat-intelligence" element={<ThreatIntelligence />} />
                     <Route path="system-health" element={<SystemHealth />} />
                     <Route path="audit-logs" element={<AuditLogs />} />
+                    <Route path="settings" element={<AdminSettings />} />
                 </Route>
             </Route>
         </Routes>

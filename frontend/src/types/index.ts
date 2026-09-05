@@ -69,7 +69,7 @@ export interface EmailScanRecord {
   threatScore: number;
   verdict: 'Safe' | 'Suspicious' | 'Malicious' | 'Critical';
   scannedAt: string;
-  status: 'Clean' | 'Quarantined' | 'Blocked' | 'Flagged';
+  status: 'Clean' | 'Quarantined' | 'Blocked' | 'Flagged' | 'Processing' | 'Completed' | 'Failed' | 'Queued';
   processingTimeMs: number;
 }
 
