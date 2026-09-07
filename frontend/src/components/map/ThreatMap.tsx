@@ -40,7 +40,7 @@ export function ThreatMap({ threatEvents }: ThreatMapProps) {
                             cx={x}
                             cy={y}
                             r={4}
-                            className={`cursor-pointer ${event.severity === 'high' || event.severity === 'critical' ? 'fill-red-500' : 'fill-cyan-500'}`}
+                            className={`cursor-pointer ${event.severity === 'High' || event.severity === 'Critical' ? 'fill-red-500' : 'fill-cyan-500'}`}
                             onClick={() => setSelectedThreat(event)}
                         />
                     );
@@ -50,7 +50,7 @@ export function ThreatMap({ threatEvents }: ThreatMapProps) {
                 <div className="absolute top-4 right-4 bg-[#0B111A] p-4 rounded border border-[#151D28] text-xs text-gray-300 w-48 shadow-lg z-10">
                    <p className="font-bold text-white mb-1">{selectedThreat.country || 'Unknown'}</p>
                    <p>{selectedThreat.threatType}</p>
-                   <p className={`font-bold ${selectedThreat.severity === 'high' || selectedThreat.severity === 'critical' ? 'text-red-500' : 'text-cyan-500'}`}>{selectedThreat.severity}</p>
+                   <p className={`font-bold ${selectedThreat.severity === 'High' || selectedThreat.severity === 'Critical' ? 'text-red-500' : 'text-cyan-500'}`}>{selectedThreat.severity}</p>
                    <button onClick={() => setSelectedThreat(null)} className="mt-2 text-[9px] hover:text-white">CLOSE</button>
                 </div>
             )}

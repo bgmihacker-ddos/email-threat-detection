@@ -15,4 +15,5 @@ passlib[bcrypt]
 email-validator
 alembic
 pytest
+pytest-asyncio
 bcrypt==4.1.2

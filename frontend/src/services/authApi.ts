@@ -1,25 +1,54 @@
+import { apiFetch } from './api';
 import { User } from '../types/auth';
 
-// Mock authentication
-export const mockLogin = async (email: string, password: string): Promise<{ user: User, token: string } | null> => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 800));
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+}
 
-  const normalizedEmail = email.trim().toLowerCase();
+export interface AuthApi {
+  register: (payload: any) => Promise<User>;
+  login: (payload: any) => Promise<LoginResponse>;
+  getMe: () => Promise<User>;
+  logout: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<{ detail: string }>;
+  resetPassword: (payload: any) => Promise<{ detail: string }>;
+  verifyEmail: (token: string) => Promise<{ detail: string }>;
+  resendVerification: (email: string) => Promise<{ detail: string }>;
+  exchangeGoogleCode: (code: string) => Promise<LoginResponse>;
+}
 
-  if (normalizedEmail === 'analyst@demo.local' && password === 'demo123') {
-    return {
-      user: { id: '1', email: 'analyst@demo.local', name: 'Security Analyst', role: 'user' },
-      token: 'mock-jwt-token'
-    };
-  }
-
-  if (normalizedEmail === 'admin@demo.local' && password === 'admin123') {
-    return {
-      user: { id: '2', email: 'admin@demo.local', name: 'Admin User', role: 'admin' },
-      token: 'mock-admin-token'
-    };
-  }
-
-  return null;
+export const authApi: AuthApi = {
+  register: async (payload) => apiFetch('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  login: async (payload) => apiFetch('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  getMe: async () => apiFetch('/api/auth/me', {
+    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+  }),
+  logout: async () => {
+    localStorage.removeItem('token');
+  },
+  forgotPassword: async (email) => apiFetch(`/api/auth/forgot-password?email=${encodeURIComponent(email)}`, {
+    method: 'POST',
+  }),
+  resetPassword: async (payload) => apiFetch('/api/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  verifyEmail: async (token) => apiFetch(`/api/auth/verify-email?token=${encodeURIComponent(token)}`, {
+    method: 'POST',
+  }),
+  resendVerification: async (email) => apiFetch(`/api/auth/resend-verification?email=${encodeURIComponent(email)}`, {
+    method: 'POST',
+  }),
+  exchangeGoogleCode: async (code) => apiFetch('/api/auth/google/exchange', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  }),
 };

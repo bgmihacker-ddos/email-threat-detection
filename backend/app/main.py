@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import analysis, auth, health, indicators, live_threats, threats
+from app.api.routes import analysis, auth, health, indicators, live_threats, threats, admin, password, google_auth
 from app.core.config import settings
 from app.database import init_db
 
@@ -27,3 +27,6 @@ app.include_router(threats.router, prefix="/api")
 app.include_router(indicators.router, prefix="/api")
 app.include_router(live_threats.router, prefix="/api")
 app.include_router(analysis.router, prefix="/api")
+app.include_router(admin.router, prefix="/api")
+app.include_router(password.router, prefix="/api")
+app.include_router(google_auth.router, prefix="/api")

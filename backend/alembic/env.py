@@ -5,7 +5,10 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import settings
 from app.database.base import Base
-from app import models  # noqa: F401
+from app.models.user import User
+from app.models.analysis import AnalysisResult
+from app.models.auth import AuthAccount
+from app.models.audit import AuditLog
 
 config = context.config
 

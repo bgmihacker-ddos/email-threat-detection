@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
+import Callback from './pages/Callback';
 import Signup from './pages/Signup';
 import LiveThreat from './pages/LiveThreat';
 import AnalyzeEmail from './pages/AnalyzeEmail';
@@ -25,15 +26,19 @@ import AuditLogs from './pages/admin/AuditLogs';
 import AdminSettings from './pages/admin/AdminSettings';
 
 function ProtectedRoute({ children, adminOnly = false }: { children?: React.ReactElement, adminOnly?: boolean }) {
-    const { isAuthenticated, user } = useAuth();
-    if (!isAuthenticated) return <Navigate to="/login" />;
-    if (adminOnly && user?.role !== 'admin') return <Navigate to="/dashboard" />;
+    const { isAuthenticated, user, loading } = useAuth();
+
+    if (loading) return <div>Loading...</div>;
+    if (!isAuthenticated) return <Navigate to="/login" replace />;
+    if (adminOnly && user?.role !== 'admin') return <Navigate to="/dashboard" replace />;
+
     return children ? children : <Outlet />;
 }
 
 function RoleBasedSettings() {
-    const { user } = useAuth();
-    if (!user) return <Navigate to="/login" />;
+    const { user, loading } = useAuth();
+    if (loading) return <div>Loading...</div>;
+    if (!user) return <Navigate to="/login" replace />;
     if (user.role === 'admin') return <AdminLayout><Settings /></AdminLayout>;
     return <UserLayout><Settings /></UserLayout>;
 }
@@ -43,6 +48,7 @@ function AppContent() {
     <Router>
         <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/auth/callback" element={<Callback />} />
             <Route path="/signup" element={<Signup />} />
 
             <Route element={<ProtectedRoute />}>

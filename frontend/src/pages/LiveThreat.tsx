@@ -32,7 +32,7 @@ export default function LiveThreat() {
              <div className="space-y-2 overflow-y-auto h-[430px]">
                  {threatEvents.map((event) => (
                     <div key={event.id} className="flex justify-between text-[10px] p-2 bg-[#0B111A] rounded">
-                        <span className={`${event.severity === 'high' || event.severity === 'critical' ? 'text-red-500' : 'text-cyan-500'} font-bold`}>{event.severity.toUpperCase()}</span>
+                        <span className={`${event.severity === 'High' || event.severity === 'Critical' ? 'text-red-500' : 'text-cyan-500'} font-bold`}>{event.severity.toUpperCase()}</span>
                         <span className="text-gray-300 truncate max-w-[80px]">{event.threatType}</span>
                         <span className="text-gray-500">{(event.confidence)}%</span>
                     </div>
