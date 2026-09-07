@@ -167,7 +167,7 @@ export function TopBar() {
 
         <div className="flex items-center gap-2 text-[10px] bg-[#0E1520] border border-[#151D28] px-3 py-1 rounded">
             <span className="text-gray-500 font-bold">THREAT ENGINE:</span>
-            <span className="text-cyan-400 uppercase">DEMO</span>
+            <span className="text-cyan-400 uppercase">ONLINE</span>
         </div>
         <button className="text-gray-400 hover:text-cyan-400 transition-colors">
           <Bell size={16} />

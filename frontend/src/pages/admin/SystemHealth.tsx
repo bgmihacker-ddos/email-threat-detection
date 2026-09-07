@@ -16,8 +16,17 @@ export default function SystemHealth() {
     });
   }, []);
 
-  const handleRestartService = (serviceName: string) => {
-    addToast(`Restarting ${serviceName} service (DEMO)`, 'warning');
+  const handleRestartService = async (serviceName: string) => {
+    setLoading(true);
+    try {
+        const data = await getSystemHealth();
+        setServices(data);
+        addToast(`${serviceName} verification completed`, 'success');
+    } catch {
+        addToast(`Failed to verify ${serviceName}`, 'error');
+    } finally {
+        setLoading(false);
+    }
   };
 
 
@@ -26,7 +35,6 @@ export default function SystemHealth() {
       case 'Operational': return 'bg-green-900/30 text-green-300 border-green-700';
       case 'Degraded': return 'bg-yellow-900/30 text-yellow-300 border-yellow-700';
       case 'Offline': return 'bg-red-900/30 text-red-300 border-red-700';
-      case 'Demo Mode': return 'bg-cyan-900/30 text-cyan-300 border-cyan-700';
       default: return 'bg-[#151D28] text-gray-400 border-[#1E2A3D]';
     }
   };
@@ -168,12 +176,12 @@ export default function SystemHealth() {
                     </td>
                     <td className="p-3">
                       <div className="flex gap-1 justify-end">
-                        {service.status !== 'Operational' && service.status !== 'Demo Mode' && (
+                        {service.status !== 'Operational' && (
                           <button
                             onClick={() => handleRestartService(service.service)}
                             className="px-2 py-1 bg-yellow-900/40 hover:bg-yellow-900/70 border border-yellow-700 text-yellow-200 text-xs font-bold rounded"
                           >
-                            Restart
+                            Verify
                           </button>
                         )}
                       </div>

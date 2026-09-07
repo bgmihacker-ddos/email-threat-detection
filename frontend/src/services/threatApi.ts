@@ -30,18 +30,19 @@ export const getIndicators = async (): Promise<ThreatIndicator[]> => {
 export const getLiveThreats = async (): Promise<ThreatMapEvent[]> => {
   try {
     const response = await apiFetch('/api/live-threats');
-    // Map response to match ThreatMapEvent type
     return (response.data || []).map((e: any) => ({
       id: e.id,
-      latitude: e.latitude || 0, // Should handle null values
-      longitude: e.longitude || 0,
-      country: e.country,
+      indicator: e.indicator,
+      latitude: e.latitude ?? 0,
+      longitude: e.longitude ?? 0,
+      country: e.country || 'Unknown',
       city: '',
-      threatType: 'Phishing', // Need to map correctly
-      severity: e.severity,
-      timestamp: e.timestamp,
+      threatType: e.indicator_type === 'url' || e.indicator_type === 'domain' ? 'Phishing' : 'Malware',
+      severity: e.severity === 'critical' || e.severity === 'High' ? 'High' : e.severity === 'high' ? 'High' : e.severity === 'medium' || e.severity === 'Medium' ? 'Medium' : 'Low',
+      timestamp: e.timestamp || new Date().toISOString(),
       source: e.source,
-      confidence: e.confidence
+      confidence: e.confidence || 0,
+      geoSource: e.geo_source || undefined
     }));
   } catch (error) {
     console.error('Error fetching live threats:', error);

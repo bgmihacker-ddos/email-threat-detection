@@ -16,8 +16,17 @@ export default function ThreatIntelligence() {
     });
   }, []);
 
-  const handleSyncProvider = (_providerId: string, providerName: string) => {
-    addToast(`Syncing ${providerName} threat intelligence feed (DEMO)`, 'info');
+  const handleSyncProvider = async (_providerId: string, providerName: string) => {
+    setLoading(true);
+    try {
+      const data = await getThreatIntelProviders();
+      setProviders(data);
+      addToast(`Refreshed telemetry for ${providerName}`, 'success');
+    } catch {
+      addToast(`Failed to sync provider ${providerName}`, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -25,7 +34,6 @@ export default function ThreatIntelligence() {
       case 'Connected': return <Wifi className="text-green-400" />;
       case 'Degraded': return <Activity className="text-yellow-400" />;
       case 'Offline': return <WifiOff className="text-red-400" />;
-      case 'Demo Mode': return <Shield className="text-cyan-400" />;
       default: return <WifiOff className="text-gray-400" />;
     }
   };
@@ -35,7 +43,6 @@ export default function ThreatIntelligence() {
       case 'Connected': return 'text-green-400';
       case 'Degraded': return 'text-yellow-400';
       case 'Offline': return 'text-red-400';
-      case 'Demo Mode': return 'text-cyan-400';
       default: return 'text-gray-400';
     }
   };
@@ -69,7 +76,7 @@ export default function ThreatIntelligence() {
         <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">ACTIVE PROVIDERS</p>
           <p className="text-2xl font-bold text-white mt-2">
-            {providers.filter(p => p.status === 'Connected' || p.status === 'Demo Mode').length}
+            {providers.filter(p => p.status === 'Connected').length}
           </p>
         </div>
 
@@ -178,7 +185,7 @@ export default function ThreatIntelligence() {
       {/* Legend */}
       <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Status Legend</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="flex items-center gap-2">
             <Wifi className="text-green-400" size={14} />
             <span className="text-xs text-white">Connected</span>
@@ -187,17 +194,12 @@ export default function ThreatIntelligence() {
           <div className="flex items-center gap-2">
             <Activity className="text-yellow-400" size={14} />
             <span className="text-xs text-white">Degraded</span>
-            <span className="text-xs text-gray-500">– High latency or errors</span>
+            <span className="text-xs text-gray-500">– High latency or connection issues</span>
           </div>
           <div className="flex items-center gap-2">
             <WifiOff className="text-red-400" size={14} />
             <span className="text-xs text-white">Offline</span>
-            <span className="text-xs text-gray-500">– No connection</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Shield className="text-cyan-400" size={14} />
-            <span className="text-xs text-white">Demo Mode</span>
-            <span className="text-xs text-gray-500">– Mock data</span>
+            <span className="text-xs text-gray-500">– Feed unreachable</span>
           </div>
         </div>
       </div>

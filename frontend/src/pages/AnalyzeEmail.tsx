@@ -56,7 +56,7 @@ export default function AnalyzeEmail() {
     try {
         const result = await analyzeEmail(emailContent, file || undefined);
         navigate(`/analysis/${result.analysis_id}`);
-    } catch (err) {
+    } catch {
         setError('Failed to analyze email. Please try again.');
         setIsAnalyzing(false);
     }

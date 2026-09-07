@@ -6,39 +6,49 @@ export default function AdminSettings() {
   const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState<'platform' | 'security' | 'detection' | 'intelligence' | 'notifications' | 'system'>('platform');
 
-  const [settings, setSettings] = useState({
-    // Platform
-    platformName: 'Email Threat Intelligence',
-    environment: 'production',
-    maintenanceMode: false,
-    sessionTimeout: '30',
-    // Security
-    requireMFA: true,
-    loginProtection: true,
-    sessionSecurity: 'strict',
-    ipRestrictions: '',
-    // Detection
-    detectionThreshold: 'high',
-    autoClassification: true,
-    threatScoring: 'dynamic',
-    urlAnalysis: true,
-    headerAnalysis: true,
-    // Intelligence
-    autoSync: true,
-    syncInterval: '15',
-    enrichment: true,
-    // Notifications
-    criticalAlerts: true,
-    adminAlerts: true,
-    healthAlerts: false,
-    // System
-    logRetention: '90',
-    auditLogging: true,
-    debugMode: false,
+  const [settings, setSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem('adminSettings');
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // Ignore malformed local preferences and use defaults below.
+    }
+    return {
+      // Platform
+      platformName: 'Email Threat Intelligence',
+      environment: 'production',
+      maintenanceMode: false,
+      sessionTimeout: '30',
+      // Security
+      requireMFA: true,
+      loginProtection: true,
+      sessionSecurity: 'strict',
+      ipRestrictions: '',
+      // Detection
+      detectionThreshold: 'high',
+      autoClassification: true,
+      threatScoring: 'dynamic',
+      urlAnalysis: true,
+      headerAnalysis: true,
+      // Intelligence
+      autoSync: true,
+      syncInterval: '15',
+      enrichment: true,
+      // Notifications
+      criticalAlerts: true,
+      adminAlerts: true,
+      healthAlerts: false,
+      // System
+      logRetention: '90',
+      auditLogging: true,
+      debugMode: false,
+    };
   });
 
   const handleSave = () => {
-    addToast('Administrative settings saved successfully (DEMO)', 'success');
+    // Persistent save to localStorage
+    localStorage.setItem('adminSettings', JSON.stringify(settings));
+    addToast('Administrative settings saved successfully', 'success');
   };
 
   const tabs = [

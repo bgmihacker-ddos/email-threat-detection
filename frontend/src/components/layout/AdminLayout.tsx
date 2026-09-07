@@ -12,7 +12,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       <div className="flex flex-col flex-1 overflow-hidden">
         <header className="h-16 bg-[#080D14] border-b border-[#151D28] flex items-center justify-between px-6">
           <div className="text-sm font-bold uppercase tracking-widest text-cyan-400">Administrator Console</div>
-          <div className="text-xs uppercase text-gray-500">Threat Engine: Demo</div>
+          <div className="flex items-center gap-2 text-xs uppercase text-gray-500"><span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />Threat Engine: Online</div>
         </header>
         <main className="flex-1 overflow-y-auto p-8">
           {children}

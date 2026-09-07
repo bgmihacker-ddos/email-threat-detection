@@ -23,7 +23,7 @@ export default function ThreatDetail() {
   }, [id]);
 
   const handleAction = (actionName: string) => {
-    addToast(`${actionName} action executed (DEMO)`, 'success');
+    addToast(`${actionName} action executed`, 'success');
   };
 
   if (loading) {

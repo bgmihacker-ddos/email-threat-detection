@@ -27,6 +27,7 @@ export interface ThreatIndicator {
 
 export interface ThreatMapEvent {
   id: string;
+  indicator?: string;
   latitude: number;
   longitude: number;
   country: string;
@@ -36,4 +37,5 @@ export interface ThreatMapEvent {
   timestamp: string;
   source: string;
   confidence: number;
+  geoSource?: string;
 }

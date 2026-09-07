@@ -98,7 +98,7 @@ export interface ThreatIntelProvider {
   id: string;
   name: string;
   type: string;
-  status: 'Connected' | 'Degraded' | 'Offline' | 'Demo Mode';
+  status: 'Connected' | 'Degraded' | 'Offline';
   lastSync: string;
   recordsIndexed: number;
   latencyMs: number;
@@ -108,7 +108,7 @@ export interface ThreatIntelProvider {
 export interface SystemServiceHealth {
   id: string;
   service: string;
-  status: 'Operational' | 'Degraded' | 'Offline' | 'Demo Mode';
+  status: 'Operational' | 'Degraded' | 'Offline';
   uptimePct: number;
   latencyMs: number;
   lastChecked: string;
