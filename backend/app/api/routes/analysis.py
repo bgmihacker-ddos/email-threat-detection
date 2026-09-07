@@ -1,16 +1,144 @@
-import uuid
-from typing import Optional
+"""Email analysis, persisted-analysis exploration, and forensic exports."""
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+import html
+import json
+import uuid
+from copy import deepcopy
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.detection.rule_engine import RuleEngine
+from app.detection.risk_scorer import RiskEngine
 from app.models.analysis import AnalysisResult
 from app.schemas.analysis import EmailAnalysisSchema
 from app.services.email_parser import EmailParser
+from app.services.header_forensics import HeaderForensicsAnalyzer
+from app.services.authentication_analyzer import AuthenticationAnalyzer
+from app.services.ioc_extractor import IOCExtractor
+from app.services.url_analyzer import URLIntelligence
+from app.services.domain_analyzer import DomainIntelligence
+from app.services.threat_intelligence import ThreatIntelligenceService
+from app.services.attachment_analyzer import AttachmentAnalyzer
+from app.services.content_analyzer import ContentAnalyzer
+from app.services.threat_reasoning import ThreatReasoningEngine
+from app.services.attack_chain import AttackChainReconstruction
+from app.ml.classifier import MLClassifier
 
 router = APIRouter()
+
+
+_REDACTED_EMAIL_FIELDS = {"raw_email", "plain_text", "html_body"}
+
+
+def _as_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _sanitize_result(result: Any, include_raw_email: bool = False) -> Dict[str, Any]:
+    """Return a result safe for exports without mutating persisted JSON.
+
+    Parsed email content is operationally useful in a live analysis response, but
+    it is redacted from portable reports by default. Callers must explicitly opt
+    into raw-email inclusion.
+    """
+    payload = deepcopy(result) if isinstance(result, dict) else {}
+    if include_raw_email:
+        return payload
+
+    email = payload.get("email")
+    if isinstance(email, dict):
+        for field in _REDACTED_EMAIL_FIELDS:
+            if field in email:
+                email[field] = "[redacted from export]"
+    return payload
+
+
+def _analysis_summary(record: AnalysisResult) -> Dict[str, Any]:
+    """Create a list-safe summary without exposing raw message content."""
+    result = record.result if isinstance(record.result, dict) else {}
+    email = result.get("email") if isinstance(result.get("email"), dict) else {}
+    metadata = email.get("metadata") if isinstance(email.get("metadata"), dict) else {}
+    sender = email.get("from") or metadata.get("from") or "(unknown sender)"
+    recipient = email.get("to") or metadata.get("to") or []
+    if isinstance(recipient, list):
+        recipient = ", ".join(str(value) for value in recipient[:3])
+
+    return {
+        "analysis_id": record.id,
+        "verdict": record.verdict,
+        "risk_score": record.risk_score,
+        "severity": record.severity,
+        "confidence": record.confidence,
+        "summary": record.summary,
+        "subject": email.get("subject") or metadata.get("subject") or "(no subject)",
+        "sender": sender,
+        "recipient": recipient or "(no recipient)",
+        "created_at": _as_utc(record.created_at).isoformat(),
+        "status": "analyzed",
+    }
+
+
+def _result_iocs(result: Any) -> List[Dict[str, Any]]:
+    if not isinstance(result, dict):
+        return []
+    extracted = result.get("extracted_iocs")
+    if not isinstance(extracted, dict):
+        return []
+    iocs = extracted.get("iocs")
+    return [item for item in iocs if isinstance(item, dict)] if isinstance(iocs, list) else []
+
+
+def _render_report_html(analysis_id: str, payload: Dict[str, Any], created_at: datetime) -> str:
+    """Render a printable, escaped forensic report with no client-side script."""
+    evidence = json.dumps(payload, ensure_ascii=False, indent=2, default=str)
+    verdict = html.escape(str(payload.get("verdict", "unknown")).upper())
+    risk_score = html.escape(str(payload.get("risk_score", "unknown")))
+    severity = html.escape(str(payload.get("severity", "unknown")).upper())
+    summary = html.escape(str(payload.get("summary", "No summary available.")))
+    report_id = html.escape(analysis_id)
+    generated_at = html.escape(_as_utc(created_at).isoformat())
+    evidence_html = html.escape(evidence)
+
+    return f"""<!doctype html>
+<html lang=\"en\">
+<head>
+  <meta charset=\"utf-8\">
+  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
+  <title>Forensic Report {report_id}</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; color: #172033; margin: 2rem; line-height: 1.45; }}
+    header {{ border-bottom: 2px solid #0e7490; margin-bottom: 1.5rem; padding-bottom: .75rem; }}
+    h1 {{ margin: 0; font-size: 1.5rem; }}
+    .meta {{ color: #526070; font-size: .85rem; }}
+    .grid {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1rem 0; }}
+    .card {{ border: 1px solid #d7dee8; border-radius: .4rem; padding: .8rem; }}
+    .label {{ color: #526070; font-size: .75rem; font-weight: bold; text-transform: uppercase; }}
+    .value {{ font-size: 1.15rem; font-weight: bold; margin-top: .25rem; }}
+    pre {{ background: #f6f8fa; border: 1px solid #d7dee8; border-radius: .4rem; overflow-wrap: anywhere; padding: 1rem; white-space: pre-wrap; }}
+    @media print {{ body {{ margin: .5in; }} }}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Email Threat Detection — Forensic Analysis Report</h1>
+    <div class=\"meta\">Analysis ID: {report_id} · Generated: {generated_at}</div>
+  </header>
+  <div class=\"grid\">
+    <section class=\"card\"><div class=\"label\">Verdict</div><div class=\"value\">{verdict}</div></section>
+    <section class=\"card\"><div class=\"label\">Risk score</div><div class=\"value\">{risk_score} / 100</div></section>
+    <section class=\"card\"><div class=\"label\">Severity</div><div class=\"value\">{severity}</div></section>
+  </div>
+  <section><h2>Summary</h2><p>{summary}</p></section>
+  <section><h2>Structured evidence</h2><pre>{evidence_html}</pre></section>
+</body>
+</html>"""
 
 
 @router.post("/analyze", response_model=EmailAnalysisSchema)
@@ -28,27 +156,97 @@ async def analyze_email(
         raw_email = raw_content.encode("utf-8")
 
     try:
+        # 1) Parsing and deterministic forensic components.
         parsed_email = EmailParser.parse_raw(raw_email)
-        analysis_result = RuleEngine.analyze(parsed_email)
+        header_forensics = HeaderForensicsAnalyzer.analyze(parsed_email)
+        authentication = AuthenticationAnalyzer.analyze(header_forensics, parsed_email)
+        extracted_iocs = IOCExtractor.extract(parsed_email)
+
+        urls = [ioc["value"] for ioc in extracted_iocs["iocs"] if ioc["type"] == "url"]
+        url_analysis = URLIntelligence.analyze_batch(urls)
+        domains = [ioc["value"] for ioc in extracted_iocs["iocs"] if ioc["type"] == "domain"]
+        domain_analysis = {domain: DomainIntelligence.analyze(domain) for domain in domains}
+
+        attachment_analysis = AttachmentAnalyzer.analyze(parsed_email.get("attachments", []))
+        content_analysis = ContentAnalyzer.analyze(parsed_email)
+        ml_analysis = MLClassifier().predict(
+            f"{parsed_email.get('subject') or ''} {parsed_email.get('plain_text') or ''}"
+        )
+
+        # 2) Optional threat intelligence. Failures remain localized in output.
+        threat_intelligence = await ThreatIntelligenceService().enrich_all(extracted_iocs["iocs"])
+
+        # 3) Preserve legacy RuleEngine data and use new fused score as final verdict.
+        rule_result = RuleEngine.analyze(parsed_email)
+        risk_result = RiskEngine.calculate_risk(
+            header_forensics,
+            authentication,
+            extracted_iocs,
+            url_analysis,
+            domain_analysis,
+            threat_intelligence,
+            attachment_analysis,
+            content_analysis,
+            ml_analysis,
+            rule_result,
+        )
+
+        all_findings = (
+            header_forensics.get("forensic_findings", [])
+            + authentication.get("findings", [])
+            + attachment_analysis.get("findings", [])
+            + content_analysis.get("findings", [])
+        )
+        extended_reasoning = ThreatReasoningEngine.generate_reasoning(
+            risk_result["verdict"],
+            risk_result["risk_score"],
+            risk_result["score_breakdown"],
+            all_findings,
+        )
+        attack_chain_steps = AttackChainReconstruction.reconstruct(
+            header_forensics,
+            authentication,
+            url_analysis,
+            attachment_analysis,
+            content_analysis,
+        )
 
         analysis_id = str(uuid.uuid4())
+        recommendations = rule_result.get("recommendations", [])
+        if risk_result["verdict"] != "benign":
+            recommendations = list(dict.fromkeys([
+                *recommendations,
+                "Verify suspicious sender requests through an independent channel.",
+                "Do not interact with suspicious links or attachments.",
+            ]))
+
         analysis = EmailAnalysisSchema(
             analysis_id=analysis_id,
-            verdict=analysis_result.get("verdict", "unknown"),
-            risk_score=analysis_result.get("risk_score", 0),
-            severity=analysis_result.get("severity", "info"),
-            confidence=analysis_result.get("confidence", 0),
-            summary=analysis_result.get("summary", "Email analysis completed."),
-            reasons=analysis_result.get("reasons", []),
-            evidence=analysis_result.get("evidence", []),
-            detections=analysis_result.get("detections", []),
-            authentication=analysis_result.get("authentication", {}),
-            forensic_findings=analysis_result.get("forensic_findings", []),
-            threat_reasoning=analysis_result.get("threat_reasoning", []),
-            attack_chain=analysis_result.get("attack_chain", []),
-            iocs=analysis_result.get("iocs", {"urls": [], "domains": [], "ips": [], "attachments": []}),
-            threat_intelligence=analysis_result.get("threat_intelligence", []),
-            recommendations=analysis_result.get("recommendations", []),
+            verdict=risk_result["verdict"],
+            risk_score=risk_result["risk_score"],
+            severity=risk_result["severity"],
+            confidence=risk_result["confidence"],
+            summary=extended_reasoning["summary"],
+            reasons=rule_result.get("reasons", []),
+            evidence=rule_result.get("evidence", []),
+            detections=rule_result.get("detections", []),
+            authentication=authentication,
+            forensic_findings=all_findings,
+            threat_reasoning=rule_result.get("threat_reasoning", []),
+            extended_reasoning=extended_reasoning,
+            attack_chain=rule_result.get("attack_chain", []),
+            attack_chain_steps=attack_chain_steps,
+            iocs=rule_result.get("iocs", {"urls": [], "domains": [], "ips": [], "attachments": []}),
+            extracted_iocs=extracted_iocs,
+            threat_intelligence=threat_intelligence,
+            recommendations=recommendations,
+            header_forensics=header_forensics,
+            url_analysis=url_analysis,
+            domain_analysis=domain_analysis,
+            attachment_analysis=attachment_analysis,
+            content_analysis=content_analysis,
+            ml_analysis=ml_analysis,
+            risk_breakdown=risk_result["score_breakdown"],
             email=parsed_email,
         )
 
@@ -65,8 +263,12 @@ async def analyze_email(
         db.commit()
 
         return analysis
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception:
+        db.rollback()
+        # Do not return raw email fragments or sensitive data in API errors.
+        raise HTTPException(status_code=500, detail="Email analysis could not be completed.")
 
 
 @router.get("/analyze/{analysis_id}", response_model=EmailAnalysisSchema)
@@ -76,3 +278,106 @@ async def get_analysis(analysis_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Analysis not found.")
 
     return EmailAnalysisSchema(**db_result.result)
+
+
+@router.get("/analyses", response_model=dict)
+def list_analyses(
+    query: Optional[str] = Query(None, min_length=1, max_length=200),
+    verdict: Optional[str] = Query(None, pattern="^(benign|suspicious|malicious)$"),
+    severity: Optional[str] = Query(None, pattern="^(info|low|medium|high|critical)$"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    """List compact persisted analysis records with server-side filters."""
+    statement = db.query(AnalysisResult)
+    if verdict:
+        statement = statement.filter(AnalysisResult.verdict == verdict)
+    if severity:
+        statement = statement.filter(AnalysisResult.severity == severity)
+    if query:
+        escaped_query = query.replace("%", "\\%").replace("_", "\\_")
+        match = f"%{escaped_query}%"
+        statement = statement.filter(
+            (AnalysisResult.summary.ilike(match)) | (AnalysisResult.id.ilike(match))
+        )
+
+    total = statement.count()
+    records = statement.order_by(AnalysisResult.created_at.desc()).offset(offset).limit(limit).all()
+    return {"data": [_analysis_summary(record) for record in records], "meta": {"total": total, "limit": limit, "offset": offset}}
+
+
+@router.get("/analyses/iocs/search", response_model=dict)
+def search_persisted_iocs(
+    value: Optional[str] = Query(None, min_length=1, max_length=500),
+    indicator_type: Optional[str] = Query(None, alias="type", max_length=32),
+    limit: int = Query(100, ge=1, le=250),
+    db: Session = Depends(get_db),
+):
+    """Search IOCs observed in persisted local analyses without external lookups."""
+    # JSON querying differs between SQLite and PostgreSQL, so bounded filtering is
+    # intentionally performed in Python for cross-database compatibility.
+    records = db.query(AnalysisResult).order_by(AnalysisResult.created_at.desc()).limit(1000).all()
+    needle = value.lower() if value else ""
+    matches: List[Dict[str, Any]] = []
+    seen = set()
+
+    for record in records:
+        for ioc in _result_iocs(record.result):
+            current_type = str(ioc.get("type") or "")
+            current_value = str(ioc.get("normalized_value") or ioc.get("value") or "")
+            if indicator_type and current_type != indicator_type:
+                continue
+            if needle and needle not in current_value.lower():
+                continue
+            key = (current_type, current_value.lower(), record.id)
+            if not current_value or key in seen:
+                continue
+            seen.add(key)
+            matches.append({
+                "indicator": current_value,
+                "type": current_type,
+                "confidence": ioc.get("confidence"),
+                "sources": ioc.get("sources") or ioc.get("source") or [],
+                "analysis_id": record.id,
+                "verdict": record.verdict,
+                "severity": record.severity,
+                "created_at": _as_utc(record.created_at).isoformat(),
+            })
+            if len(matches) >= limit:
+                return {"data": matches, "meta": {"limit": limit, "truncated": True, "source": "persisted_local_analyses"}}
+
+    return {"data": matches, "meta": {"limit": limit, "truncated": False, "source": "persisted_local_analyses"}}
+
+
+@router.get("/analyze/{analysis_id}/report.json")
+def export_analysis_json(
+    analysis_id: str,
+    include_raw_email: bool = Query(False),
+    db: Session = Depends(get_db),
+):
+    """Download portable structured evidence, redacting message content by default."""
+    record = db.query(AnalysisResult).filter(AnalysisResult.id == analysis_id).first()
+    if record is None:
+        raise HTTPException(status_code=404, detail="Analysis not found.")
+    payload = _sanitize_result(record.result, include_raw_email=include_raw_email)
+    return JSONResponse(
+        content=payload,
+        headers={"Content-Disposition": f'attachment; filename="analysis-{analysis_id}.json"'},
+    )
+
+
+@router.get("/analyze/{analysis_id}/report.html", response_class=HTMLResponse)
+def export_analysis_html(
+    analysis_id: str,
+    include_raw_email: bool = Query(False),
+    db: Session = Depends(get_db),
+):
+    """Serve a printable HTML report containing escaped structured evidence."""
+    record = db.query(AnalysisResult).filter(AnalysisResult.id == analysis_id).first()
+    if record is None:
+        raise HTTPException(status_code=404, detail="Analysis not found.")
+    payload = _sanitize_result(record.result, include_raw_email=include_raw_email)
+    response = HTMLResponse(_render_report_html(record.id, payload, record.created_at))
+    response.headers["Content-Disposition"] = f'inline; filename="analysis-{analysis_id}.html"'
+    return response

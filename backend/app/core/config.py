@@ -54,6 +54,7 @@ class Settings:
     VIRUSTOTAL_API_KEY = os.getenv("VIRUSTOTAL_API_KEY")
     URLSCAN_API_KEY = os.getenv("URLSCAN_API_KEY")
     GOOGLE_SAFE_BROWSING_API_KEY = os.getenv("GOOGLE_SAFE_BROWSING_API_KEY")
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 
 settings = Settings()

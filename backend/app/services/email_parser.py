@@ -1,47 +1,521 @@
-import email
+"""
+email_parser.py — Phase 6A: RFC/MIME forensic email parser.
+
+Extracts a structured forensic representation of an email while preserving
+backward compatibility with the existing RuleEngine interface.
+"""
+
+import logging
+import re
 from email import policy
+from email.headerregistry import Address
 from email.parser import BytesParser
+from email.utils import getaddresses, parseaddr
+from html.parser import HTMLParser
+from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
+
+# Maximum raw email size logged in debug messages (chars) — avoid leaking content.
+_LOG_PREVIEW_LEN = 80
+
+
+# ---------------------------------------------------------------------------
+# Helper: link extractor from HTML
+# ---------------------------------------------------------------------------
+
+class _HrefExtractor(HTMLParser):
+    """Collect href values from <a> tags in HTML."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.hrefs: List[str] = []
+
+    def handle_starttag(self, tag: str, attrs: List) -> None:
+        if tag.lower() == "a":
+            for name, value in attrs:
+                if name.lower() == "href" and value:
+                    self.hrefs.append(value)
+
+
+def _extract_hrefs(html: str) -> List[str]:
+    parser = _HrefExtractor()
+    try:
+        parser.feed(html)
+    except Exception:
+        pass
+    return parser.hrefs
+
+
+# ---------------------------------------------------------------------------
+# Helper: URL extraction from plain text
+# ---------------------------------------------------------------------------
+
+_URL_RE = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
+
+
+def _extract_urls_from_text(text: str) -> List[str]:
+    return _URL_RE.findall(text)
+
+
+# ---------------------------------------------------------------------------
+# Helper: URL normalization / dedup
+# ---------------------------------------------------------------------------
+
+def _normalize_url(url: str) -> str:
+    """Minimal normalization: strip trailing punctuation that is unlikely to be
+    part of the URL (common in plain-text prose)."""
+    return url.rstrip(".,;:!?\"')")
+
+
+def _dedup_urls(urls: List[str]) -> List[str]:
+    seen: Dict[str, None] = {}
+    result = []
+    for u in urls:
+        n = _normalize_url(u)
+        if n not in seen:
+            seen[n] = None
+            result.append(n)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Helper: address parsing
+# ---------------------------------------------------------------------------
+
+def _parse_address(raw: str) -> Optional[Dict[str, Optional[str]]]:
+    """Parse a single 'Name <addr>' string into its components."""
+    if not raw:
+        return None
+    display, addr = parseaddr(raw)
+    if not addr and not display:
+        return None
+    domain = addr.split("@", 1)[1] if "@" in addr else None
+    return {
+        "display_name": display or None,
+        "address": addr or None,
+        "domain": domain,
+    }
+
+
+def _parse_address_list(raw_header_values: List[str]) -> List[Dict[str, Optional[str]]]:
+    """Parse a list of raw header values into structured address objects.
+
+    Handles comma-separated addresses within each header value and skips entries
+    that cannot be parsed rather than raising.
+    """
+    result = []
+    try:
+        pairs = getaddresses(raw_header_values)
+        for display, addr in pairs:
+            if not addr and not display:
+                continue
+            domain = addr.split("@", 1)[1] if "@" in addr else None
+            result.append({
+                "display_name": display or None,
+                "address": addr or None,
+                "domain": domain,
+            })
+    except Exception:
+        pass
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Helper: Received header parsing
+# ---------------------------------------------------------------------------
+
+_IP_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b|(?:[0-9a-fA-F]{1,4}:){2,7}[0-9a-fA-F]{1,4}\b")
+_DATE_IN_RECEIVED_RE = re.compile(r";\s*(.+)$")
+
+
+def _parse_received_header(raw: str) -> Dict[str, Any]:
+    """Extract structured information from a single Received header value.
+
+    Does not perform network lookups. Everything is text-only extraction.
+    """
+    entry: Dict[str, Any] = {
+        "raw": raw,
+        "from_server": None,
+        "by_server": None,
+        "ips": [],
+        "timestamp": None,
+    }
+
+    # Extract IP addresses found anywhere in the header.
+    entry["ips"] = _IP_RE.findall(raw)
+
+    # Extract 'from' part — strip trailing punctuation (e.g. ';').
+    from_match = re.search(r"\bfrom\s+(\S+)", raw, re.IGNORECASE)
+    if from_match:
+        entry["from_server"] = from_match.group(1).rstrip(";")
+
+    # Extract 'by' part — strip trailing punctuation (e.g. ';').
+    by_match = re.search(r"\bby\s+(\S+)", raw, re.IGNORECASE)
+    if by_match:
+        entry["by_server"] = by_match.group(1).rstrip(";")
+
+    # Extract timestamp from trailing '; <date>' if present.
+    date_match = _DATE_IN_RECEIVED_RE.search(raw)
+    if date_match:
+        entry["timestamp"] = date_match.group(1).strip()
+
+    return entry
+
+
+# ---------------------------------------------------------------------------
+# Main parser
+# ---------------------------------------------------------------------------
 
 class EmailParser:
+    """RFC/MIME forensic email parser.
+
+    Callable interface is the existing ``parse_raw(raw_email: bytes) -> dict``.
+    The returned dict maintains all existing keys consumed by ``RuleEngine``
+    and extends them with structured forensic fields.
+    """
+
+    # Headers that carry authentication evidence.
+    _AUTH_HEADERS = (
+        "authentication-results",
+        "received-spf",
+        "dkim-signature",
+        "arc-seal",
+        "arc-message-signature",
+        "arc-authentication-results",
+    )
+
     @staticmethod
-    def parse_raw(raw_email: bytes):
+    def parse_raw(raw_email: bytes) -> Dict[str, Any]:
+        """Parse an RFC/MIME email message.
+
+        Args:
+            raw_email: Raw email bytes.
+
+        Returns:
+            Structured dictionary containing forensic and backward-compat fields.
+
+        Raises:
+            ValueError: If ``raw_email`` is empty or None.
+        """
+        if not raw_email:
+            raise ValueError("Empty email content provided.")
+
+        try:
+            return EmailParser._parse(raw_email)
+        except ValueError:
+            raise
+        except Exception as exc:
+            # Return a controlled partial result so the analysis pipeline can
+            # continue with whatever could be extracted.
+            logger.warning("Email parsing error: %s", str(exc))
+            return EmailParser._empty_result(
+                raw_email=raw_email,
+                error=str(exc),
+            )
+
+    @staticmethod
+    def _parse(raw_email: bytes) -> Dict[str, Any]:
+        # policy=default gives us modern string-based header values.
         msg = BytesParser(policy=policy.default).parsebytes(raw_email)
 
-        # Basic extraction
-        data = {
-            "from": msg.get("from"),
-            "to": msg.get_all("to", []),
-            "reply_to": msg.get("reply-to"),
-            "return_path": msg.get("return-path"),
-            "subject": msg.get("subject"),
-            "date": msg.get("date"),
-            "message_id": msg.get("message-id"),
-            "received": msg.get_all("received", []),
-            "authentication_results": msg.get("authentication-results"),
-            "spf": msg.get("spf"),
-            "dkim": msg.get("dkim"),
-            "dmarc": msg.get("dmarc"),
-            "headers": dict(msg.items()),
-            "plain_text": "",
-            "html_body": "",
-            "attachments": []
+        # ------------------------------------------------------------------
+        # 1. Metadata (standard headers)
+        # ------------------------------------------------------------------
+        raw_from = msg.get("from") or ""
+        raw_to = msg.get_all("to") or []
+        raw_cc = msg.get_all("cc") or []
+        raw_bcc = msg.get_all("bcc") or []
+        raw_reply_to = msg.get_all("reply-to") or []
+        raw_return_path = msg.get("return-path")
+        subject = msg.get("subject")
+        date = msg.get("date")
+        message_id = msg.get("message-id")
+        mime_version = msg.get("mime-version")
+        content_type_header = msg.get("content-type")
+        content_transfer_encoding = msg.get("content-transfer-encoding")
+
+        metadata = {
+            "from": raw_from or None,
+            "to": raw_to,
+            "cc": raw_cc,
+            "bcc": raw_bcc,
+            "reply_to": raw_reply_to,
+            "return_path": raw_return_path,
+            "subject": subject,
+            "date": date,
+            "message_id": message_id,
+            "mime_version": mime_version,
+            "content_type": content_type_header,
+            "content_transfer_encoding": content_transfer_encoding,
         }
 
-        # Body and Attachment Extraction
+        # ------------------------------------------------------------------
+        # 2. Parsed address structures
+        # ------------------------------------------------------------------
+        addresses = {
+            "from": _parse_address(raw_from),
+            "to": _parse_address_list(raw_to),
+            "cc": _parse_address_list(raw_cc),
+            "bcc": _parse_address_list(raw_bcc),
+            "reply_to": _parse_address_list(raw_reply_to),
+            "return_path": _parse_address(raw_return_path or ""),
+        }
+
+        # ------------------------------------------------------------------
+        # 3. All headers (preserve duplicate headers as lists)
+        # ------------------------------------------------------------------
+        all_headers: Dict[str, Any] = {}
+        for key, value in msg.items():
+            k_lower = key.lower()
+            if k_lower in all_headers:
+                existing = all_headers[k_lower]
+                if isinstance(existing, list):
+                    existing.append(value)
+                else:
+                    all_headers[k_lower] = [existing, value]
+            else:
+                all_headers[k_lower] = value
+
+        # ------------------------------------------------------------------
+        # 4. Received chain
+        # ------------------------------------------------------------------
+        raw_received = msg.get_all("received") or []
+        received_chain = [_parse_received_header(r) for r in raw_received]
+
+        # ------------------------------------------------------------------
+        # 5. Authentication headers (extraction only — no pass/fail judgment)
+        # ------------------------------------------------------------------
+        authentication_headers: Dict[str, Any] = {}
+        for h in EmailParser._AUTH_HEADERS:
+            values = msg.get_all(h) or []
+            if values:
+                authentication_headers[h] = values if len(values) > 1 else values[0]
+
+        # ------------------------------------------------------------------
+        # 6. Body extraction
+        # ------------------------------------------------------------------
+        plain_text, html_body = EmailParser._extract_bodies(msg)
+
+        # ------------------------------------------------------------------
+        # 7. URL extraction
+        # ------------------------------------------------------------------
+        text_urls = _extract_urls_from_text(plain_text)
+        html_text_urls = _extract_urls_from_text(html_body)
+        html_href_urls = _extract_hrefs(html_body)
+        all_urls = _dedup_urls(text_urls + html_text_urls + html_href_urls)
+
+        # ------------------------------------------------------------------
+        # 8. Attachments
+        # ------------------------------------------------------------------
+        attachments = EmailParser._extract_attachments(msg)
+
+        # ------------------------------------------------------------------
+        # 9. Derive simple RuleEngine compat values from auth headers
+        # ------------------------------------------------------------------
+        spf_raw = authentication_headers.get("received-spf")
+        if isinstance(spf_raw, list):
+            spf_raw = spf_raw[0]
+
+        dkim_raw = authentication_headers.get("dkim-signature")
+        if isinstance(dkim_raw, list):
+            dkim_raw = dkim_raw[0]
+
+        # Leave dmarc as None — we don't have a dedicated header for it before
+        # forensic analysis phase; the RuleEngine tolerates None gracefully.
+        dmarc_raw = None
+
+        # Derive friendly from address string for RuleEngine.
+        from_str = addresses["from"]["address"] if addresses["from"] and addresses["from"].get("address") else raw_from
+
+        # Derive reply_to string for RuleEngine mismatch check.
+        reply_to_str = None
+        if addresses["reply_to"]:
+            first = addresses["reply_to"][0]
+            reply_to_str = first.get("address") if first else None
+
+        # ------------------------------------------------------------------
+        # 10. Raw email (avoid logging)
+        # ------------------------------------------------------------------
+        try:
+            raw_email_str = raw_email.decode("utf-8", errors="replace")
+        except Exception:
+            raw_email_str = repr(raw_email)
+
+        # ------------------------------------------------------------------
+        # Build result — new forensic fields + all existing RuleEngine fields.
+        # ------------------------------------------------------------------
+        result: Dict[str, Any] = {
+            # ---- Forensic fields (Phase 6A) ----
+            "metadata": metadata,
+            "addresses": addresses,
+            "headers": all_headers,
+            "received_chain": received_chain,
+            "authentication_headers": authentication_headers,
+            "message_id": message_id,
+            "urls": all_urls,
+            "raw_email": raw_email_str,
+            # ---- Backward-compat RuleEngine fields ----
+            "from": from_str,
+            "to": raw_to,
+            "reply_to": reply_to_str,
+            "return_path": raw_return_path,
+            "subject": subject,
+            "date": date,
+            "authentication_results": authentication_headers.get("authentication-results"),
+            "received": raw_received,
+            "spf": spf_raw,
+            "dkim": dkim_raw,
+            "dmarc": dmarc_raw,
+            "plain_text": plain_text,
+            "html_body": html_body,
+            "attachments": attachments,
+        }
+
+        return result
+
+    # ------------------------------------------------------------------
+    # Body extraction
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _extract_bodies(msg: Any) -> tuple:
+        """Walk the MIME tree and collect plain_text and html_body.
+
+        Handles:
+        - text/plain, text/html
+        - multipart/alternative, multipart/mixed
+        - base64, quoted-printable (handled by Python email library)
+        - malformed parts (skipped with a log warning)
+        """
+        plain_text = ""
+        html_body = ""
+
         for part in msg.walk():
             content_type = part.get_content_type()
-            content_disposition = str(part.get("Content-Disposition"))
+            disposition = (part.get("content-disposition") or "").lower()
 
-            if content_type == "text/plain" and "attachment" not in content_disposition:
-                data["plain_text"] = part.get_content().strip()
-            elif content_type == "text/html" and "attachment" not in content_disposition:
-                data["html_body"] = part.get_content().strip()
-            elif part.get_filename():
-                filename = part.get_filename()
-                data["attachments"].append({
-                    "name": filename,
-                    "extension": filename.split('.')[-1] if '.' in filename else '',
-                    "type": content_type,
-                    "size": len(part.get_content())
-                })
-        return data
+            # Skip attachments.
+            if "attachment" in disposition:
+                continue
+            # Skip multipart containers — they are not body content themselves.
+            if content_type.startswith("multipart/"):
+                continue
+
+            if content_type == "text/plain" and not plain_text:
+                try:
+                    plain_text = part.get_content()
+                    if plain_text:
+                        plain_text = plain_text.strip()
+                except Exception as exc:
+                    logger.warning("Could not decode text/plain part: %s", exc)
+
+            elif content_type == "text/html" and not html_body:
+                try:
+                    html_body = part.get_content()
+                    if html_body:
+                        html_body = html_body.strip()
+                except Exception as exc:
+                    logger.warning("Could not decode text/html part: %s", exc)
+
+        return plain_text or "", html_body or ""
+
+    # ------------------------------------------------------------------
+    # Attachment extraction
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _extract_attachments(msg: Any) -> List[Dict[str, Any]]:
+        """Return a list of attachment metadata dicts.
+
+        Does not decode or store attachment content.
+        """
+        attachments = []
+        for part in msg.walk():
+            filename = part.get_filename()
+            disposition = (part.get("content-disposition") or "").lower()
+            content_type = part.get_content_type()
+
+            # Include parts that are explicitly marked as attachments OR have a
+            # filename but are not inline text parts.
+            is_attachment = "attachment" in disposition or (
+                filename
+                and content_type not in ("text/plain", "text/html")
+            )
+            if not is_attachment:
+                continue
+
+            extension = ""
+            if filename and "." in filename:
+                extension = filename.rsplit(".", 1)[-1].lower()
+
+            # Size: attempt to measure without decoding full content.
+            size: Optional[int] = None
+            try:
+                payload = part.get_payload(decode=True)
+                if payload is not None:
+                    size = len(payload)
+            except Exception:
+                pass
+
+            attachments.append({
+                # Keep 'name' for RuleEngine backward compat.
+                "name": filename or "",
+                "filename": filename or "",
+                "content_type": content_type,
+                # Keep 'type' for RuleEngine backward compat.
+                "type": content_type,
+                "extension": extension,
+                # Keep 'size' for RuleEngine backward compat.
+                "size": size,
+                "content_disposition": disposition,
+                "content_id": part.get("content-id"),
+            })
+
+        return attachments
+
+    # ------------------------------------------------------------------
+    # Empty/error result
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _empty_result(raw_email: bytes, error: str) -> Dict[str, Any]:
+        """Return a minimal, safe result when parsing fails."""
+        try:
+            raw_email_str = raw_email.decode("utf-8", errors="replace")
+        except Exception:
+            raw_email_str = ""
+
+        return {
+            "metadata": {},
+            "addresses": {
+                "from": None,
+                "to": [],
+                "cc": [],
+                "bcc": [],
+                "reply_to": [],
+                "return_path": None,
+            },
+            "headers": {},
+            "received_chain": [],
+            "authentication_headers": {},
+            "message_id": None,
+            "urls": [],
+            "raw_email": raw_email_str,
+            "parse_error": error,
+            # Backward-compat
+            "from": None,
+            "to": [],
+            "reply_to": None,
+            "return_path": None,
+            "subject": None,
+            "date": None,
+            "authentication_results": None,
+            "received": [],
+            "spf": None,
+            "dkim": None,
+            "dmarc": None,
+            "plain_text": "",
+            "html_body": "",
+            "attachments": [],
+        }

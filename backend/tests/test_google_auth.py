@@ -32,6 +32,6 @@ def test_google_callback_new_user(mock_authorize_access_token, test_client, db_s
     # We might need to mock authorizing or setting up mocking session.
     # Actually, the callback logic expects standard OAuth flow variables.
 
-    # Let's check status code
-    assert response.status_code == 200
-    assert "access_token" in response.json()
+    # Check that it redirects to frontend with handoff code
+    assert response.status_code == 307
+    assert "/auth/callback?code=" in response.headers.get("location", "")

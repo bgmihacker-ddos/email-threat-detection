@@ -14,6 +14,10 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
+    bind = op.get_bind()
+    if "oauth_handoff_codes" in sa.inspect(bind).get_table_names():
+        return
+
     op.create_table(
         "oauth_handoff_codes",
         sa.Column("id", sa.String(length=36), nullable=False),
@@ -26,4 +30,6 @@ def upgrade() -> None:
     )
 
 def downgrade() -> None:
-    op.drop_table("oauth_handoff_codes")
+    bind = op.get_bind()
+    if "oauth_handoff_codes" in sa.inspect(bind).get_table_names():
+        op.drop_table("oauth_handoff_codes")

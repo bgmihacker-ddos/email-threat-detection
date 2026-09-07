@@ -159,7 +159,7 @@ class RuleEngine:
 
         # Forensic findings
         results["forensic_findings"] = [
-            {"type": "Header Analysis", "detail": f"From: {from_addr}, Subject: {email_data.get('subject', 'N/A')[:50]}"},
+            {"type": "Header Analysis", "detail": f"From: {from_addr}, Subject: {(email_data.get('subject') or 'N/A')[:50]}"},
             {
                 "type": "Authentication Status",
                 "detail": f"SPF: {results['authentication']['spf']}, DKIM: {results['authentication']['dkim']}, DMARC: {results['authentication'].get('dmarc', 'missing')}",
