@@ -27,7 +27,7 @@ from app.services.attachment_analyzer import AttachmentAnalyzer
 from app.services.content_analyzer import ContentAnalyzer
 from app.services.threat_reasoning import ThreatReasoningEngine
 from app.services.attack_chain import AttackChainReconstruction
-from app.ml.classifier import MLClassifier
+from app.detection.ml_classifier import get_ml_classifier
 
 router = APIRouter()
 
@@ -169,9 +169,7 @@ async def analyze_email(
 
         attachment_analysis = AttachmentAnalyzer.analyze(parsed_email.get("attachments", []))
         content_analysis = ContentAnalyzer.analyze(parsed_email)
-        ml_analysis = MLClassifier().predict(
-            f"{parsed_email.get('subject') or ''} {parsed_email.get('plain_text') or ''}"
-        )
+        ml_analysis = get_ml_classifier().predict_email(parsed_email)
 
         # 2) Optional threat intelligence. Failures remain localized in output.
         threat_intelligence = await ThreatIntelligenceService().enrich_all(extracted_iocs["iocs"])

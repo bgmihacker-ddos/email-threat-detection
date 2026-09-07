@@ -1,7 +1,10 @@
+import asyncio
+import httpx
 from fastapi import APIRouter
-from typing import List, Optional
 from app.integrations.threatfox import ThreatFoxService
 from app.integrations.urlhaus import URLhausService
+from app.services.geo_enricher import GeoEnricher
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -10,50 +13,117 @@ async def get_live_threats():
     tf = ThreatFoxService()
     uh = URLhausService()
 
-    tf_response = await tf.get_recent_ioc()
-    uh_response = await uh.get_recent_urls()
+    tf_response, uh_response = await asyncio.gather(
+        tf.get_recent_ioc(),
+        uh.get_recent_urls(),
+        return_exceptions=True,
+    )
+
+    if isinstance(tf_response, Exception):
+        tf_response = {"data": [], "status": "error", "error_message": str(tf_response)}
+    if isinstance(uh_response, Exception):
+        uh_response = {"data": [], "status": "error", "error_message": str(uh_response)}
 
     all_data = []
 
-    # Process ThreatFox
-    for item in tf_response["data"]:
-        # Only include if we have geo data
-        if item.latitude is not None and item.longitude is not None:
-            all_data.append({
-                "id": f"TF-{item.id}",
-                "indicator": item.indicator,
-                "indicator_type": item.indicator_type,
-                "country": item.country,
-                "country_code": item.country_code,
-                "latitude": item.latitude,
-                "longitude": item.longitude,
-                "severity": item.severity,
-                "confidence": item.confidence,
-                "source": item.source,
-                "timestamp": item.first_seen if item.first_seen else ""
-            })
+    # 1. Collect all events first
+    for item in tf_response.get("data", []):
+        all_data.append({
+            "id": f"TF-{item.id}",
+            "indicator": item.indicator,
+            "indicator_type": item.indicator_type,
+            "country": item.country or "Unknown",
+            "country_code": item.country_code,
+            "latitude": item.latitude,
+            "longitude": item.longitude,
+            "severity": item.severity,
+            "confidence": item.confidence,
+            "source": item.source,
+            "timestamp": item.first_seen or item.last_seen or "",
+            "geo_source": None
+        })
 
-    # Process URLhaus (no geo data usually)
-    for item in uh_response["data"]:
+    for item in uh_response.get("data", []):
         all_data.append({
             "id": f"UH-{item.id}",
             "indicator": item.indicator,
             "indicator_type": item.indicator_type,
-            "country": "Unknown",
-            "country_code": None,
+            "country": item.country or "Unknown",
+            "country_code": item.country_code,
+            "latitude": item.latitude,
+            "longitude": item.longitude,
             "severity": item.severity,
             "confidence": item.confidence,
             "source": item.source,
-            "timestamp": ""
+            "timestamp": item.first_seen or item.last_seen or "",
+            "geo_source": None
         })
+
+    # 2. Extract public IPs for enrichment
+    ip_events = []
+    unique_ips = set()
+    for event in all_data:
+        # Ignore if already geolocated by the provider
+        if event["latitude"] is not None and event["longitude"] is not None:
+            continue
+
+        candidate_ip = GeoEnricher.extract_ip(event["indicator"])
+        if candidate_ip:
+            event["_clean_ip"] = candidate_ip
+            ip_events.append(event)
+            unique_ips.add(candidate_ip)
+
+    # 3. Request missing IP geolocations with bounded concurrency
+    # Limits simultaneous external calls and bounds total enrichment time
+    new_ips = [ip for ip in unique_ips if ip not in GeoEnricher._cache][:25]
+    if new_ips:
+        semaphore = asyncio.Semaphore(10)
+
+        async def _enrich_worker(http_client: httpx.AsyncClient, ip: str):
+            async with semaphore:
+                try:
+                    await GeoEnricher.enrich_ip(ip, client=http_client)
+                except Exception:
+                    pass
+
+        try:
+            async with httpx.AsyncClient(timeout=settings.GEOLOCATION_API_TIMEOUT_SECONDS) as client:
+                await asyncio.wait_for(
+                    asyncio.gather(*(_enrich_worker(client, ip) for ip in new_ips), return_exceptions=True),
+                    timeout=5.0,
+                )
+        except asyncio.TimeoutError:
+            pass
+
+
+
+
+
+    # 4. Apply geolocation data to events
+    for event in ip_events:
+        clean_ip = event.get("_clean_ip")
+        if not clean_ip:
+            continue
+
+        del event["_clean_ip"]
+
+        # Apply cached result if it exists and succeeded
+        cached_result = GeoEnricher._cache.get(clean_ip)
+        if cached_result:
+            event["latitude"] = cached_result["latitude"]
+            event["longitude"] = cached_result["longitude"]
+            event["country"] = cached_result["country"]
+            if cached_result.get("country_code"):
+                event["country_code"] = cached_result["country_code"]
+            event["geo_source"] = cached_result["geo_source"]
 
     return {
         "data": all_data,
         "meta": {
             "count": len(all_data),
             "providers": [
-                {"source": "ThreatFox", "status": tf_response["status"], "error": tf_response["error_message"]},
-                {"source": "URLhaus", "status": uh_response["status"], "error": uh_response["error_message"]}
+                {"source": "ThreatFox", "status": tf_response.get("status", "unknown"), "error": tf_response.get("error_message")},
+                {"source": "URLhaus", "status": uh_response.get("status", "unknown"), "error": uh_response.get("error_message")}
             ]
         }
     }

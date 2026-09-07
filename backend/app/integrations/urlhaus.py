@@ -10,41 +10,72 @@ logger = logging.getLogger(__name__)
 class URLhausService:
     def __init__(self):
         self.base_url = "https://urlhaus-api.abuse.ch/v1/"
-        self.timeout = 10.0
+        self.timeout = httpx.Timeout(5.0, connect=2.0)
 
     async def get_recent_urls(self) -> ProviderResponse:
-        if not settings.URLHAUS_API_KEY:
-            return {"data": [], "status": "not_configured", "error_message": "API key missing"}
+        key = settings.URLHAUS_API_KEY
+        if not (key and key.strip()):
+            return {"data": [], "status": "not_configured", "error_message": "Provider API key is not configured."}
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                headers = {"API-KEY": settings.URLHAUS_API_KEY}
-                response = await client.post(self.base_url + "urls/recent/", data={"limit": 100}, headers=headers)
-                response.raise_for_status()
-                data = response.json()
+                headers = {"Auth-Key": key}
+                response = await client.get(self.base_url + "urls/recent/", headers=headers)
 
-                if data.get("query_status") != "ok":
-                    logger.error(f"URLhaus API Error: {data.get('query_status')}")
-                    return {"data": [], "status": "error", "error_message": data.get('query_status')}
+            if response.status_code == 429:
+                return {"data": [], "status": "rate_limited", "error_message": "Provider rate limit reached."}
+            if response.status_code in {401, 403}:
+                return {"data": [], "status": "unavailable", "error_message": "Provider authorization failed."}
+            if response.status_code == 404:
+                return {"data": [], "status": "not_found", "error_message": "No results found."}
+            response.raise_for_status()
 
-                indicators = []
-                for item in data.get("urls", []):
-                    indicators.append(ThreatIndicator(
-                        id=str(item.get("id")),
-                        indicator=item.get("url"),
-                        indicator_type="url",
-                        severity="high",
-                        confidence=80,
-                        source="URLhaus",
-                        status="active" if item.get("url_status") == "online" else "inactive",
-                        tags=item.get("tags", []),
-                        reference_url=item.get("urlhaus_reference")
-                    ))
-                logger.info(f"URLhaus: HTTP 200, received {len(data.get('urls', []))} records, normalized {len(indicators)}")
-                return {"data": indicators, "status": "ok", "error_message": None}
+            data = response.json()
+            if data.get("query_status") != "ok":
+                logger.error(f"URLhaus API Error: {data.get('query_status')}")
+                return {"data": [], "status": "error", "error_message": data.get('query_status')}
+
+            indicators = []
+            for item in data.get("urls", []):
+                if not isinstance(item, dict) or not item.get("id") or not item.get("url"):
+                    continue
+
+                tags = item.get("tags") or []
+                if not isinstance(tags, list):
+                    tags = [str(tags)]
+
+                indicators.append(ThreatIndicator(
+                    id=str(item["id"]),
+                    indicator=str(item["url"]),
+                    indicator_type="url",
+                    severity=self._map_severity(item.get("threat")),
+                    confidence=self._confidence(item),
+                    source="URLhaus",
+                    status="active" if item.get("url_status") == "online" else "inactive",
+                    tags=[str(tag) for tag in tags],
+                    reference_url=item.get("urlhaus_reference"),
+                    first_seen=item.get("date_added"),
+                    last_seen=item.get("last_online"),
+                ))
+            return {"data": indicators, "status": "ok", "error_message": None}
+        except httpx.TimeoutException:
+            return {"data": [], "status": "timeout", "error_message": "Provider request timed out."}
         except httpx.HTTPError as e:
             logger.error(f"URLhaus HTTP Error: {e}")
             return {"data": [], "status": "error", "error_message": str(e)}
         except Exception as e:
             logger.error(f"URLhaus Unexpected Error: {e}")
-            return {"data": [], "status": "error", "error_message": str(e)}
+            return {"data": [], "status": "error", "error_message": "Provider response was malformed."}
+
+    @staticmethod
+    def _map_severity(threat: Optional[str]) -> str:
+        value = (threat or "").lower()
+        return "high" if value in {"malware", "phishing"} else "medium"
+
+    @staticmethod
+    def _confidence(item: dict) -> int:
+        blacklists = item.get("blacklists") or {}
+        if not isinstance(blacklists, dict):
+            return 80
+        listed = sum(1 for value in blacklists.values() if value)
+        return min(100, 80 + listed * 5)

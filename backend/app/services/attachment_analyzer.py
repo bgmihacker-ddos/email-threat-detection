@@ -41,6 +41,10 @@ class AttachmentAnalyzer:
             if not extension and "." in filename:
                 extension = filename.rsplit(".", 1)[-1].lower()
 
+            sha256 = att.get("sha256")
+            md5 = att.get("md5")
+            magic_bytes = att.get("magic_bytes", "")
+
             indicators = []
             risk = "safe"
 
@@ -52,8 +56,16 @@ class AttachmentAnalyzer:
                     indicators.append("double_extension")
                     risk = "suspicious"
 
+            # Magic bytes checks
+            is_executable = (magic_bytes.startswith("4d5a")) # MZ
+            is_zip_based = (magic_bytes.startswith("504b"))  # PK (zip, docx, jar, etc)
+
+            if is_executable and extension not in _DANGEROUS_EXTENSIONS:
+                indicators.append("executable_magic_mismatch")
+                risk = "malicious"
+
             # Check dangerous extension
-            if extension in _DANGEROUS_EXTENSIONS:
+            if extension in _DANGEROUS_EXTENSIONS or is_executable:
                 indicators.append("executable_extension")
                 risk = "malicious"
                 high_risk_count += 1
@@ -68,6 +80,8 @@ class AttachmentAnalyzer:
                 "filename": filename,
                 "content_type": content_type,
                 "size": size,
+                "sha256": sha256,
+                "md5": md5,
                 "extension": extension,
                 "risk_level": risk,
                 "indicators": indicators,
@@ -75,6 +89,9 @@ class AttachmentAnalyzer:
             analyzed_list.append(analyzed_item)
 
             if risk in ("malicious", "suspicious"):
+                evidence = [f"Filename: {filename}", f"Type: {content_type}"]
+                if sha256: evidence.append(f"SHA256: {sha256}")
+                if magic_bytes: evidence.append(f"Magic: {magic_bytes}")
                 findings.append({
                     "finding_id": f"attachment.{filename}.risk",
                     "category": "attachment",
@@ -82,8 +99,8 @@ class AttachmentAnalyzer:
                     "description": f"Attachment {filename} has extension .{extension} and indicators: {', '.join(indicators)}.",
                     "severity": "high" if risk == "malicious" else "medium",
                     "confidence": 95,
-                    "evidence": [f"Filename: {filename}", f"Type: {content_type}"],
-                    "related_iocs": [filename],
+                    "evidence": evidence,
+                    "related_iocs": [filename, sha256] if sha256 else [filename],
                 })
 
         return {

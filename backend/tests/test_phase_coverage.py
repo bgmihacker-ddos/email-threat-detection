@@ -206,7 +206,7 @@ async def test_6f_virustotal_mocked():
     with patch("app.services.threat_intelligence.settings.VIRUSTOTAL_API_KEY", None):
         vt_nokey = VirusTotalProvider()
         res = await vt_nokey.lookup("domain", "evil.com")
-        assert res["status"] == "unavailable"
+        assert res["status"] == "not_configured"
 
     # Mocked 200 OK
     with patch("app.services.threat_intelligence.settings.VIRUSTOTAL_API_KEY", "mock_key"):
@@ -260,6 +260,7 @@ async def test_6f_urlhaus_mocked():
             assert res["status"] == "ok"
             assert res["reputation"] == "malicious"
             assert "phishing" in res["categories"]
+            assert mock_post.call_args.kwargs["headers"] == {"Auth-Key": "test_key"}
 
 
 @pytest.mark.asyncio
@@ -279,6 +280,7 @@ async def test_6f_threatfox_mocked():
             assert res["status"] == "ok"
             assert res["confidence"] == 90
             assert "botnet_cc" in res["categories"]
+            assert mock_post.call_args.kwargs["headers"] == {"Auth-Key": "test_key"}
 
 
 @pytest.mark.asyncio
@@ -347,7 +349,7 @@ def test_6i_ml_classifier_fallback():
     assert pred["status"] == "unavailable"
     assert pred["label"] == "unknown"
     assert pred["probability"] == 0.0
-    assert pred["model_version"] == "v1.0-cpu"
+    assert pred["model_version"] == "tfidf-logreg-controlled-v1"
 
 
 # ============================================================================

@@ -54,6 +54,8 @@ class Settings:
     VIRUSTOTAL_API_KEY = os.getenv("VIRUSTOTAL_API_KEY")
     URLSCAN_API_KEY = os.getenv("URLSCAN_API_KEY")
     GOOGLE_SAFE_BROWSING_API_KEY = os.getenv("GOOGLE_SAFE_BROWSING_API_KEY")
+    GEOLOCATION_API_URL = os.getenv("GEOLOCATION_API_URL", "https://ipapi.co")
+    GEOLOCATION_API_TIMEOUT_SECONDS = float(os.getenv("GEOLOCATION_API_TIMEOUT_SECONDS", "3"))
     FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 

@@ -451,10 +451,20 @@ class EmailParser:
 
             # Size: attempt to measure without decoding full content.
             size: Optional[int] = None
+            sha256: Optional[str] = None
+            md5: Optional[str] = None
+            magic_bytes: Optional[str] = None
+
             try:
                 payload = part.get_payload(decode=True)
                 if payload is not None:
                     size = len(payload)
+
+                    import hashlib
+                    sha256 = hashlib.sha256(payload).hexdigest()
+                    md5 = hashlib.md5(payload).hexdigest()
+                    magic_bytes_raw = payload[:4]
+                    magic_bytes = magic_bytes_raw.hex()
             except Exception:
                 pass
 
@@ -468,6 +478,9 @@ class EmailParser:
                 "extension": extension,
                 # Keep 'size' for RuleEngine backward compat.
                 "size": size,
+                "sha256": sha256,
+                "md5": md5,
+                "magic_bytes": magic_bytes,
                 "content_disposition": disposition,
                 "content_id": part.get("content-id"),
             })
