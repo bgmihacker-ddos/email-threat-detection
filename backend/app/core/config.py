@@ -44,7 +44,7 @@ class Settings:
     CORS_ORIGINS = _parse_cors_origins(
         os.getenv(
             "CORS_ORIGINS",
-            "http://localhost:5173,https://sih-2026-project-blush.vercel.app",
+            "http://localhost:5173,https://email-threat-detection1.vercel.app",
         )
     )
 
