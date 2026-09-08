@@ -25,6 +25,17 @@ _IP_CANDIDATE_RE = re.compile(
     r"(?<![0-9A-Fa-f:.])(?:\d{1,3}(?:\.\d{1,3}){3}|(?:[0-9A-Fa-f]{0,4}:){2,}[0-9A-Fa-f:.]*)(?![0-9A-Fa-f:.])"
 )
 
+_KNOWN_PROVIDERS: Dict[str, List[str]] = {
+    "google": ["google.com", "gmail.com", "googlemail.com", "gmr-mx.google.com"],
+    "microsoft": ["outlook.com", "protection.outlook.com", "microsoft.com", "office365.com", "hotmail.com"],
+    "amazon_ses": ["amazonses.com", "amazonaws.com"],
+    "sendgrid": ["sendgrid.net", "sendgrid.com"],
+    "mailgun": ["mailgun.org", "mailgun.net"],
+    "mailchimp": ["mcsv.net", "mailchimp.com", "mandrillapp.com"],
+    "postmark": ["postmarkapp.com", "wildbit.com"],
+    "fastmail": ["messagingengine.com", "fastmail.com"],
+}
+
 
 def _as_list(value: Any) -> List[str]:
     """Return a scalar or list-like header value as a list of nonempty strings."""
@@ -105,6 +116,7 @@ def _classify_ip(ip_value: Any) -> Dict[str, Any]:
         "version": None,
         "classification": "invalid/unknown",
         "source": "received",
+        "evidence_class": "informational",
     }
     try:
         parsed = ipaddress.ip_address(text)
@@ -140,6 +152,8 @@ def _finding(
     confidence: int = 100,
     evidence: Optional[List[str]] = None,
     related_iocs: Optional[List[str]] = None,
+    evidence_class: str = "contextual_anomaly",
+    risk_relevance: str = "contextual",
 ) -> Dict[str, Any]:
     """Build a JSON-serializable structured forensic finding."""
     return {
@@ -151,6 +165,8 @@ def _finding(
         "confidence": confidence,
         "evidence": evidence or [],
         "related_iocs": related_iocs or [],
+        "evidence_class": evidence_class,
+        "risk_relevance": risk_relevance,
     }
 
 
@@ -192,6 +208,9 @@ class HeaderForensicsAnalyzer:
         header_completeness = HeaderForensicsAnalyzer._analyze_header_completeness(source, metadata, findings)
         duplicates = HeaderForensicsAnalyzer._analyze_duplicates(headers, findings)
 
+        # Identify legitimate infrastructure providers
+        identified_providers = HeaderForensicsAnalyzer._identify_providers(mail_flow, domains)
+
         ip_counts = {
             "public": sum(ip["classification"] == "public" for ip in mail_flow["ip_addresses"]),
             "private": sum(ip["classification"] == "private" for ip in mail_flow["ip_addresses"]),
@@ -222,6 +241,7 @@ class HeaderForensicsAnalyzer:
                 finding["severity"] in {"low", "medium", "high", "critical"}
                 for finding in findings
             ),
+            "identified_providers": identified_providers,
         }
 
         return {
@@ -232,6 +252,30 @@ class HeaderForensicsAnalyzer:
             "forensic_findings": findings,
             "forensic_summary": summary,
         }
+
+    @staticmethod
+    def _identify_providers(mail_flow: Dict[str, Any], domains: Dict[str, Any]) -> List[str]:
+        """Recognize known legitimate infrastructure patterns as informational context."""
+        found: set[str] = set()
+        candidates: List[str] = list(domains.get("received_domains") or [])
+        if domains.get("from_domain"):
+            candidates.append(domains["from_domain"])
+        if domains.get("return_path_domain"):
+            candidates.append(domains["return_path_domain"])
+
+        for hop in mail_flow.get("hops", []):
+            for srv in (hop.get("from_server"), hop.get("by_server")):
+                if srv:
+                    candidates.append(str(srv).lower())
+
+        for provider, provider_domains in _KNOWN_PROVIDERS.items():
+            for p_dom in provider_domains:
+                for candidate in candidates:
+                    if candidate and (candidate == p_dom or candidate.endswith("." + p_dom)):
+                        found.add(provider)
+                        break
+
+        return sorted(found)
 
     @staticmethod
     def _address_domain(addresses: Dict[str, Any], field: str) -> Optional[str]:
@@ -258,6 +302,32 @@ class HeaderForensicsAnalyzer:
         from_domain = HeaderForensicsAnalyzer._address_domain(addresses, "from")
         reply_to_domain = HeaderForensicsAnalyzer._address_domain(addresses, "reply_to")
         return_path_domain = HeaderForensicsAnalyzer._address_domain(addresses, "return_path")
+        sender_domain = HeaderForensicsAnalyzer._address_domain(addresses, "sender") or _normalized_domain(headers.get("sender"))
+
+        # Display-name spoofing check (e.g. "PayPal Support <security@attacker.com>")
+        from_entry = addresses.get("from")
+        if isinstance(from_entry, list) and from_entry:
+            from_entry = from_entry[0]
+        if isinstance(from_entry, dict):
+            disp_name = str(from_entry.get("display_name") or "").strip()
+            actual_addr = str(from_entry.get("address") or "").strip()
+            if disp_name and "@" in disp_name:
+                embedded_match = re.search(r"[\w\.-]+@([a-zA-Z0-9\.-]+\.[a-zA-Z]{2,})", disp_name)
+                if embedded_match:
+                    embedded_domain = _normalized_domain(embedded_match.group(1))
+                    if embedded_domain and from_domain and embedded_domain != from_domain:
+                        findings.append(_finding(
+                            "identity.display_name.spoofing",
+                            "identity",
+                            "Display name contains conflicting email address",
+                            f"The From display name '{disp_name}' contains an address under '{embedded_domain}', while actual sender is '{from_domain}'. This is a strong indicator of display-name deception.",
+                            "high",
+                            95,
+                            [f"Display Name: {disp_name}", f"Actual Address: {actual_addr}"],
+                            [from_domain, embedded_domain],
+                            evidence_class="strong_risk_signal",
+                            risk_relevance="risk_contributing",
+                        ))
 
         message_id_raw = source.get("message_id") or metadata.get("message_id")
         message_id_domain = None
@@ -274,6 +344,8 @@ class HeaderForensicsAnalyzer:
                     "low",
                     95,
                     [str(message_id_raw)],
+                    evidence_class="contextual_anomaly",
+                    risk_relevance="contextual",
                 ))
         else:
             findings.append(_finding(
@@ -283,6 +355,8 @@ class HeaderForensicsAnalyzer:
                 "The message has no Message-ID header, which reduces traceability but is not by itself proof of malicious activity.",
                 "low",
                 100,
+                evidence_class="contextual_anomaly",
+                risk_relevance="contextual",
             ))
 
         parser_auth = source.get("authentication_headers")
@@ -306,6 +380,9 @@ class HeaderForensicsAnalyzer:
             "from_to_return_path": _domain_relationship(from_domain, return_path_domain),
             "from_to_message_id": _domain_relationship(from_domain, message_id_domain),
         }
+        if sender_domain:
+            relationships["from_to_sender"] = _domain_relationship(from_domain, sender_domain)
+
         if authentication_domains:
             relationships["from_to_authentication_results"] = _domain_relationship(
                 from_domain,
@@ -319,11 +396,13 @@ class HeaderForensicsAnalyzer:
                 "domain.from_reply_to.mismatch",
                 "domain",
                 "Reply-To domain differs from From domain",
-                "The Reply-To address points to a different domain than the visible sender. This can be legitimate, so it is reported as evidence rather than a verdict.",
+                "The Reply-To address points to a different domain than the visible sender. This can be legitimate for mailing lists and CRM tools, so it is recorded as contextual evidence.",
                 "medium",
                 95,
                 [f"From domain: {from_domain}", f"Reply-To domain: {reply_to_domain}"],
                 [value for value in (from_domain, reply_to_domain) if value],
+                evidence_class="contextual_anomaly",
+                risk_relevance="contextual",
             ))
 
         if relationships["from_to_return_path"] == "different_domain":
@@ -331,11 +410,13 @@ class HeaderForensicsAnalyzer:
                 "domain.from_return_path.divergence",
                 "domain",
                 "Return-Path domain differs from From domain",
-                "The envelope return path differs from the visible sender. This is common for mailing systems and is recorded as contextual evidence.",
+                "The envelope return path differs from the visible sender. This is standard for third-party ESPs (e.g. SendGrid, Mailgun) and is recorded as contextual evidence.",
                 "low",
                 90,
                 [f"From domain: {from_domain}", f"Return-Path domain: {return_path_domain}"],
                 [value for value in (from_domain, return_path_domain) if value],
+                evidence_class="contextual_anomaly",
+                risk_relevance="contextual",
             ))
 
         if relationships["from_to_message_id"] == "different_domain":
@@ -343,17 +424,20 @@ class HeaderForensicsAnalyzer:
                 "domain.from_message_id.difference",
                 "domain",
                 "Message-ID domain differs from From domain",
-                "The Message-ID was generated under a different domain than the visible sender. This can occur with third-party sending infrastructure.",
+                "The Message-ID was generated under a different domain than the visible sender. This regularly occurs with cloud relays and transactional mailers.",
                 "low",
                 85,
                 [f"From domain: {from_domain}", f"Message-ID domain: {message_id_domain}"],
                 [value for value in (from_domain, message_id_domain) if value],
+                evidence_class="contextual_anomaly",
+                risk_relevance="contextual",
             ))
 
         return {
             "from_domain": from_domain,
             "reply_to_domain": reply_to_domain,
             "return_path_domain": return_path_domain,
+            "sender_domain": sender_domain,
             "message_id_domain": message_id_domain,
             "received_domains": received_hosts,
             "authentication_results_domains": authentication_domains,
@@ -438,11 +522,13 @@ class HeaderForensicsAnalyzer:
                         f"ip.received.{classified['classification']}.{classified['ip']}",
                         "ip",
                         f"{classified['classification'].replace('_', ' ').title()} IP in Received header",
-                        "A non-public IP address appears in a Received header. This may reflect internal mail infrastructure and is not a reputation judgment.",
+                        "A non-public IP address appears in a Received header. This reflects internal network hops or VPN routing and is not a reputation judgment.",
                         "info",
                         100,
                         [f"Hop {index}: {classified['ip']}"],
                         [classified["ip"]],
+                        evidence_class="informational",
+                        risk_relevance="informational",
                     ))
 
         if not hops:
@@ -453,6 +539,8 @@ class HeaderForensicsAnalyzer:
                 "No Received header chain is available, so delivery routing cannot be reconstructed.",
                 "low",
                 100,
+                evidence_class="contextual_anomaly",
+                risk_relevance="contextual",
             ))
 
         timeline_entries: List[Dict[str, Any]] = []
@@ -482,6 +570,8 @@ class HeaderForensicsAnalyzer:
                     "low",
                     80,
                     [f"Hop {index}: {_timestamp_iso(timestamp)}" for index, timestamp in timestamps],
+                    evidence_class="contextual_anomaly",
+                    risk_relevance="contextual",
                 ))
 
         if missing_timestamps and hops:
@@ -493,6 +583,8 @@ class HeaderForensicsAnalyzer:
                 "info",
                 100,
                 [f"Hop indexes: {', '.join(map(str, missing_timestamps))}"],
+                evidence_class="informational",
+                risk_relevance="informational",
             ))
 
         first = chronological[0][1] if chronological else None
@@ -583,6 +675,8 @@ class HeaderForensicsAnalyzer:
                     "info",
                     100,
                     [f"Reported status: {entry['status'] or 'not specified'}", *entry["sources"]],
+                    evidence_class="informational",
+                    risk_relevance="informational",
                 ))
 
         return normalized
@@ -622,6 +716,8 @@ class HeaderForensicsAnalyzer:
                 "The message has no Date header, preventing confirmation of the sender-reported send time.",
                 "low",
                 100,
+                evidence_class="contextual_anomaly",
+                risk_relevance="contextual",
             ))
         else:
             parsed_date = _parse_timestamp(str(date_value))
@@ -634,6 +730,8 @@ class HeaderForensicsAnalyzer:
                     "low",
                     100,
                     [str(date_value)],
+                    evidence_class="contextual_anomaly",
+                    risk_relevance="contextual",
                 ))
             else:
                 now = datetime.now(timezone.utc)
@@ -646,6 +744,8 @@ class HeaderForensicsAnalyzer:
                         "low",
                         95,
                         [_timestamp_iso(parsed_date) or ""],
+                        evidence_class="contextual_anomaly",
+                        risk_relevance="contextual",
                     ))
                 if _timezone_label(str(date_value)) is None:
                     findings.append(_finding(
@@ -656,6 +756,8 @@ class HeaderForensicsAnalyzer:
                         "info",
                         90,
                         [str(date_value)],
+                        evidence_class="informational",
+                        risk_relevance="informational",
                     ))
 
         return {
@@ -683,5 +785,7 @@ class HeaderForensicsAnalyzer:
                 severity,
                 100,
                 [f"Occurrences: {len(values)}"],
+                evidence_class="contextual_anomaly",
+                risk_relevance="contextual",
             ))
         return duplicates

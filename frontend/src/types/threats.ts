@@ -12,6 +12,8 @@ export interface Threat {
   firstSeen: string;
   lastSeen: string;
   status: Status;
+  description?: string;
+  sender?: string;
 }
 
 export interface ThreatIndicator {
@@ -19,6 +21,8 @@ export interface ThreatIndicator {
   ioc: string;
   type: 'IP' | 'Domain' | 'URL' | 'Email' | 'Hash';
   risk: Severity;
+  confidence: number;
+  source: string;
   firstSeen: string;
   lastSeen: string;
   relatedThreats: string[];

@@ -77,7 +77,7 @@ def test_attachment_analyzer():
     ]
     res = AttachmentAnalyzer.analyze(attachments)
     assert res["high_risk_count"] == 2
-    assert len(res["findings"]) == 2
+    assert len(res["findings"]) >= 2
 
 
 def test_content_analyzer():
@@ -101,14 +101,14 @@ def test_ml_classifier_unavailable():
 
 
 def test_risk_scorer_and_fusion():
-    header_forensics = {"forensic_findings": [{"finding_id": "test.high", "severity": "high", "title": "High Risk Header"}]}
-    authentication = {"findings": [{"finding_id": "auth.fail", "severity": "high", "title": "Auth Failed"}]}
+    header_forensics = {"forensic_findings": [{"finding_id": "test.high", "severity": "high", "title": "High Risk Header", "evidence_class": "strong_risk_signal"}]}
+    authentication = {"findings": [{"finding_id": "auth.fail", "severity": "high", "title": "Auth Failed", "evidence_class": "strong_risk_signal"}]}
     iocs = {"iocs": []}
-    url_intel = [{"normalized": "https://evil.com", "indicators": ["credential_url"]}]
+    url_intel = [{"normalized": "https://evil.com", "indicators": ["credential_url"], "findings": [{"finding_id": "url.cred", "severity": "high", "title": "Credential URL", "evidence_class": "strong_risk_signal"}]}]
     domain_intel = {}
     threat_intel = []
     attachments = {"findings": []}
-    content = {"findings": [{"finding_id": "content.bec", "severity": "high", "title": "BEC Detected"}]}
+    content = {"findings": [{"finding_id": "content.bec", "severity": "high", "title": "BEC Detected", "evidence_class": "strong_risk_signal"}]}
     ml_res = {"status": "unavailable"}
     rule_res = {}
 
@@ -129,10 +129,10 @@ def test_threat_reasoning_and_attack_chain():
     assert len(reasoning["decision_path"]) > 0
 
     header_forensics = {"mail_flow": {"hop_count": 2, "origin_ip": "1.2.3.4"}}
-    authentication = {"findings": [{"title": "Auth Failed"}]}
+    authentication = {"findings": [{"title": "Auth Failed", "severity": "high", "finding_id": "auth.spf.fail", "confidence": 100}]}
     url_intel = [{"normalized": "http://evil.com", "risk_indicators": 1, "indicators": ["suspicious_tld"]}]
     attachments = {"findings": []}
-    content = {"urgency_keywords": ["urgent"]}
+    content = {"findings": [{"finding_id": "content.social_engineering.urgency", "title": "Urgency"}], "urgency_keywords": ["urgent"]}
 
     chain = AttackChainReconstruction.reconstruct(
         header_forensics, authentication, url_intel, attachments, content

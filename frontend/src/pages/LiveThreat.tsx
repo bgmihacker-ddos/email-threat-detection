@@ -2,81 +2,19 @@ import { ThreatMap } from '../components/map/ThreatMap';
 import { useState, useEffect } from 'react';
 import { getLiveThreats } from '../services/threatApi';
 import { ThreatMapEvent } from '../types/threats';
+import { Activity, AlertTriangle, Globe2, Radio, RefreshCw, ShieldAlert } from 'lucide-react';
+import { SeverityBadge } from '../components/common/SeverityBadge';
 
 export default function LiveThreat() {
-  const [threatEvents, setThreatEvents] = useState<ThreatMapEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    getLiveThreats()
-      .then(setThreatEvents)
-      .catch((err) => {
-        console.error('Failed to fetch live threats:', err);
-        setError('Failed to load live threat feed. Please try again later.');
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-           <h1 className="text-2xl font-bold text-white">LIVE THREAT INTELLIGENCE</h1>
-           <p className="text-sm text-gray-400">ThreatFox and URLhaus observed threat infrastructure telemetry</p>
-        </div>
-        <div className="bg-[#101722] border border-[#151D28] px-3 py-1 rounded text-[10px] text-cyan-400 font-bold uppercase tracking-widest">
-            LIVE THREAT FEED
-        </div>
-      </div>
-
-      <div className="border border-yellow-800 bg-yellow-950/30 px-4 py-3 text-xs text-yellow-200 rounded">
-        <strong>Infrastructure attribution notice:</strong> Pins identify observed infrastructure or reporting gateways, not a verified physical location of an attacker.
-      </div>
-
-      {error && (
-        <div className="border border-red-800 bg-red-950/30 px-4 py-3 text-xs text-red-200 rounded flex justify-between items-center">
-          <span>{error}</span>
-          <button
-            onClick={() => {
-              setError(null);
-              setLoading(true);
-              getLiveThreats()
-                .then(setThreatEvents)
-                .catch((err) => {
-                  console.error('Failed to fetch live threats:', err);
-                  setError('Failed to load live threat feed. Please try again later.');
-                })
-                .finally(() => setLoading(false));
-            }}
-            className="px-2 py-1 bg-red-900/50 hover:bg-red-900 text-red-200 hover:text-white rounded text-[11px] transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-         <div className="lg:col-span-3 bg-[#080D14] p-4 rounded border border-[#151D28] h-[670px] flex flex-col">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">GEOLOCATED OBSERVED INFRASTRUCTURE</h3>
-            <div className="flex-1 w-full relative">
-               {loading ? <div className="h-full w-full flex items-center justify-center text-xs font-mono text-gray-400 animate-pulse bg-[#060A10] rounded border border-[#151D28]">LOADING LIVE THREAT FEED...</div> : <ThreatMap threatEvents={threatEvents} />}
-            </div>
-         </div>
-         <div className="bg-[#080D14] p-4 rounded border border-[#151D28] h-[670px] flex flex-col">
-             <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">OBSERVED EVENTS ({threatEvents.length})</h3>
-             <div className="space-y-2 overflow-y-auto flex-1 pr-1">
-                 {!loading && !threatEvents.length && <p className="text-xs text-gray-500 font-mono">NO LIVE THREAT EVENTS AVAILABLE.</p>}
-                 {threatEvents.map((event) => (
-                    <div key={event.id} className="text-[10px] p-2 bg-[#0B111A] rounded space-y-1 border border-[#151D28]/50 hover:border-cyan-500/30 transition-colors">
-                        <div className="flex justify-between gap-2"><span className={`${event.severity === 'High' || event.severity === 'Critical' ? 'text-red-500' : event.severity === 'Medium' ? 'text-orange-400' : 'text-blue-400'} font-bold`}>{event.severity.toUpperCase()}</span><span className="text-gray-500">{event.confidence}%</span></div>
-                        <div className="text-gray-300 truncate">{event.threatType} · {event.country}</div>
-                        <div className="text-gray-500 truncate">{event.source}{event.geoSource ? ` · ${event.geoSource}` : ''}</div>
-                    </div>
-                 ))}
-             </div>
-         </div>
-      </div>
-    </div>
-  );
+  const [threatEvents, setThreatEvents] = useState<ThreatMapEvent[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null); const [selectedId, setSelectedId] = useState<string | null>(null);
+  const loadThreats = () => { setLoading(true); setError(null); getLiveThreats().then(setThreatEvents).catch(() => setError('Failed to load live threat feed.')).finally(() => setLoading(false)); };
+  useEffect(() => { loadThreats(); }, []);
+  const selected = threatEvents.find(event => event.id === selectedId); const highCount = threatEvents.filter(event => event.severity === 'High' || event.severity === 'Critical').length; const sourceCount = new Set(threatEvents.map(event => event.source).filter(Boolean)).size;
+  return <div className="mx-auto max-w-[1600px] space-y-5"><header className="flex flex-col gap-4 border-b border-[#151D28] pb-5 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-500">Threat operations center</p><h1 className="mt-1 text-2xl font-semibold text-white">Live threat intelligence</h1><p className="mt-1 text-sm text-gray-500">Observed infrastructure telemetry from connected intelligence providers.</p></div><div className="flex items-center gap-2 rounded border border-red-500/20 bg-red-950/20 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-red-300"><span className="h-2 w-2 rounded-full bg-red-400 animate-pulse" /> Live feed</div></header>
+    <div className="flex items-start gap-3 rounded border border-yellow-800/60 bg-yellow-950/20 px-4 py-3 text-xs leading-relaxed text-yellow-200"><AlertTriangle size={15} className="mt-0.5 shrink-0 text-yellow-400" /><p><strong>Infrastructure attribution notice:</strong> Pins identify observed infrastructure or reporting gateways, not a verified physical location of an attacker.</p></div>
+    {error && <div className="flex items-center justify-between rounded border border-red-800/60 bg-red-950/30 px-4 py-3 text-xs text-red-200"><span>{error}</span><button onClick={loadThreats} className="inline-flex items-center gap-1.5 rounded border border-red-700/50 px-2 py-1 hover:bg-red-900/40"><RefreshCw size={12} /> Retry</button></div>}
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><HudMetric label="Observed events" value={loading ? '—' : threatEvents.length} icon={Radio} /><HudMetric label="Elevated severity" value={loading ? '—' : highCount} icon={ShieldAlert} tone="text-red-400" /><HudMetric label="Intelligence sources" value={loading ? '—' : sourceCount} icon={Globe2} tone="text-violet-300" /><HudMetric label="Feed status" value={loading ? 'Loading' : error ? 'Degraded' : 'Operational'} icon={Activity} tone={error ? 'text-yellow-400' : 'text-emerald-400'} /></div>
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]"><section className="flex min-h-[620px] flex-col rounded border border-[#151D28] bg-[#080D14] p-4"><div className="mb-3 flex items-center justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-600">Geospatial intelligence</p><h2 className="mt-1 text-sm font-semibold text-gray-200">Observed infrastructure map</h2></div><div className="hidden items-center gap-3 text-[10px] text-gray-500 sm:flex"><span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-red-400" /> High</span><span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-yellow-400" /> Medium</span><span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-cyan-400" /> Low</span></div></div><div className="min-h-0 flex-1 overflow-hidden rounded border border-[#151D28] bg-[#060A10]">{loading ? <div className="flex h-full min-h-[560px] items-center justify-center font-mono text-xs text-cyan-400 animate-pulse">LOADING OBSERVED INFRASTRUCTURE...</div> : <ThreatMap threatEvents={threatEvents} />}</div></section><aside className="flex min-h-[620px] flex-col rounded border border-[#151D28] bg-[#080D14] p-4"><div className="flex items-start justify-between border-b border-[#151D28] pb-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-600">Event feed</p><h2 className="mt-1 text-sm font-semibold text-gray-200">Observed events <span className="font-mono text-gray-500">({threatEvents.length})</span></h2></div><button onClick={loadThreats} title="Refresh feed" className="rounded p-1.5 text-gray-500 transition-colors hover:bg-[#151D28] hover:text-cyan-300"><RefreshCw size={14} /></button></div><div className="mt-3 flex-1 space-y-2 overflow-y-auto pr-1">{!loading && !threatEvents.length && <p className="rounded border border-dashed border-[#263449] p-4 text-center font-mono text-xs text-gray-600">No live threat events available.</p>}{threatEvents.map(event => <button key={event.id} onClick={() => setSelectedId(event.id)} className={`w-full rounded border p-3 text-left transition-colors ${selectedId === event.id ? 'border-cyan-500/40 bg-cyan-950/20' : 'border-[#151D28] bg-[#060A10] hover:border-[#263449]'}`}><div className="flex items-center justify-between gap-2"><SeverityBadge severity={event.severity} /><span className="font-mono text-[10px] text-gray-600">{event.confidence}%</span></div><p className="mt-2 truncate text-xs font-medium text-gray-300">{event.threatType} <span className="text-gray-600">·</span> {event.country}</p><p className="mt-1 truncate text-[10px] text-gray-600">{event.source}{event.geoSource ? ` · ${event.geoSource}` : ''}</p></button>)}</div>{selected && <div className="mt-3 rounded border border-cyan-500/20 bg-cyan-950/10 p-3"><p className="text-[9px] font-bold uppercase tracking-wider text-cyan-400">Selected event</p><p className="mt-1 break-all font-mono text-xs text-gray-300">{selected.indicator || selected.id}</p><p className="mt-2 text-[10px] text-gray-500">{selected.city || selected.country} · {formatDate(selected.timestamp)}</p><p className="mt-1 text-[10px] text-gray-600">Coordinates reflect reported infrastructure only.</p></div>}</aside></div></div>;
 }
+function HudMetric({ label, value, icon: Icon, tone = 'text-cyan-400' }: { label: string; value: string | number; icon: typeof Activity; tone?: string }) { return <div className="rounded border border-[#151D28] bg-[#080D14] p-3"><div className="flex items-center justify-between"><p className="text-[9px] font-bold uppercase tracking-wider text-gray-600">{label}</p><Icon size={14} className={tone} /></div><p className={`mt-2 font-mono text-xl font-semibold ${tone}`}>{value}</p></div>; }
+function formatDate(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString(); }

@@ -4,111 +4,23 @@ import { searchPersistedIocs } from '../services/analysisApi';
 import { ThreatIndicator, IOCType, Severity } from '../types';
 import { ThreatIndicator as FeedThreatIndicator } from '../types/threats';
 import { useToast } from '../context/ToastContext';
-import { Search, Filter, Copy, Eye, Database, Radio } from 'lucide-react';
+import { Search, Filter, Copy, Eye, Database, Radio, ChevronDown, ChevronRight } from 'lucide-react';
 import { categorizeIoc } from '../utils/iocCategorization';
+import { SeverityBadge } from '../components/common/SeverityBadge';
 
 export default function Indicators() {
-  const [indicators, setIndicators] = useState<ThreatIndicator[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState<string>('ALL');
-  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
-  const [sourceMode, setSourceMode] = useState<'live' | 'local'>('live');
-  const { addToast } = useToast();
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      setLoading(true);
-      try {
-        if (sourceMode === 'live') {
-          const data = await getLiveIndicators();
-          if (!cancelled) setIndicators(data.map(normaliseFeedIndicator));
-        } else {
-          const response = await searchPersistedIocs(searchTerm || ' ', selectedType === 'ALL' ? undefined : selectedType.toLowerCase());
-          if (!cancelled) setIndicators((response.data || []).map((item: any, index: number) => ({
-            id: `${item.analysis_id}-${item.indicator}-${index}`,
-            ioc: item.indicator,
-            type: normaliseType(item.type),
-            risk: normaliseSeverity(item.severity),
-            confidence: item.confidence || 0,
-            source: 'Persisted Local Analysis',
-            firstSeen: item.created_at,
-            lastSeen: item.created_at,
-            relatedThreats: [item.analysis_id],
-            status: 'Active',
-          })));
-        }
-      } catch {
-        if (!cancelled) setIndicators([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    const timer = window.setTimeout(load, sourceMode === 'local' ? 300 : 0);
-    return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [sourceMode, searchTerm, selectedType]);
-
-  const handleCopyIOC = async (ioc: string) => {
-    try {
-      await navigator.clipboard.writeText(ioc);
-      addToast('IOC copied to clipboard', 'info');
-    } catch { addToast('Clipboard access was unavailable', 'warning'); }
-  };
-
-  const filteredIndicators = indicators.filter((item) => {
-    const matchesSearch = !searchTerm || item.ioc.toLowerCase().includes(searchTerm.toLowerCase()) || item.source.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = selectedType === 'ALL' || item.type === selectedType;
-    const itemCategory = categorizeIoc({ value: item.ioc, source: item.source, type: item.type });
-    const matchesCategory = selectedCategory === 'ALL' || itemCategory === selectedCategory;
-    return matchesSearch && matchesType && matchesCategory;
-  });
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-white uppercase tracking-wider flex items-center gap-2"><Eye className="text-cyan-400" />Indicators of Compromise</h1>
-        <p className="text-xs text-gray-400">Live external threat intelligence and IOCs extracted from persisted local analyses</p>
-      </div>
-
-      <div className="flex gap-2 border-b border-[#151D28]">
-        <button onClick={() => setSourceMode('live')} className={`px-3 py-2 text-xs font-bold ${sourceMode === 'live' ? 'border-b-2 border-cyan-400 text-cyan-400' : 'text-gray-400'}`}><Radio size={13} className="inline mr-1" />LIVE FEEDS</button>
-        <button onClick={() => setSourceMode('local')} className={`px-3 py-2 text-xs font-bold ${sourceMode === 'local' ? 'border-b-2 border-cyan-400 text-cyan-400' : 'text-gray-400'}`}><Database size={13} className="inline mr-1" />LOCAL ANALYSIS IOCs</button>
-      </div>
-
-      <div className="bg-[#080D14] p-4 rounded border border-[#151D28] flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[240px]"><Search className="absolute left-3 top-2.5 text-gray-500" size={16} /><input placeholder="Search IOC value or source..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-[#05080D] border border-[#151D28] pl-9 pr-4 py-2 text-xs text-white rounded focus:outline-none focus:border-cyan-500" /></div>
-        <div className="flex items-center gap-2"><Filter size={14} className="text-gray-500" /><select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="bg-[#05080D] border border-[#151D28] text-xs text-gray-300 py-2 px-3 rounded"><option value="ALL">All Types</option><option value="IP">IP Address</option><option value="Domain">Domain</option><option value="URL">URL</option><option value="Hash">Hash</option></select></div>
-        <div className="flex items-center gap-2"><Filter size={14} className="text-gray-500" /><select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="bg-[#05080D] border border-[#151D28] text-xs text-gray-300 py-2 px-3 rounded"><option value="ALL">All Categories</option><option value="Actual IOC">Actual IOC</option><option value="Infrastructure">Infrastructure</option><option value="Forensic Artifact">Forensic Artifact</option></select></div>
-      </div>
-
-      <div className="bg-[#080D14] rounded border border-[#151D28] overflow-hidden">
-        {loading ? <div className="p-8 text-center text-gray-400 font-mono text-xs animate-pulse">LOADING IOC DATA...</div> : !filteredIndicators.length ? <div className="p-8 text-center text-gray-500 font-mono text-xs">NO {sourceMode === 'live' ? 'LIVE INDICATORS' : 'PERSISTED IOCs'} MATCH THE CURRENT FILTER.</div> : <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead className="bg-[#0B111A] text-gray-400 border-b border-[#151D28]"><tr><th className="p-3">IOC VALUE</th><th className="p-3">CATEGORY</th><th className="p-3">TYPE</th><th className="p-3">SEVERITY</th><th className="p-3">CONFIDENCE</th><th className="p-3">SOURCE</th><th className="p-3">OBSERVED</th><th className="p-3 text-right">ACTION</th></tr></thead><tbody className="divide-y divide-[#151D28]">{filteredIndicators.map((indicator) => {
-          const category = categorizeIoc({ value: indicator.ioc, source: indicator.source, type: indicator.type });
-          return (
-            <tr key={indicator.id} className="hover:bg-[#0E1520]">
-              <td className="p-3 font-mono text-cyan-300 break-all max-w-[360px]">{indicator.ioc}</td>
-              <td className="p-3 font-bold text-[10px] uppercase">
-                <span className={category === 'Actual IOC' ? 'text-red-400' : category === 'Infrastructure' ? 'text-yellow-400' : 'text-cyan-400'}>
-                  {category}
-                </span>
-              </td>
-              <td className="p-3 text-gray-300">{indicator.type}</td>
-              <td className={`p-3 font-bold uppercase ${severityClass(indicator.risk)}`}>{indicator.risk}</td>
-              <td className="p-3 font-mono text-gray-300">{indicator.confidence}%</td>
-              <td className="p-3 text-gray-400">{indicator.source}</td>
-              <td className="p-3 text-gray-400">{safeDate(indicator.firstSeen)}</td>
-              <td className="p-3 text-right"><button onClick={() => handleCopyIOC(indicator.ioc)} className="p-1 bg-[#151D28] hover:bg-[#1E2A3D] text-gray-400 hover:text-white rounded" title="Copy IOC"><Copy size={12} /></button></td>
-            </tr>
-          );
-        })}</tbody></table></div>}
-      </div>
-    </div>
-  );
+  const [indicators, setIndicators] = useState<ThreatIndicator[]>([]); const [loading, setLoading] = useState(true); const [searchTerm, setSearchTerm] = useState(''); const [selectedType, setSelectedType] = useState('ALL'); const [selectedCategory, setSelectedCategory] = useState('ALL'); const [sourceMode, setSourceMode] = useState<'live' | 'local'>('live'); const [expanded, setExpanded] = useState<string | null>(null); const { addToast } = useToast();
+  useEffect(() => { let cancelled = false; const load = async () => { setLoading(true); try { if (sourceMode === 'live') { const data = await getLiveIndicators(); if (!cancelled) setIndicators(data.map(normaliseFeedIndicator)); } else { const response = await searchPersistedIocs(searchTerm || ' ', selectedType === 'ALL' ? undefined : selectedType.toLowerCase()); if (!cancelled) setIndicators((response.data || []).map((item: any, index: number) => ({ id: `${item.analysis_id}-${item.indicator}-${index}`, ioc: item.indicator, type: normaliseType(item.type), risk: normaliseSeverity(item.severity), confidence: item.confidence || 0, source: 'Persisted Local Analysis', firstSeen: item.created_at, lastSeen: item.created_at, relatedThreats: [item.analysis_id], status: 'Active' }))); } } catch { if (!cancelled) setIndicators([]); } finally { if (!cancelled) setLoading(false); } }; const timer = window.setTimeout(load, sourceMode === 'local' ? 300 : 0); return () => { cancelled = true; window.clearTimeout(timer); }; }, [sourceMode, searchTerm, selectedType]);
+  const filtered = indicators.filter(item => { const matchesSearch = !searchTerm || item.ioc.toLowerCase().includes(searchTerm.toLowerCase()) || (item.source || '').toLowerCase().includes(searchTerm.toLowerCase()); const matchesType = selectedType === 'ALL' || item.type === selectedType; const category = categorizeIoc({ value: item.ioc, source: item.source || '', type: item.type }); return matchesSearch && matchesType && (selectedCategory === 'ALL' || category === selectedCategory); });
+  const handleCopy = async (ioc: string) => { try { await navigator.clipboard.writeText(ioc); addToast('IOC copied to clipboard', 'info'); } catch { addToast('Clipboard access was unavailable', 'warning'); } };
+  return <div className="mx-auto max-w-[1600px] space-y-5"><header className="flex items-center gap-3 border-b border-[#151D28] pb-5"><div className="rounded border border-violet-500/20 bg-violet-950/20 p-2 text-violet-300"><Eye size={19} /></div><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-violet-300">Threat intelligence console</p><h1 className="mt-1 text-2xl font-semibold text-white">Indicator intelligence</h1><p className="mt-1 text-sm text-gray-500">Separate actual IOCs from infrastructure and forensic artifacts.</p></div></header>
+    <div className="flex gap-1 border-b border-[#151D28]"><SourceTab active={sourceMode === 'live'} onClick={() => setSourceMode('live')} icon={Radio} label="Live feeds" /><SourceTab active={sourceMode === 'local'} onClick={() => setSourceMode('local')} icon={Database} label="Local analysis IOCs" /></div>
+    <section className="flex flex-col gap-3 rounded border border-[#151D28] bg-[#080D14] p-4 xl:flex-row"><div className="relative min-w-0 flex-1"><Search className="absolute left-3 top-2.5 text-gray-600" size={15} /><input placeholder="Search IOC value or provider source" value={searchTerm} onChange={event => setSearchTerm(event.target.value)} className="w-full rounded border border-[#263449] bg-[#060A10] py-2.5 pl-9 pr-3 text-xs text-gray-200 outline-none placeholder:text-gray-600 focus:border-cyan-500/70" /></div><div className="flex flex-wrap items-center gap-2"><Filter size={14} className="text-gray-600" /><FilterSelect label="Type" value={selectedType} setValue={setSelectedType} options={['ALL', 'IP', 'Domain', 'URL', 'Hash', 'Email']} /><FilterSelect label="Category" value={selectedCategory} setValue={setSelectedCategory} options={['ALL', 'Actual IOC', 'Infrastructure', 'Forensic Artifact']} /></div></section>
+    <section className="overflow-hidden rounded border border-[#151D28] bg-[#080D14]"><div className="flex items-center justify-between border-b border-[#151D28] px-5 py-4"><div><p className="text-[9px] font-bold uppercase tracking-[0.18em] text-gray-600">{sourceMode === 'live' ? 'External provider telemetry' : 'Persisted analysis evidence'}</p><p className="mt-1 text-sm text-gray-300"><span className="font-mono text-cyan-400">{filtered.length}</span> indicators in view</p></div><div className="hidden items-center gap-3 text-[10px] text-gray-600 md:flex"><span><i className="mr-1 inline-block h-2 w-2 rounded-full bg-red-400" />Actual IOC</span><span><i className="mr-1 inline-block h-2 w-2 rounded-full bg-yellow-400" />Infrastructure</span><span><i className="mr-1 inline-block h-2 w-2 rounded-full bg-cyan-400" />Artifact</span></div></div>{loading ? <div className="space-y-2 p-5">{[1, 2, 3, 4].map(row => <div key={row} className="h-12 animate-pulse rounded bg-[#0D1520]" />)}</div> : !filtered.length ? <div className="p-12 text-center font-mono text-xs text-gray-600">No indicators match the current filters.</div> : <div className="overflow-x-auto"><table className="w-full min-w-[950px] text-left text-xs"><thead className="bg-[#060A10] text-[10px] uppercase tracking-wider text-gray-600"><tr><th className="px-5 py-3">Indicator</th><th className="px-4 py-3">Classification</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Risk</th><th className="px-4 py-3">Confidence</th><th className="px-4 py-3">Provider / source</th><th className="px-5 py-3">Last seen</th><th /></tr></thead><tbody>{filtered.map(item => { const category = categorizeIoc({ value: item.ioc, source: item.source || '', type: item.type }); const isExpanded = expanded === item.id; return <><tr key={item.id} className="border-t border-[#151D28]/70 transition-colors hover:bg-[#0D1520]"><td className="max-w-[320px] px-5 py-3"><button onClick={() => setExpanded(isExpanded ? null : item.id)} className="flex items-center gap-2 text-left font-mono text-xs text-cyan-300 hover:text-cyan-200">{isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}<span className="break-all">{item.ioc}</span></button></td><td className="px-4 py-3"><span className={`text-[10px] font-bold uppercase ${category === 'Actual IOC' ? 'text-red-400' : category === 'Infrastructure' ? 'text-yellow-400' : 'text-cyan-400'}`}>{category}</span></td><td className="px-4 py-3 text-gray-400">{item.type}</td><td className="px-4 py-3"><SeverityBadge severity={item.risk} /></td><td className="px-4 py-3 font-mono text-gray-400">{(item as any).confidence ?? 0}%</td><td className="max-w-[180px] truncate px-4 py-3 text-gray-500">{item.source || 'Unavailable'}</td><td className="whitespace-nowrap px-5 py-3 text-gray-500">{safeDate(item.lastSeen)}</td><td className="px-3 py-3 text-right"><button onClick={() => handleCopy(item.ioc)} className="rounded p-1.5 text-gray-600 hover:bg-[#151D28] hover:text-cyan-300" title="Copy indicator"><Copy size={13} /></button></td></tr>{isExpanded && <tr key={`${item.id}-detail`} className="border-t border-[#151D28]/50 bg-[#060A10]"><td colSpan={8} className="px-10 py-3"><div className="grid grid-cols-1 gap-3 text-xs md:grid-cols-3"><div><p className="text-[9px] uppercase tracking-wider text-gray-600">First seen</p><p className="mt-1 text-gray-400">{safeDate(item.firstSeen)}</p></div><div><p className="text-[9px] uppercase tracking-wider text-gray-600">Related threats</p><p className="mt-1 font-mono text-gray-400">{item.relatedThreats?.length || 0}</p></div><div><p className="text-[9px] uppercase tracking-wider text-gray-600">Status</p><p className="mt-1 text-gray-400">{item.status}</p></div></div></td></tr>}</>; })}</tbody></table></div>}</section></div>;
 }
-
-function normaliseFeedIndicator(item: FeedThreatIndicator): ThreatIndicator { return { ...item, confidence: 0, source: 'External threat feed' }; }
+function SourceTab({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: typeof Radio; label: string }) { return <button onClick={onClick} className={`inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors ${active ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-gray-600 hover:text-gray-300'}`}><Icon size={13} />{label}</button>; }
+function FilterSelect({ label, value, setValue, options }: { label: string; value: string; setValue: (value: string) => void; options: string[] }) { return <select aria-label={label} value={value} onChange={event => setValue(event.target.value)} className="rounded border border-[#263449] bg-[#060A10] px-2.5 py-2 text-xs text-gray-400 outline-none focus:border-cyan-500/70">{options.map(option => <option key={option} value={option}>{option === 'ALL' ? `All ${label}` : option}</option>)}</select>; }
+function normaliseFeedIndicator(item: FeedThreatIndicator): ThreatIndicator { return { ...item, source: item.source || 'External threat feed' }; }
 function normaliseType(value: string): IOCType { const type = String(value || '').toLowerCase(); return type === 'url' ? 'URL' : type === 'domain' ? 'Domain' : type === 'ip' ? 'IP' : type === 'email' ? 'Email' : 'Hash'; }
 function normaliseSeverity(value: string): Severity { const severity = String(value || '').toLowerCase(); return severity === 'critical' ? 'Critical' : severity === 'high' ? 'High' : severity === 'medium' ? 'Medium' : severity === 'low' ? 'Low' : 'Safe'; }
-function severityClass(value: Severity) { return value === 'Critical' || value === 'High' ? 'text-red-400' : value === 'Medium' ? 'text-yellow-400' : 'text-green-400'; }
 function safeDate(value?: string) { return value ? new Date(value).toLocaleString() : 'Unknown'; }

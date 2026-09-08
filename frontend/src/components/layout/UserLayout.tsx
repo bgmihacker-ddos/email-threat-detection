@@ -1,85 +1,20 @@
 import { ReactNode } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import {
-  LayoutDashboard, Mail, ShieldAlert, History, Settings, Globe, BarChart3,
-  LogOut, Activity
-} from 'lucide-react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, MailSearch, ShieldAlert, History, Settings, Globe2, BarChart3, LogOut, Activity, Radar, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
+const pageNames: Record<string, string> = { dashboard: 'Security overview', analyze: 'Email investigation', 'live-threat': 'Live threat operations', threats: 'Threat investigations', indicators: 'Indicator intelligence', history: 'Investigation history', reports: 'Security reports', settings: 'Settings' };
+
 export function UserLayout({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex h-screen bg-[#05080D] text-gray-100 antialiased">
-      <UserSidebar />
-      <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Reuse TopBar */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-          {children}
-        </main>
-      </div>
-    </div>
-  );
+  const location = useLocation();
+  const segment = location.pathname.split('/')[1] || 'dashboard';
+  return <div className="flex h-screen overflow-hidden bg-[#05080D] text-gray-100 antialiased"><UserSidebar /><div className="flex min-w-0 flex-1 flex-col overflow-hidden"><header className="flex h-14 shrink-0 items-center justify-between border-b border-[#151D28] bg-[#080D14]/95 px-4 md:px-6"><div className="flex items-center gap-2 text-xs"><span className="hidden text-gray-600 sm:inline">SOC</span><ChevronRight size={13} className="text-gray-700" /><span className="font-medium text-gray-300">{pageNames[segment] || 'Investigation detail'}</span></div><div className="flex items-center gap-2 rounded border border-emerald-500/15 bg-emerald-950/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse-slow" /> Investigation service online</div></header><main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">{children}</main></div></div>;
 }
 
 function UserSidebar() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
-  return (
-    <aside className="w-64 bg-[#080D14] border-r border-[#151D28] flex flex-col">
-      <div className="p-6 border-b border-[#151D28]">
-        <h1 className="text-xl font-bold text-cyan-400">EMAIL THREAT</h1>
-        <p className="text-xs text-gray-500">INTELLIGENCE</p>
-      </div>
-
-      <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
-        <div className="space-y-1">
-          <p className="text-[10px] font-bold text-gray-500 uppercase px-4 mb-2 tracking-wider">Overview</p>
-          <NavItem to="/" icon={LayoutDashboard} name="Dashboard" />
-          <NavItem to="/analyze" icon={Mail} name="Analyze Email" />
-        </div>
-        <div className="space-y-1">
-          <p className="text-[10px] font-bold text-gray-500 uppercase px-4 mb-2 tracking-wider">Threat Intelligence</p>
-          <NavItem to="/live-threat" icon={Globe} name="Live Threat" />
-          <NavItem to="/threats" icon={ShieldAlert} name="Threats" />
-          <NavItem to="/indicators" icon={Activity} name="Indicators" />
-        </div>
-        <div className="space-y-1">
-          <p className="text-[10px] font-bold text-gray-500 uppercase px-4 mb-2 tracking-wider">Email Security</p>
-          <NavItem to="/history" icon={History} name="Email History" />
-          <NavItem to="/reports" icon={BarChart3} name="Reports" />
-        </div>
-        <div className="space-y-1">
-          <p className="text-[10px] font-bold text-gray-500 uppercase px-4 mb-2 tracking-wider">System</p>
-          <NavItem to="/settings" icon={Settings} name="Settings" />
-        </div>
-      </nav>
-
-      <div className="p-4 border-t border-[#151D28]">
-         <div className="flex items-center justify-between text-sm text-gray-400">
-             <div className="flex items-center gap-3">
-               <div className="w-8 h-8 rounded-full bg-blue-900 flex items-center justify-center font-bold text-blue-300 capitalize">{user?.name.charAt(0)}</div>
-               <div>
-                 <p className="font-bold text-white text-xs">{user?.name}</p>
-                 <p className="text-[10px] text-gray-500 uppercase tracking-widest">Role: {user?.role.toUpperCase()}</p>
-               </div>
-             </div>
-             <button onClick={handleLogout} className="hover:text-red-400"><LogOut size={16} /></button>
-         </div>
-      </div>
-    </aside>
-  );
+  const { user, logout } = useAuth(); const navigate = useNavigate();
+  const handleLogout = () => { logout(); navigate('/login'); };
+  return <aside className="hidden w-64 shrink-0 flex-col border-r border-[#151D28] bg-[#080D14] md:flex"><div className="border-b border-[#151D28] px-5 py-5"><div className="flex items-center gap-3"><div className="rounded border border-cyan-500/25 bg-cyan-950/30 p-2 text-cyan-400"><Radar size={19} /></div><div><h1 className="text-sm font-bold tracking-wide text-white">EMAIL THREAT</h1><p className="text-[9px] font-bold tracking-[0.2em] text-cyan-500">INTELLIGENCE</p></div></div></div><nav className="flex-1 space-y-6 overflow-y-auto p-3"><NavGroup label="Operations"><NavItem to="/dashboard" icon={LayoutDashboard} name="Security overview" /><NavItem to="/analyze" icon={MailSearch} name="Analyze email" /></NavGroup><NavGroup label="Threat intelligence"><NavItem to="/live-threat" icon={Globe2} name="Live threat" /><NavItem to="/threats" icon={ShieldAlert} name="Threats" /><NavItem to="/indicators" icon={Activity} name="Indicators" /></NavGroup><NavGroup label="Investigations"><NavItem to="/history" icon={History} name="History" /><NavItem to="/reports" icon={BarChart3} name="Reports" /></NavGroup><NavGroup label="Platform"><NavItem to="/settings" icon={Settings} name="Settings" /></NavGroup></nav><div className="border-t border-[#151D28] p-3"><div className="flex items-center justify-between rounded bg-[#060A10] p-2.5"><div className="flex min-w-0 items-center gap-2.5"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-blue-950 text-sm font-bold text-blue-300">{user?.name?.charAt(0) || '?'}</div><div className="min-w-0"><p className="truncate text-xs font-semibold text-gray-200">{user?.name || 'Analyst'}</p><p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-gray-600">{user?.role || 'user'}</p></div></div><button aria-label="Sign out" onClick={handleLogout} className="rounded p-1.5 text-gray-500 transition-colors hover:bg-red-950/40 hover:text-red-400"><LogOut size={15} /></button></div></div></aside>;
 }
-
-function NavItem({ to, icon: Icon, name }: { to: string, icon: any, name: string }) {
-  return (
-    <NavLink to={to} className={({ isActive }) => `flex items-center gap-3 px-4 py-2 text-sm rounded ${isActive ? 'bg-[#151D28] text-cyan-400 border-l-2 border-cyan-400' : 'text-gray-400 hover:text-gray-200 hover:bg-[#101722]'}`}>
-      <Icon size={16} />
-      {name}
-    </NavLink>
-  );
-}
+function NavGroup({ label, children }: { label: string; children: ReactNode }) { return <div><p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.18em] text-gray-600">{label}</p><div className="space-y-1">{children}</div></div>; }
+function NavItem({ to, icon: Icon, name }: { to: string; icon: typeof Activity; name: string }) { return <NavLink to={to} className={({ isActive }) => `group flex items-center gap-3 rounded px-3 py-2 text-xs font-medium transition-colors ${isActive ? 'border border-cyan-500/15 bg-cyan-950/30 text-cyan-300' : 'text-gray-500 hover:bg-[#101722] hover:text-gray-200'}`}><Icon size={15} className="text-gray-600 transition-colors group-hover:text-cyan-400" />{name}</NavLink>; }

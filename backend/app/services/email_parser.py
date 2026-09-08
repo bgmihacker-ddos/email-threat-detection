@@ -10,7 +10,7 @@ import re
 from email import policy
 from email.headerregistry import Address
 from email.parser import BytesParser
-from email.utils import getaddresses, parseaddr
+from email.utils import getaddresses, parseaddr, parsedate_to_datetime
 from html.parser import HTMLParser
 from typing import Any, Dict, List, Optional
 
@@ -130,35 +130,63 @@ _DATE_IN_RECEIVED_RE = re.compile(r";\s*(.+)$")
 
 
 def _parse_received_header(raw: str) -> Dict[str, Any]:
-    """Extract structured information from a single Received header value.
+    """Extract deterministic, text-only details from one ``Received`` hop.
 
-    Does not perform network lookups. Everything is text-only extraction.
+    Header values are untrusted input.  The parser keeps the original value,
+    captures useful relay metadata when the syntax is recognizable, and never
+    performs DNS/IP attribution or treats a malformed hop as malicious.
     """
+    raw_value = str(raw or "")
     entry: Dict[str, Any] = {
-        "raw": raw,
+        "raw": raw_value,
         "from_server": None,
         "by_server": None,
+        "from_host": None,
+        "by_host": None,
+        "source_ip": None,
+        "destination_ip": None,
         "ips": [],
+        "protocol": None,
         "timestamp": None,
+        "timestamp_iso": None,
+        "parse_status": "ok",
     }
 
-    # Extract IP addresses found anywhere in the header.
-    entry["ips"] = _IP_RE.findall(raw)
+    entry["ips"] = list(dict.fromkeys(_IP_RE.findall(raw_value)))
 
-    # Extract 'from' part — strip trailing punctuation (e.g. ';').
-    from_match = re.search(r"\bfrom\s+(\S+)", raw, re.IGNORECASE)
+    from_match = re.search(r"\bfrom\s+([^;\s(]+)", raw_value, re.IGNORECASE)
+    by_match = re.search(r"\bby\s+([^;\s(]+)", raw_value, re.IGNORECASE)
     if from_match:
-        entry["from_server"] = from_match.group(1).rstrip(";")
-
-    # Extract 'by' part — strip trailing punctuation (e.g. ';').
-    by_match = re.search(r"\bby\s+(\S+)", raw, re.IGNORECASE)
+        entry["from_server"] = from_match.group(1).rstrip(";,")
+        entry["from_host"] = entry["from_server"]
     if by_match:
-        entry["by_server"] = by_match.group(1).rstrip(";")
+        entry["by_server"] = by_match.group(1).rstrip(";,")
+        entry["by_host"] = entry["by_server"]
 
-    # Extract timestamp from trailing '; <date>' if present.
-    date_match = _DATE_IN_RECEIVED_RE.search(raw)
+    # The first bracketed/parenthesized address is normally the source relay;
+    # preserve all values in ``ips`` because Received syntax varies by MTA.
+    if entry["ips"]:
+        entry["source_ip"] = entry["ips"][0]
+        if len(entry["ips"]) > 1:
+            entry["destination_ip"] = entry["ips"][1]
+
+    protocol_match = re.search(r"\b(?:with|via)\s+([A-Za-z0-9._/-]+)", raw_value, re.IGNORECASE)
+    if protocol_match:
+        entry["protocol"] = protocol_match.group(1).lower()
+
+    date_match = _DATE_IN_RECEIVED_RE.search(raw_value)
     if date_match:
-        entry["timestamp"] = date_match.group(1).strip()
+        timestamp = date_match.group(1).strip()
+        entry["timestamp"] = timestamp
+        try:
+            parsed = parsedate_to_datetime(timestamp)
+            entry["timestamp_iso"] = parsed.isoformat() if parsed else None
+        except (TypeError, ValueError, OverflowError):
+            entry["parse_status"] = "invalid_timestamp"
+    elif raw_value:
+        entry["parse_status"] = "missing_timestamp"
+    else:
+        entry["parse_status"] = "empty"
 
     return entry
 
@@ -227,10 +255,13 @@ class EmailParser:
         raw_cc = msg.get_all("cc") or []
         raw_bcc = msg.get_all("bcc") or []
         raw_reply_to = msg.get_all("reply-to") or []
+        raw_sender = msg.get("sender") or ""
         raw_return_path = msg.get("return-path")
         subject = msg.get("subject")
         date = msg.get("date")
         message_id = msg.get("message-id")
+        in_reply_to = msg.get("in-reply-to")
+        references = msg.get_all("references") or []
         mime_version = msg.get("mime-version")
         content_type_header = msg.get("content-type")
         content_transfer_encoding = msg.get("content-transfer-encoding")
@@ -241,10 +272,13 @@ class EmailParser:
             "cc": raw_cc,
             "bcc": raw_bcc,
             "reply_to": raw_reply_to,
+            "sender": raw_sender or None,
             "return_path": raw_return_path,
             "subject": subject,
             "date": date,
             "message_id": message_id,
+            "in_reply_to": in_reply_to,
+            "references": references,
             "mime_version": mime_version,
             "content_type": content_type_header,
             "content_transfer_encoding": content_transfer_encoding,
@@ -259,6 +293,7 @@ class EmailParser:
             "cc": _parse_address_list(raw_cc),
             "bcc": _parse_address_list(raw_bcc),
             "reply_to": _parse_address_list(raw_reply_to),
+            "sender": _parse_address(raw_sender),
             "return_path": _parse_address(raw_return_path or ""),
         }
 
@@ -353,13 +388,18 @@ class EmailParser:
             "received_chain": received_chain,
             "authentication_headers": authentication_headers,
             "message_id": message_id,
+            "in_reply_to": in_reply_to,
+            "references": references,
             "urls": all_urls,
             "raw_email": raw_email_str,
             # ---- Backward-compat RuleEngine fields ----
             "from": from_str,
             "to": raw_to,
             "reply_to": reply_to_str,
+            "sender": raw_sender or None,
             "return_path": raw_return_path,
+            "in_reply_to": in_reply_to,
+            "references": references,
             "subject": subject,
             "date": date,
             "authentication_results": authentication_headers.get("authentication-results"),
@@ -507,12 +547,15 @@ class EmailParser:
                 "cc": [],
                 "bcc": [],
                 "reply_to": [],
+                "sender": None,
                 "return_path": None,
             },
             "headers": {},
             "received_chain": [],
             "authentication_headers": {},
             "message_id": None,
+            "in_reply_to": None,
+            "references": [],
             "urls": [],
             "raw_email": raw_email_str,
             "parse_error": error,

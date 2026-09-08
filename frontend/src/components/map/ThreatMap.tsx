@@ -60,7 +60,7 @@ export function ThreatMap({ threatEvents }: ThreatMapProps) {
                         'geoapify-raster': {
                             type: 'raster',
                             tiles: [
-                                `https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${apiKey}`
+                                `https://maps.geoapify.com/v1/tile/dark-matter/{z}/{x}/{y}.png?apiKey=${apiKey}`
                             ],
                             tileSize: 256,
                             maxzoom: 20,
@@ -82,6 +82,9 @@ export function ThreatMap({ threatEvents }: ThreatMapProps) {
             });
 
             map.on('load', () => {
+                // Force a resize after load — flex-1 containers may have a
+                // deferred computed height that differs from the initial paint.
+                map.resize();
                 setMapLoaded(true);
             });
 
@@ -90,19 +93,26 @@ export function ThreatMap({ threatEvents }: ThreatMapProps) {
             });
 
             mapRef.current = map;
+
+            // Handle resizing
+            const resizeObserver = new ResizeObserver(() => {
+                map.resize();
+            });
+            resizeObserver.observe(mapContainerRef.current);
+
+            return () => {
+                resizeObserver.disconnect();
+                markersRef.current.forEach(m => m.remove());
+                markersRef.current = [];
+                if (mapRef.current) {
+                    mapRef.current.remove();
+                    mapRef.current = null;
+                }
+            };
         } catch (err) {
             console.error('Failed to initialize MapLibre:', err);
             setLoadError('Failed to initialize the map engine.');
         }
-
-        return () => {
-            markersRef.current.forEach(m => m.remove());
-            markersRef.current = [];
-            if (mapRef.current) {
-                mapRef.current.remove();
-                mapRef.current = null;
-            }
-        };
     }, [apiKey]);
 
     // Update markers when validEvents change or map loads
@@ -185,7 +195,7 @@ export function ThreatMap({ threatEvents }: ThreatMapProps) {
     return (
         <div
             ref={containerWrapperRef}
-            className="relative bg-[#060A10] rounded-lg border border-[#151D28] w-full h-full min-h-[550px] overflow-hidden shadow-2xl flex flex-col"
+            className="relative bg-[#060A10] rounded-lg border border-[#151D28] w-full h-[500px] overflow-hidden shadow-2xl flex flex-col"
         >
             {/* HUD / Map Overlay */}
             <div className="absolute top-3 left-3 z-10 bg-[#0A101D]/90 backdrop-blur border border-[#1E293B] px-3 py-2 rounded text-[11px] font-mono text-gray-300 shadow-md space-y-1 pointer-events-none">
@@ -231,7 +241,7 @@ export function ThreatMap({ threatEvents }: ThreatMapProps) {
                 <button
                     onClick={toggleFullscreen}
                     title="Toggle Fullscreen"
-                    className="p-2 bg-[#0A101D]/90 hover:bg-[#1E293B] text-gray-300 hover:text-white rounded border border-[#1E293B] shadow transition-colors"
+                    className="p-2 bg-[#0A101D]/90 hover:bg-[#1E293B] text-gray-300 hover:text-white rounded border border-[#151D28] shadow transition-colors"
                 >
                     {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
                 </button>
@@ -253,10 +263,12 @@ export function ThreatMap({ threatEvents }: ThreatMapProps) {
                 </div>
             )}
 
-            {/* Map Container */}
+            {/* Map Container — fills the outer wrapper; h-full avoids a
+                double-height stack that breaks the WebGL canvas init. */}
             <div
                 ref={mapContainerRef}
-                className="w-full h-full"
+                style={{ position: 'absolute', inset: 0 }}
+                className="z-0"
             />
 
             {/* Threat Detail Popup */}
@@ -309,7 +321,7 @@ export function ThreatMap({ threatEvents }: ThreatMapProps) {
                         {selectedThreat.indicator && (
                             <div className="pt-1">
                                 <span className="text-gray-400 block text-[10px]">Indicator:</span>
-                                <span className="text-cyan-300 break-all bg-[#060A10] p-1 rounded block text-[10px] border border-[#1E293B]">
+                                <span className="text-cyan-300 break-all bg-[#060A10] p-1 rounded block text-[10px] border border-[#151D28]">
                                     {selectedThreat.indicator}
                                 </span>
                             </div>

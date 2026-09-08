@@ -391,10 +391,10 @@ def test_6k_reasoning_and_6l_attack_chain():
     assert len(reasoning["decision_path"]) > 0
 
     header_forensics = {"mail_flow": {"hop_count": 2, "origin_ip": "1.1.1.1"}}
-    authentication = {"findings": [{"title": "Auth Fail"}]}
+    authentication = {"findings": [{"title": "Auth Fail", "severity": "high", "finding_id": "auth.spf.fail", "confidence": 100}]}
     url_intel = [{"normalized": "http://phish.com", "risk_indicators": 1, "indicators": ["credential_url"]}]
     attachments = {"findings": []}
-    content = {"urgency_keywords": ["urgent"]}
+    content = {"findings": [{"finding_id": "content.social_engineering.urgency", "title": "Urgency"}], "urgency_keywords": ["urgent"]}
 
     chain = AttackChainReconstruction.reconstruct(
         header_forensics, authentication, url_intel, attachments, content

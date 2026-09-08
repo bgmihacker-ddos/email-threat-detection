@@ -58,3 +58,6 @@ coverage.xml
 # Testing
 .tox/
 .nox/
+
+# TypeScript build artifacts
+*.tsbuildinfo
