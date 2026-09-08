@@ -73,28 +73,28 @@ export default function ThreatIntelligence() {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
+        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">ACTIVE PROVIDERS</p>
           <p className="text-2xl font-bold text-white mt-2">
             {providers.filter(p => p.status === 'Connected').length}
           </p>
         </div>
 
-        <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
+        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">TOTAL RECORDS</p>
           <p className="text-2xl font-bold text-cyan-400 mt-2">
             {providers.reduce((acc, p) => acc + p.recordsIndexed, 0).toLocaleString()}
           </p>
         </div>
 
-        <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
+        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">AVG LATENCY</p>
           <p className="text-2xl font-bold text-yellow-400 mt-2">
             {providers.length > 0 ? Math.round(providers.reduce((acc, p) => acc + p.latencyMs, 0) / providers.length) : 0}ms
           </p>
         </div>
 
-        <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
+        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">AVG HEALTH SCORE</p>
           <p className="text-2xl font-bold text-green-400 mt-2">
             {providers.length > 0 ? Math.round(providers.reduce((acc, p) => acc + p.healthScore, 0) / providers.length) : 0}%
@@ -103,15 +103,15 @@ export default function ThreatIntelligence() {
       </div>
 
       {/* Providers Grid */}
-      <div className="bg-[#080D14] rounded border border-[#151D28]">
+      <div className="bg-[#101b21] rounded border border-[#1b3037]">
         {loading ? (
           <div className="p-8 text-center text-gray-400 font-mono text-xs animate-pulse">
             LOADING THREAT INTELLIGENCE STATUS...
           </div>
         ) : (
-          <div className="divide-y divide-[#151D28]">
+          <div className="divide-y divide-[#1b3037]">
             {providers.map((provider) => (
-              <div key={provider.id} className="p-4 hover:bg-[#0E1520] transition-colors">
+              <div key={provider.id} className="p-4 hover:bg-[#1b2b31] transition-colors">
                 <div className="flex flex-col md:flex-row md:items-center gap-4">
                   {/* Provider Info */}
                   <div className="flex-1">
@@ -122,7 +122,7 @@ export default function ThreatIntelligence() {
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="text-sm font-bold text-white">{provider.name}</h3>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#151D28] text-gray-300">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#1b3037] text-gray-300">
                             {provider.type}
                           </span>
                         </div>
@@ -183,7 +183,7 @@ export default function ThreatIntelligence() {
       </div>
 
       {/* Legend */}
-      <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
+      <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Status Legend</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="flex items-center gap-2">

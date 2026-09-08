@@ -23,15 +23,15 @@ export function UserLayout({ children }: { children: ReactNode }) {
   }, [segment]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#05080D] text-gray-100 antialiased font-sans">
+    <div className="flex h-screen overflow-hidden bg-transparent text-gray-100 antialiased font-sans">
       <SecurityEnvironmentBackground profile={profile} intensity="subtle" />
 
       <UserSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
 
-      <div className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden bg-[#080D14]/40 backdrop-blur-[2px]">
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden bg-[#0c171c]/25 backdrop-blur-[2px]">
         <TopBar />
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto p-4 md:p-7 lg:p-9">
           {children}
         </main>
       </div>
@@ -49,16 +49,16 @@ function UserSidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: ()
   };
 
   return (
-    <aside className={`hidden md:flex flex-col border-r border-[#151D28] bg-[#080D14]/80 backdrop-blur-md transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'}`}>
-      <div className={`border-b border-[#151D28] px-5 py-5 ${collapsed ? 'px-3 flex justify-center' : ''}`}>
+    <aside className={`hidden md:flex flex-col border-r border-[#1b3037] bg-[#0c171c]/90 backdrop-blur-md transition-all duration-300 ${collapsed ? 'w-16' : 'w-72'}`}>
+      <div className={`border-b border-[#1b3037] px-5 py-5 ${collapsed ? 'px-3 flex justify-center' : ''}`}>
         <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
-          <div className="rounded border border-cyan-500/25 bg-cyan-950/30 p-2 text-cyan-400 cursor-pointer" onClick={onToggle}>
+          <div className="rounded-lg border border-[#3b5e60] bg-[#142b2d] p-2 text-[#58d6c0] cursor-pointer" onClick={onToggle}>
             <Radar size={collapsed ? 18 : 19} />
           </div>
           {!collapsed && (
             <div className="cursor-pointer" onClick={onToggle}>
               <h1 className="text-sm font-bold tracking-wide text-white">EMAIL THREAT</h1>
-              <p className="text-[9px] font-bold tracking-[0.2em] text-cyan-500">INTELLIGENCE</p>
+              <p className="text-[9px] font-bold tracking-[0.2em] text-[#58d6c0]">FORENSIC INTELLIGENCE</p>
             </div>
           )}
         </div>
@@ -86,11 +86,11 @@ function UserSidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: ()
         </NavGroup>
       </nav>
 
-      <div className="border-t border-[#151D28] p-3">
-        <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} rounded bg-[#060A10] p-2.5`}>
+      <div className="border-t border-[#1b3037] p-3">
+        <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} rounded-lg border border-[#1b3037] bg-[#101f24] p-2.5`}>
           {!collapsed && (
             <div className="flex min-w-0 items-center gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-blue-950 text-sm font-bold text-blue-300">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#3b5e60] bg-[#183235] text-sm font-bold text-[#8ce2d0]">
                 {user?.name?.charAt(0) || '?'}
               </div>
               <div className="min-w-0">
@@ -131,8 +131,8 @@ function NavItem({ to, icon: Icon, name, collapsed }: { to: string; icon: typeof
       className={({ isActive }) =>
         `group flex items-center gap-3 rounded px-3 py-2 text-xs font-medium transition-colors ${
           isActive
-            ? 'border border-cyan-500/15 bg-cyan-950/30 text-cyan-300'
-            : 'text-gray-500 hover:bg-[#101722] hover:text-gray-200'
+            ? 'border border-[#31514e] bg-[#183235] text-[#8ce2d0]'
+            : 'text-[#718581] hover:bg-[#14262b] hover:text-[#e3efeb]'
         } ${collapsed ? 'justify-center' : ''}`
       }
       title={collapsed ? name : undefined}

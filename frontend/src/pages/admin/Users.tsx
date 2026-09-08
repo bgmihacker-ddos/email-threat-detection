@@ -98,17 +98,17 @@ export default function Users() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
+        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">TOTAL USERS</p>
           <p className="text-2xl font-bold text-white mt-2">{users.length}</p>
         </div>
-        <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
+        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">ACTIVE USERS</p>
           <p className="text-2xl font-bold text-green-400 mt-2">
             {users.filter(u => u.status === 'Active').length}
           </p>
         </div>
-        <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
+        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">ADMINISTRATORS</p>
           <p className="text-2xl font-bold text-cyan-400 mt-2">
             {users.filter(u => u.role === 'admin').length}
@@ -117,7 +117,7 @@ export default function Users() {
       </div>
 
       {/* Search & Filters */}
-      <div className="bg-[#080D14] p-4 rounded border border-[#151D28] flex flex-wrap gap-4">
+      <div className="bg-[#101b21] p-4 rounded border border-[#1b3037] flex flex-wrap gap-4">
         <div className="relative flex-1 min-w-[240px]">
           <Search className="absolute left-3 top-2.5 text-gray-500" size={16} />
           <input
@@ -125,7 +125,7 @@ export default function Users() {
             placeholder="Search by name, email, ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-[#05080D] border border-[#151D28] pl-9 pr-4 py-2 text-xs text-white rounded focus:outline-none focus:border-cyan-500"
+            className="w-full bg-[#081216] border border-[#1b3037] pl-9 pr-4 py-2 text-xs text-white rounded focus:outline-none focus:border-cyan-500"
           />
         </div>
 
@@ -134,7 +134,7 @@ export default function Users() {
           <select
             value={selectedRole}
             onChange={(e) => setSelectedRole(e.target.value)}
-            className="bg-[#05080D] border border-[#151D28] text-xs text-gray-300 py-2 px-3 rounded focus:outline-none"
+            className="bg-[#081216] border border-[#1b3037] text-xs text-gray-300 py-2 px-3 rounded focus:outline-none"
           >
             <option value="ALL">All Roles</option>
             <option value="admin">Admin</option>
@@ -145,7 +145,7 @@ export default function Users() {
         <select
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
-          className="bg-[#05080D] border border-[#151D28] text-xs text-gray-300 py-2 px-3 rounded focus:outline-none"
+          className="bg-[#081216] border border-[#1b3037] text-xs text-gray-300 py-2 px-3 rounded focus:outline-none"
         >
           <option value="ALL">All Statuses</option>
           <option value="Active">Active</option>
@@ -154,7 +154,7 @@ export default function Users() {
       </div>
 
       {/* Users Table */}
-      <div className="bg-[#080D14] rounded border border-[#151D28] overflow-hidden">
+      <div className="bg-[#101b21] rounded border border-[#1b3037] overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-gray-400 font-mono text-xs animate-pulse">
             LOADING USER DATABASE...
@@ -166,7 +166,7 @@ export default function Users() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#0B111A] text-gray-400 border-b border-[#151D28]">
+              <thead className="bg-[#16242a] text-gray-400 border-b border-[#1b3037]">
                 <tr>
                   <th className="p-3 font-semibold">USER ID</th>
                   <th className="p-3 font-semibold">EMAIL</th>
@@ -176,16 +176,16 @@ export default function Users() {
                   <th className="p-3 font-semibold text-right">ACTIONS</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#151D28]">
+              <tbody className="divide-y divide-[#1b3037]">
                 {filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-[#0E1520] transition-colors">
+                  <tr key={user.id} className="hover:bg-[#1b2b31] transition-colors">
                     <td className="p-3 font-mono text-cyan-400">{user.id.slice(0, 12)}…</td>
                     <td className="p-3 text-white">{user.email}</td>
                     <td className="p-3">
                       <select
                         value={user.role}
                         onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                        className="bg-[#05080D] border border-[#151D28] text-[10px] text-gray-300 py-1 px-2 rounded"
+                        className="bg-[#081216] border border-[#1b3037] text-[10px] text-gray-300 py-1 px-2 rounded"
                       >
                         <option value="user">User</option>
                         <option value="admin">Admin</option>
@@ -204,7 +204,7 @@ export default function Users() {
                         {user.status === 'Active' ? (
                           <button
                             onClick={() => handleDeactivate(user.id)}
-                            className="p-1 bg-[#151D28] hover:bg-red-950 text-gray-400 hover:text-red-400 rounded"
+                            className="p-1 bg-[#1b3037] hover:bg-red-950 text-gray-400 hover:text-red-400 rounded"
                             title="Deactivate User"
                           >
                             <UserX size={12} />
@@ -212,7 +212,7 @@ export default function Users() {
                         ) : (
                           <button
                             onClick={() => handleActivate(user.id)}
-                            className="p-1 bg-[#151D28] hover:bg-green-950 text-gray-400 hover:text-green-400 rounded"
+                            className="p-1 bg-[#1b3037] hover:bg-green-950 text-gray-400 hover:text-green-400 rounded"
                             title="Activate User"
                           >
                             <UserCheck size={12} />

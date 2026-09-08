@@ -13,8 +13,8 @@ export function SeverityBadge({ severity, className = '', dotOnly = false }: Sev
   let dotColor = 'bg-gray-400';
 
   if (sev === 'critical') {
-    colors = 'bg-[#4B1113] text-[#FF5F6D] border-[#FF5F6D]/30';
-    dotColor = 'bg-[#FF5F6D]';
+    colors = 'bg-[#3b2424] text-[#f2aaa2] border-[#ed756d]/30';
+    dotColor = 'bg-[#ed756d]';
   } else if (sev === 'high' || sev === 'malicious') {
     colors = 'bg-red-950/40 text-red-400 border-red-500/30';
     dotColor = 'bg-red-400';

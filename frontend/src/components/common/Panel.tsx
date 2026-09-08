@@ -11,10 +11,10 @@ interface PanelProps {
 
 export function Panel({ title, open = true, onToggle, children, className = '' }: PanelProps) {
   return (
-    <section className={`bg-[#080D14] p-5 border border-[#151D28] rounded ${className}`}>
+    <section className={`soc-panel p-5 ${className}`}>
       <button
         onClick={onToggle}
-        className="w-full flex items-center gap-2 text-left text-xs font-bold text-cyan-500 uppercase tracking-wider disabled:cursor-default"
+        className="w-full flex items-center gap-2 text-left text-xs font-bold text-[#58d6c0] uppercase tracking-[0.14em] disabled:cursor-default"
         disabled={!onToggle}
       >
         {onToggle && (open ? <ChevronDown size={14} /> : <ChevronRight size={14} />)}

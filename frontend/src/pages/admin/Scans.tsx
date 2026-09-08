@@ -78,23 +78,23 @@ export default function Scans() {
         <div className="text-xs text-cyan-400 font-mono">{total} RECORDED ANALYSES</div>
       </div>
 
-      <div className="bg-[#080D14] p-4 rounded border border-[#151D28] grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="bg-[#101b21] p-4 rounded border border-[#1b3037] grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="relative">
           <Search className="absolute left-3 top-2.5 text-gray-500" size={16} />
           <input
             value={query}
             onChange={(event) => { setQuery(event.target.value); setPage(0); }}
             placeholder="Search subject, sender, recipient..."
-            className="w-full bg-[#05080D] border border-[#151D28] pl-9 pr-4 py-2 text-xs text-white rounded focus:outline-none focus:border-cyan-500"
+            className="w-full bg-[#081216] border border-[#1b3037] pl-9 pr-4 py-2 text-xs text-white rounded focus:outline-none focus:border-cyan-500"
           />
         </div>
-        <select value={verdict} onChange={(event) => { setVerdict(event.target.value); setPage(0); }} className="bg-[#05080D] border border-[#151D28] text-xs text-gray-300 py-2 px-3 rounded">
+        <select value={verdict} onChange={(event) => { setVerdict(event.target.value); setPage(0); }} className="bg-[#081216] border border-[#1b3037] text-xs text-gray-300 py-2 px-3 rounded">
           <option value="">All verdicts</option>
           <option value="malicious">Malicious</option>
           <option value="suspicious">Suspicious</option>
           <option value="safe">Safe</option>
         </select>
-        <select value={severity} onChange={(event) => { setSeverity(event.target.value); setPage(0); }} className="bg-[#05080D] border border-[#151D28] text-xs text-gray-300 py-2 px-3 rounded">
+        <select value={severity} onChange={(event) => { setSeverity(event.target.value); setPage(0); }} className="bg-[#081216] border border-[#1b3037] text-xs text-gray-300 py-2 px-3 rounded">
           <option value="">All severities</option>
           <option value="critical">Critical</option>
           <option value="high">High</option>
@@ -103,7 +103,7 @@ export default function Scans() {
         </select>
       </div>
 
-      <div className="bg-[#080D14] rounded border border-[#151D28] overflow-hidden">
+      <div className="bg-[#101b21] rounded border border-[#1b3037] overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-gray-400 font-mono text-xs animate-pulse">LOADING PERSISTED ANALYSES...</div>
         ) : scans.length === 0 ? (
@@ -114,12 +114,12 @@ export default function Scans() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#0B111A] text-gray-400 border-b border-[#151D28]">
+              <thead className="bg-[#16242a] text-gray-400 border-b border-[#1b3037]">
                 <tr><th className="p-3">ANALYSIS ID</th><th className="p-3">SENDER → RECIPIENT</th><th className="p-3">SUBJECT</th><th className="p-3">RISK</th><th className="p-3">VERDICT</th><th className="p-3">SEVERITY</th><th className="p-3">CREATED</th><th className="p-3 text-right">ACTIONS</th></tr>
               </thead>
-              <tbody className="divide-y divide-[#151D28]">
+              <tbody className="divide-y divide-[#1b3037]">
                 {scans.map((scan) => (
-                  <tr key={scan.analysis_id} className="hover:bg-[#0E1520]">
+                  <tr key={scan.analysis_id} className="hover:bg-[#1b2b31]">
                     <td className="p-3 font-mono text-cyan-400">{scan.analysis_id.slice(0, 12)}…</td>
                     <td className="p-3 text-gray-300"><span>{scan.sender || 'Unknown'}</span><span className="mx-1 text-gray-600">→</span><span>{scan.recipient || 'Unknown'}</span></td>
                     <td className="p-3 text-white max-w-[240px] truncate">{scan.subject || 'No subject'}</td>
@@ -127,7 +127,7 @@ export default function Scans() {
                     <td className={`p-3 font-bold uppercase ${tone(scan.verdict)}`}>{scan.verdict}</td>
                     <td className={`p-3 font-bold uppercase ${tone(scan.severity)}`}>{scan.severity}</td>
                     <td className="p-3 text-gray-400 font-mono">{safeDate(scan.created_at)}</td>
-                    <td className="p-3"><div className="flex justify-end gap-1"><button onClick={() => navigate(`/analysis/${scan.analysis_id}`)} title="Open forensic analysis" className="p-1 bg-[#151D28] hover:bg-[#1E2A3D] text-gray-400 hover:text-white rounded"><Eye size={13} /></button><button onClick={() => exportReport(scan.analysis_id)} title="Download printable report" className="p-1 bg-[#151D28] hover:bg-[#1E2A3D] text-gray-400 hover:text-white rounded"><Download size={13} /></button></div></td>
+                    <td className="p-3"><div className="flex justify-end gap-1"><button onClick={() => navigate(`/analysis/${scan.analysis_id}`)} title="Open forensic analysis" className="p-1 bg-[#1b3037] hover:bg-[#1E2A3D] text-gray-400 hover:text-white rounded"><Eye size={13} /></button><button onClick={() => exportReport(scan.analysis_id)} title="Download printable report" className="p-1 bg-[#1b3037] hover:bg-[#1E2A3D] text-gray-400 hover:text-white rounded"><Download size={13} /></button></div></td>
                   </tr>
                 ))}
               </tbody>

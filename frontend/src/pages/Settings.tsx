@@ -79,7 +79,7 @@ export default function Settings() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="border-b border-[#151D28] flex gap-1 overflow-x-auto">
+      <div className="border-b border-[#1b3037] flex gap-1 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -98,7 +98,7 @@ export default function Settings() {
 
       {/* Profile Tab */}
       {activeTab === 'profile' && (
-        <div className="bg-[#080D14] p-5 rounded border border-[#151D28] space-y-4">
+        <div className="bg-[#101b21] p-5 rounded border border-[#1b3037] space-y-4">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Personal Information</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -108,7 +108,7 @@ export default function Settings() {
                 type="text"
                 value={profile.name}
                 onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
               />
             </div>
 
@@ -118,7 +118,7 @@ export default function Settings() {
                 type="email"
                 value={profile.email}
                 onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
               />
             </div>
 
@@ -128,7 +128,7 @@ export default function Settings() {
                 type="text"
                 value={profile.jobTitle}
                 onChange={(e) => setProfile({ ...profile, jobTitle: e.target.value })}
-                className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
               />
             </div>
 
@@ -138,7 +138,7 @@ export default function Settings() {
                 type="text"
                 value={profile.department}
                 onChange={(e) => setProfile({ ...profile, department: e.target.value })}
-                className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
               />
             </div>
 
@@ -147,7 +147,7 @@ export default function Settings() {
               <select
                 value={profile.timezone}
                 onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
-                className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
               >
                 <option value="UTC-05:00">UTC-05:00 (Eastern)</option>
                 <option value="UTC-06:00">UTC-06:00 (Central)</option>
@@ -164,7 +164,7 @@ export default function Settings() {
                 type="text"
                 value={profile.avatarUrl}
                 onChange={(e) => setProfile({ ...profile, avatarUrl: e.target.value })}
-                className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
                 placeholder="https://..."
               />
             </div>
@@ -174,7 +174,7 @@ export default function Settings() {
 
       {/* Security Tab */}
       {activeTab === 'security' && (
-        <div className="bg-[#080D14] p-5 rounded border border-[#151D28] space-y-4">
+        <div className="bg-[#101b21] p-5 rounded border border-[#1b3037] space-y-4">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Security Settings</h2>
 
           <div className="space-y-4">
@@ -215,7 +215,7 @@ export default function Settings() {
               <select
                 value={security.sessionTimeout}
                 onChange={(e) => setSecurity({ ...security, sessionTimeout: e.target.value })}
-                className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
               >
                 <option value="15">15 minutes</option>
                 <option value="30">30 minutes</option>
@@ -254,7 +254,7 @@ export default function Settings() {
                         newList[idx] = e.target.value;
                         setSecurity({ ...security, ipWhitelist: newList });
                       }}
-                      className="flex-1 bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
+                      className="flex-1 bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
                     />
                     <button
                       onClick={() => {
@@ -281,7 +281,7 @@ export default function Settings() {
 
       {/* Notifications Tab */}
       {activeTab === 'notifications' && (
-        <div className="bg-[#080D14] p-5 rounded border border-[#151D28] space-y-4">
+        <div className="bg-[#101b21] p-5 rounded border border-[#1b3037] space-y-4">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Notification Preferences</h2>
 
           <div className="space-y-6">
@@ -386,7 +386,7 @@ export default function Settings() {
 
       {/* Application Tab */}
       {activeTab === 'application' && (
-        <div className="bg-[#080D14] p-5 rounded border border-[#151D28] space-y-4">
+        <div className="bg-[#101b21] p-5 rounded border border-[#1b3037] space-y-4">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Application Configuration</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -395,7 +395,7 @@ export default function Settings() {
               <select
                 value={application.theme}
                 onChange={(e) => setApplication({ ...application, theme: e.target.value })}
-                className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
               >
                 <option value="dark">Dark (Default)</option>
                 <option value="darker">Darker</option>
@@ -408,13 +408,13 @@ export default function Settings() {
               <select
                 value={application.language}
                 onChange={(e) => setApplication({ ...application, language: e.target.value })}
-                className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
               >
                 <option value="en">English</option>
                 <option value="es">Español</option>
                 <option value="fr">Français</option>
                 <option value="de">Deutsch</option>
-                <option value="ja">日本語</option>
+                <option value="ja">æ—¥æœ¬èªž</option>
               </select>
             </div>
 
@@ -423,7 +423,7 @@ export default function Settings() {
               <select
                 value={application.dateFormat}
                 onChange={(e) => setApplication({ ...application, dateFormat: e.target.value })}
-                className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
               >
                 <option value="YYYY-MM-DD">2026-09-05</option>
                 <option value="MM/DD/YYYY">09/05/2026</option>
@@ -437,7 +437,7 @@ export default function Settings() {
               <select
                 value={application.timeFormat}
                 onChange={(e) => setApplication({ ...application, timeFormat: e.target.value })}
-                className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
               >
                 <option value="24h">24-hour (14:30)</option>
                 <option value="12h">12-hour (2:30 PM)</option>
@@ -483,7 +483,7 @@ export default function Settings() {
               <select
                 value={application.refreshInterval}
                 onChange={(e) => setApplication({ ...application, refreshInterval: e.target.value })}
-                className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
               >
                 <option value="15">15 seconds</option>
                 <option value="30">30 seconds</option>

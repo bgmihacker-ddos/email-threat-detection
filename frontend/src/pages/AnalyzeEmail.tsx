@@ -79,10 +79,10 @@ export default function AnalyzeEmail() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       {/* Header */}
-      <header className="border-b border-[#151D28] pb-5">
+      <header className="relative overflow-hidden rounded-xl border border-[#29454b] bg-[#101b21]/80 p-6 shadow-[0_20px_60px_rgba(2,12,15,0.22)]">
         <div className="flex items-center gap-2">
-          <span className="flex h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-cyan-400">INGESTION PIPELINE • FORENSIC INTAKE</p>
+          <span className="flex h-2 w-2 rounded-full bg-[#58d6c0] shadow-[0_0_10px_rgba(88,214,192,0.8)] animate-pulse" />
+          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[#58d6c0]">INGESTION PIPELINE · FORENSIC INTAKE</p>
         </div>
         <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-white">Email Investigation Lab</h1>
         <p className="mt-1 max-w-3xl text-xs text-gray-400 font-mono">
@@ -93,7 +93,7 @@ export default function AnalyzeEmail() {
       {/* Primary Intake Grid */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
         {/* Upload Box */}
-        <section className="lg:col-span-3 rounded-lg border border-[#151D28] bg-[#080D14]/90 p-5 shadow-lg flex flex-col justify-between">
+        <section className="lg:col-span-3 rounded-xl border border-[#1b3037] bg-[#101b21]/90 p-6 shadow-[0_18px_45px_rgba(2,12,15,0.2)] flex flex-col justify-between">
           <div>
             <div className="flex items-start gap-3">
               <div className="rounded border border-cyan-500/30 bg-cyan-950/40 p-2.5 text-cyan-400">
@@ -114,10 +114,10 @@ export default function AnalyzeEmail() {
               onDragOver={(e) => e.preventDefault()}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className="mt-5 flex min-h-52 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-[#1C2A3D] bg-[#05080D] p-6 text-center transition-all hover:border-cyan-500/60 hover:bg-cyan-950/10"
+              className="mt-5 flex min-h-52 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-[#29454b] bg-[#081216] p-6 text-center transition-all hover:border-cyan-500/60 hover:bg-cyan-950/10"
             >
               {file ? (
-                <div className="flex max-w-full items-center gap-3 rounded-lg border border-cyan-500/40 bg-[#0B111A] px-5 py-3.5 shadow-md">
+                <div className="flex max-w-full items-center gap-3 rounded-lg border border-cyan-500/40 bg-[#16242a] px-5 py-3.5 shadow-md">
                   <FileText size={22} className="shrink-0 text-cyan-400" />
                   <div className="min-w-0 text-left font-mono">
                     <p className="truncate text-xs font-bold text-gray-100">{file.name}</p>
@@ -138,7 +138,7 @@ export default function AnalyzeEmail() {
                 </div>
               ) : (
                 <>
-                  <div className="rounded-full bg-[#080D14] p-3 border border-[#151D28] text-gray-500 mb-2">
+                  <div className="rounded-full bg-[#101b21] p-3 border border-[#1b3037] text-gray-500 mb-2">
                     <FileUp size={26} className="text-cyan-400" />
                   </div>
                   <p className="text-xs font-semibold uppercase font-mono tracking-wider text-gray-200">
@@ -159,7 +159,7 @@ export default function AnalyzeEmail() {
             </div>
           </div>
 
-          <div className="mt-4 flex items-center justify-between pt-3 border-t border-[#151D28]/60 text-[11px] font-mono text-gray-500">
+          <div className="mt-4 flex items-center justify-between pt-3 border-t border-[#1b3037]/60 text-[11px] font-mono text-gray-500">
             <span>Supported: RFC 822, RFC 2822, RFC 5322</span>
             <button
               type="button"
@@ -172,7 +172,7 @@ export default function AnalyzeEmail() {
         </section>
 
         {/* Forensic Capabilities Checklist */}
-        <aside className="lg:col-span-2 rounded-lg border border-[#151D28] bg-[#080D14]/90 p-5 shadow-lg flex flex-col justify-between">
+        <aside className="lg:col-span-2 rounded-xl border border-[#1b3037] bg-[#101b21]/90 p-6 shadow-[0_18px_45px_rgba(2,12,15,0.2)] flex flex-col justify-between">
           <div>
             <p className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] text-gray-500">ENGINE CAPABILITIES</p>
             <h3 className="mt-1 text-sm font-semibold text-gray-200">Automated Pipeline Coverage</h3>
@@ -220,14 +220,14 @@ export default function AnalyzeEmail() {
             </div>
           </div>
 
-          <div className="mt-6 rounded border border-[#151D28] bg-[#05080D] p-3 text-[10px] font-mono text-gray-500 leading-relaxed">
+          <div className="mt-6 rounded border border-[#1b3037] bg-[#081216] p-3 text-[10px] font-mono text-gray-500 leading-relaxed">
             Data Safety: Local processing mode. No unencrypted content is shared with external parties.
           </div>
         </aside>
       </div>
 
       {/* Raw MIME Paste Option */}
-      <section className="rounded-lg border border-[#151D28] bg-[#080D14]/90 p-5 shadow-lg">
+      <section className="rounded-xl border border-[#1b3037] bg-[#101b21]/90 p-6 shadow-[0_18px_45px_rgba(2,12,15,0.2)]">
         <div className="flex items-start gap-3">
           <div className="rounded border border-violet-500/30 bg-violet-950/40 p-2.5 text-violet-300">
             <MailSearch size={20} />
@@ -244,7 +244,7 @@ export default function AnalyzeEmail() {
         </div>
 
         <textarea
-          className="mt-4 h-56 w-full resize-y rounded-lg border border-[#1C2A3D] bg-[#05080D] p-4 font-mono text-xs leading-relaxed text-gray-300 outline-none transition-all placeholder:text-gray-700 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
+          className="mt-4 h-56 w-full resize-y rounded-lg border border-[#29454b] bg-[#081216] p-4 font-mono text-xs leading-relaxed text-gray-300 outline-none transition-all placeholder:text-gray-700 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
           placeholder={`Delivered-To: victim@enterprise.corp
 Received: from mail.attacker.net (mail.attacker.net [198.51.100.24])
     by mx.google.com with ESMTPS id ...
@@ -278,7 +278,7 @@ Please verify your credentials at http://suspicious-login-portal.com/login`}
             </span>
           </div>
 
-          <div className="w-full bg-[#05080D] h-2 rounded-full overflow-hidden border border-[#151D28]">
+          <div className="w-full bg-[#081216] h-2 rounded-full overflow-hidden border border-[#1b3037]">
             <div
               className="bg-gradient-to-r from-cyan-500 to-violet-500 h-full transition-all duration-500"
               style={{ width: `${progressPct}%` }}
@@ -300,7 +300,7 @@ Please verify your credentials at http://suspicious-login-portal.com/login`}
       )}
 
       {/* Action Footer */}
-      <div className="flex flex-col gap-3 border-t border-[#151D28] pt-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 border-t border-[#1b3037] pt-5 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-gray-500 font-mono">
           {file
             ? `Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`

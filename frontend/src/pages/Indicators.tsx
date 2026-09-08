@@ -153,7 +153,7 @@ export default function Indicators() {
       <SecurityEnvironmentBackground profile="indicators" intensity="subtle" />
 
       {/* Header */}
-      <header className="relative z-10 flex flex-col gap-4 border-b border-[#151D28] pb-5 lg:flex-row lg:items-end lg:justify-between">
+      <header className="relative z-10 flex flex-col gap-4 border-b border-[#1b3037] pb-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <span className="flex h-2 w-2 rounded-full bg-violet-400 animate-pulse" />
@@ -203,7 +203,7 @@ export default function Indicators() {
       </header>
 
       {/* Mode Selector Tabs */}
-      <div className="relative z-10 flex gap-2 border-b border-[#151D28]">
+      <div className="relative z-10 flex gap-2 border-b border-[#1b3037]">
         <SourceTab
           active={sourceMode === 'live'}
           onClick={() => { setSourceMode('live'); setExpanded(null); }}
@@ -219,7 +219,7 @@ export default function Indicators() {
       </div>
 
       {/* Filter and Search Bar */}
-      <section className="relative z-10 flex flex-col gap-3 rounded-lg border border-[#151D28] bg-[#080D14]/90 p-4 shadow-lg xl:flex-row">
+      <section className="relative z-10 flex flex-col gap-3 rounded-lg border border-[#1b3037] bg-[#101b21]/90 p-4 shadow-lg xl:flex-row">
         <div className="relative min-w-0 flex-1">
           <Search className="absolute left-3 top-2.5 text-gray-500" size={15} />
           <input
@@ -230,7 +230,7 @@ export default function Indicators() {
             }
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full rounded-lg border border-[#1C2A3D] bg-[#05080D] py-2 pl-9 pr-3 text-xs font-mono text-gray-200 outline-none placeholder:text-gray-600 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
+            className="w-full rounded-lg border border-[#29454b] bg-[#081216] py-2 pl-9 pr-3 text-xs font-mono text-gray-200 outline-none placeholder:text-gray-600 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
           />
         </div>
 
@@ -252,8 +252,8 @@ export default function Indicators() {
       </section>
 
       {/* Main Table / Workbench */}
-      <section className="relative z-10 overflow-hidden rounded-lg border border-[#151D28] bg-[#080D14]/90 shadow-lg">
-        <div className="flex items-center justify-between border-b border-[#151D28] px-5 py-4">
+      <section className="relative z-10 overflow-hidden rounded-lg border border-[#1b3037] bg-[#101b21]/90 shadow-lg">
+        <div className="flex items-center justify-between border-b border-[#1b3037] px-5 py-4">
           <div>
             <p className="text-[9px] font-mono font-bold uppercase tracking-[0.18em] text-gray-500">
               {sourceMode === 'live' ? 'External Threat Provider Observations' : 'Locally Analyzed Evidence Records'}
@@ -279,7 +279,7 @@ export default function Indicators() {
         {loading ? (
           <div className="space-y-2 p-5">
             {[1, 2, 3, 4, 5].map(row => (
-              <div key={row} className="h-12 animate-pulse rounded bg-[#060A10] border border-[#151D28]" />
+              <div key={row} className="h-12 animate-pulse rounded bg-[#0b171c] border border-[#1b3037]" />
             ))}
           </div>
         ) : !filtered.length ? (
@@ -289,7 +289,7 @@ export default function Indicators() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1000px] text-left text-xs font-mono">
-              <thead className="bg-[#05080D] text-[10px] uppercase tracking-wider text-gray-500 border-b border-[#151D28]">
+              <thead className="bg-[#081216] text-[10px] uppercase tracking-wider text-gray-500 border-b border-[#1b3037]">
                 <tr>
                   <th className="px-5 py-3">Indicator</th>
                   <th className="px-4 py-3">Classification</th>
@@ -301,7 +301,7 @@ export default function Indicators() {
                   <th className="px-3 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#151D28]/60">
+              <tbody className="divide-y divide-[#1b3037]/60">
                 {filtered.map(item => {
                   const category = categorizeIoc({
                     value: item.indicator,
@@ -355,7 +355,7 @@ function IndicatorRow({
 
   return (
     <>
-      <tr className={`transition-colors hover:bg-[#0D1520] ${isExpanded ? 'bg-[#0B111A]' : ''}`}>
+      <tr className={`transition-colors hover:bg-[#0D1520] ${isExpanded ? 'bg-[#16242a]' : ''}`}>
         <td className="max-w-[340px] px-5 py-3.5">
           <button
             onClick={onToggle}
@@ -412,7 +412,7 @@ function IndicatorRow({
         <td className="px-3 py-3.5 text-right whitespace-nowrap">
           <button
             onClick={onCopy}
-            className="rounded p-1.5 text-gray-500 hover:bg-[#151D28] hover:text-cyan-300 transition-colors"
+            className="rounded p-1.5 text-gray-500 hover:bg-[#1b3037] hover:text-cyan-300 transition-colors"
             title="Copy indicator value"
           >
             <Copy size={13} />
@@ -422,11 +422,11 @@ function IndicatorRow({
 
       {/* Expanded Intelligence Drawer */}
       {isExpanded && (
-        <tr className="border-t border-[#1C2A3D] bg-[#05080D]">
+        <tr className="border-t border-[#29454b] bg-[#081216]">
           <td colSpan={8} className="p-0">
-            <div className="p-5 space-y-4 border-l-2 border-cyan-500 bg-[#060A10]/95 text-xs font-mono">
+            <div className="p-5 space-y-4 border-l-2 border-cyan-500 bg-[#0b171c]/95 text-xs font-mono">
               {/* Row 1: Identity & Provenance */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border-b border-[#151D28] pb-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border-b border-[#1b3037] pb-4">
                 <div>
                   <p className="text-[9px] uppercase tracking-wider text-gray-500">Provider Provenance</p>
                   <p className="mt-1 text-gray-200 font-semibold flex items-center gap-1.5">
@@ -461,7 +461,7 @@ function IndicatorRow({
               </div>
 
               {/* Row 2: Threat & Attribution Context */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border-b border-[#151D28] pb-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border-b border-[#1b3037] pb-4">
                 <div>
                   <p className="text-[9px] uppercase tracking-wider text-gray-500">Threat Type / Category</p>
                   <p className="mt-1 text-gray-200 font-semibold flex items-center gap-1.5">
@@ -503,13 +503,13 @@ function IndicatorRow({
               </div>
 
               {/* Row 3: Tags & Infrastructure */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-[#151D28] pb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-[#1b3037] pb-4">
                 <div>
                   <p className="text-[9px] uppercase tracking-wider text-gray-500 mb-1.5">Observed Tags</p>
                   {item.tags && item.tags.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5">
                       {item.tags.map((tag, i) => (
-                        <span key={i} className="rounded bg-[#151D28] px-2 py-0.5 text-[10px] text-gray-300 border border-[#263449]">
+                        <span key={i} className="rounded bg-[#1b3037] px-2 py-0.5 text-[10px] text-gray-300 border border-[#3b5e60]">
                           {tag}
                         </span>
                       ))}
@@ -567,7 +567,7 @@ function IndicatorRow({
 
               {/* If Local Analysis Mode: Show Email Case Context */}
               {sourceMode === 'local' && item.analysis_id && (
-                <div className="rounded border border-[#1C2A3D] bg-[#05080D] p-3 space-y-1.5 text-[11px]">
+                <div className="rounded border border-[#29454b] bg-[#081216] p-3 space-y-1.5 text-[11px]">
                   <p className="text-[9px] uppercase tracking-wider text-cyan-400 font-bold">Investigation Forensic Context</p>
                   <p className="text-gray-300"><strong className="text-gray-400">Email Subject:</strong> {item.email_subject}</p>
                   <p className="text-gray-300"><strong className="text-gray-400">Sender:</strong> {item.email_sender}</p>
@@ -602,7 +602,7 @@ function SourceTab({
       className={`inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-mono font-bold uppercase tracking-wider transition-colors ${
         active
           ? 'border-cyan-400 text-cyan-300 bg-cyan-950/10'
-          : 'border-transparent text-gray-500 hover:text-gray-300 hover:bg-[#080D14]'
+          : 'border-transparent text-gray-500 hover:text-gray-300 hover:bg-[#101b21]'
       }`}
     >
       <Icon size={14} />
@@ -627,7 +627,7 @@ function FilterSelect({
       aria-label={label}
       value={value}
       onChange={e => setValue(e.target.value)}
-      className="rounded-lg border border-[#1C2A3D] bg-[#05080D] px-2.5 py-1.5 text-xs font-mono text-gray-300 outline-none focus:border-cyan-500"
+      className="rounded-lg border border-[#29454b] bg-[#081216] px-2.5 py-1.5 text-xs font-mono text-gray-300 outline-none focus:border-cyan-500"
     >
       {options.map(opt => (
         <option key={opt} value={opt}>

@@ -4,6 +4,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, PieChart, Pie, Cell
 import { ArrowRight, MailSearch, Shield, Activity, Database, Clock, ChevronRight, Terminal } from 'lucide-react';
 import { SeverityBadge } from '../components/common/SeverityBadge';
 import { MetricCard } from '../components/common/MetricCard';
+import { SecurityEnvironmentBackground } from '../components/common/SecurityEnvironmentBackground';
 import { DashboardSummary, getDashboardSummary } from '../services/analysisApi';
 
 const EMPTY_SUMMARY: DashboardSummary = {
@@ -18,8 +19,8 @@ const EMPTY_SUMMARY: DashboardSummary = {
 };
 
 const tooltipStyle = {
-  backgroundColor: '#080D14',
-  border: '1px solid #1C2A3D',
+  backgroundColor: '#101b21',
+  border: '1px solid #29454b',
   borderRadius: '6px',
   color: '#F3F4F6',
   fontSize: '11px',
@@ -41,26 +42,29 @@ export default function Dashboard() {
   const totalIOCs = summary.top_indicators.reduce((acc, curr) => acc + curr.count, 0);
 
   return (
-    <div className="space-y-6 max-w-[1680px] mx-auto">
+    <div className="relative mx-auto max-w-[1680px] space-y-7">
+      <SecurityEnvironmentBackground profile="dashboard" intensity="subtle" />
       {/* Top Banner / Hero Header */}
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-[#151D28] pb-5">
+      <header className="relative z-10 flex flex-col gap-5 overflow-hidden rounded-xl border border-[#29454b] bg-[#101b21]/80 p-6 shadow-[0_24px_70px_rgba(2,12,15,0.25)] lg:flex-row lg:items-end lg:justify-between">
+        <div className="pointer-events-none absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-[#58d6c0]/[0.07] to-transparent" />
         <div>
           <div className="flex items-center gap-2">
-            <span className="flex h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-cyan-400">SOC TELEMETRY HUB • LOCAL INVESTIGATION</p>
+            <span className="flex h-2 w-2 rounded-full bg-[#58d6c0] shadow-[0_0_12px_rgba(88,214,192,0.8)] animate-pulse" />
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#58d6c0]">SOC telemetry hub · local investigation</p>
           </div>
-          <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+          <h1 className="mt-3 flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
             Email Threat Operations Overview
           </h1>
-          <p className="mt-1 text-xs text-gray-400 font-mono">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#9aadaa]">
             Deterministic forensic telemetry, SPF/DKIM/DMARC divergence tracking, and MITRE ATT&CK alignment.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="relative flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+          <div className="hidden rounded-md border border-[#29454b] bg-[#0c171c]/70 px-3 py-2 sm:block"><p className="font-mono text-[9px] uppercase tracking-wider text-[#718581]">Operating posture</p><p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-emerald-300"><span className="h-1.5 w-1.5 rounded-full bg-emerald-300" /> Evidence collection active</p></div>
           <Link
             to="/analyze"
-            className="btn-primary shadow-lg shadow-cyan-950/40"
+            className="btn-primary shadow-lg shadow-[#2eaa9d]/20"
           >
             <MailSearch size={15} />
             <span>Analyze EML / MIME</span>
@@ -70,33 +74,33 @@ export default function Dashboard() {
       </header>
 
       {/* Telemetry Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-[#080D14]/80 p-3 rounded-lg border border-[#151D28] text-xs font-mono">
+      <div className="relative z-10 grid grid-cols-2 gap-3 rounded-lg border border-[#1b3037] bg-[#101b21]/85 p-3 text-xs font-mono shadow-[0_14px_35px_rgba(2,12,15,0.18)] md:grid-cols-4">
         <div className="flex items-center gap-2.5 px-2">
-          <Database size={14} className="text-cyan-400 shrink-0" />
+          <Database size={14} className="shrink-0 text-[#58d6c0]" />
           <div className="min-w-0">
             <p className="text-[9px] text-gray-500 uppercase">Data Repository</p>
             <p className="text-xs text-gray-200 font-semibold truncate">{summary.data_source || 'Local SQLite Store'}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 px-2 border-l border-[#151D28]">
-          <Shield size={14} className="text-emerald-400 shrink-0" />
+        <div className="flex items-center gap-2.5 border-l border-[#1b3037] px-2">
+          <Shield size={14} className="shrink-0 text-emerald-300" />
           <div className="min-w-0">
             <p className="text-[9px] text-gray-500 uppercase">Forensic Engine</p>
             <p className="text-xs text-gray-200 font-semibold">Deterministic V1.5</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 px-2 border-l border-[#151D28]">
-          <Activity size={14} className="text-amber-400 shrink-0" />
+        <div className="flex items-center gap-2.5 border-l border-[#1b3037] px-2">
+          <Activity size={14} className="shrink-0 text-[#f0b35a]" />
           <div className="min-w-0">
             <p className="text-[9px] text-gray-500 uppercase">Total IOCs Extracted</p>
             <p className="text-xs text-gray-200 font-semibold">{loading ? '—' : totalIOCs}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 px-2 border-l border-[#151D28]">
-          <Clock size={14} className="text-violet-400 shrink-0" />
+        <div className="flex items-center gap-2.5 border-l border-[#1b3037] px-2">
+          <Clock size={14} className="shrink-0 text-[#b1a8df]" />
           <div className="min-w-0">
             <p className="text-[9px] text-gray-500 uppercase">Pipeline Mode</p>
             <p className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
@@ -108,13 +112,13 @@ export default function Dashboard() {
       </div>
 
       {error && (
-        <div className="rounded border border-yellow-800/70 bg-yellow-950/30 px-4 py-3 text-xs text-yellow-200 font-mono">
+        <div className="relative z-10 rounded border border-yellow-800/70 bg-[#302519]/70 px-4 py-3 font-mono text-xs text-yellow-200">
           {error}
         </div>
       )}
 
       {/* Metric Cards Grid */}
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="relative z-10 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           title="Total Investigations"
           value={loading ? '—' : summary.metrics.total_analyses}
@@ -138,16 +142,16 @@ export default function Dashboard() {
       </section>
 
       {/* Analytical Charts & Threat Indicators */}
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+      <section className="relative z-10 grid grid-cols-1 gap-4 xl:grid-cols-12">
         {/* Activity Volume Chart */}
-        <div className="xl:col-span-5 rounded-lg border border-[#151D28] bg-[#080D14]/90 p-5 shadow-lg">
+        <div className="xl:col-span-5 rounded-lg border border-[#1b3037] bg-[#101b21]/90 p-5 shadow-[0_18px_45px_rgba(2,12,15,0.2)]">
           <SectionTitle eyebrow="INVESTIGATION CHRONOLOGY" title="Threat Activity Volume" />
           <div className="mt-4">
             {summary.activity.length ? (
               <ResponsiveContainer width="100%" height={230}>
                 <BarChart data={summary.activity} barGap={4}>
                   <XAxis dataKey="date" tick={{ fill: '#64748B', fontSize: 10, fontFamily: 'monospace' }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={tooltipStyle} cursor={{ fill: '#151D28' }} />
+                  <Tooltip contentStyle={tooltipStyle} cursor={{ fill: '#1b3037' }} />
                   <Bar dataKey="analyses" name="Total Ingested" fill="#0891B2" radius={[3, 3, 0, 0]} />
                   <Bar dataKey="flagged" name="High Risk Flagged" fill="#F59E0B" radius={[3, 3, 0, 0]} />
                 </BarChart>
@@ -159,7 +163,7 @@ export default function Dashboard() {
         </div>
 
         {/* Severity Distribution */}
-        <div className="xl:col-span-3 rounded-lg border border-[#151D28] bg-[#080D14]/90 p-5 shadow-lg">
+        <div className="xl:col-span-3 rounded-lg border border-[#1b3037] bg-[#101b21]/90 p-5 shadow-[0_18px_45px_rgba(2,12,15,0.2)]">
           <SectionTitle eyebrow="RISK POSTURE" title="Severity Distribution" />
           <div className="mt-4">
             {summary.distribution.length ? (
@@ -186,13 +190,13 @@ export default function Dashboard() {
         </div>
 
         {/* Top Indicators */}
-        <div className="xl:col-span-4 rounded-lg border border-[#151D28] bg-[#080D14]/90 p-5 shadow-lg">
+        <div className="xl:col-span-4 rounded-lg border border-[#1b3037] bg-[#101b21]/90 p-5 shadow-[0_18px_45px_rgba(2,12,15,0.2)]">
           <SectionTitle eyebrow="FORENSIC ARTIFACTS" title="Observed Intelligence Indicators" />
           <div className="mt-4">
             {summary.top_indicators.length ? (
               <div className="space-y-1.5 max-h-[230px] overflow-y-auto pr-1">
                 {summary.top_indicators.map((item, index) => (
-                  <div key={item.indicator} className="flex items-center justify-between gap-3 rounded bg-[#05080D] border border-[#151D28]/60 px-3 py-2 transition-colors hover:border-cyan-500/30">
+                  <div key={item.indicator} className="flex items-center justify-between gap-3 rounded bg-[#081216] border border-[#1b3037]/60 px-3 py-2 transition-colors hover:border-cyan-500/30">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <span className="font-mono text-[10px] text-gray-600 w-4">{String(index + 1).padStart(2, '0')}</span>
                       <span className="font-mono text-xs text-gray-300 truncate" title={item.indicator}>
@@ -213,8 +217,8 @@ export default function Dashboard() {
       </section>
 
       {/* Recent Investigation Queue Table */}
-      <section className="overflow-hidden rounded-lg border border-[#151D28] bg-[#080D14]/90 shadow-lg">
-        <div className="flex items-center justify-between border-b border-[#151D28] px-5 py-4 bg-[#060A10]">
+      <section className="relative z-10 overflow-hidden rounded-lg border border-[#1b3037] bg-[#101b21]/90 shadow-[0_18px_45px_rgba(2,12,15,0.2)]">
+        <div className="flex items-center justify-between border-b border-[#1b3037] bg-[#0c171c] px-5 py-4">
           <div className="flex items-center gap-2">
             <Terminal size={15} className="text-cyan-400" />
             <SectionTitle eyebrow="CASE LOG" title="Recent Email Investigations" compact />
@@ -227,7 +231,7 @@ export default function Dashboard() {
         {summary.recent_analyses.length ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[800px] text-left text-xs">
-              <thead className="bg-[#05080D] text-[10px] uppercase font-mono tracking-wider text-gray-500 border-b border-[#151D28]">
+              <thead className="bg-[#081216] text-[10px] uppercase font-mono tracking-wider text-gray-500 border-b border-[#1b3037]">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Subject / Case ID</th>
                   <th className="px-4 py-3 font-semibold">Sender Identity</th>
@@ -237,7 +241,7 @@ export default function Dashboard() {
                   <th className="px-5 py-3 font-semibold text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#151D28]/60">
+              <tbody className="divide-y divide-[#1b3037]/60">
                 {summary.recent_analyses.map((item) => (
                   <tr key={item.analysis_id} className="transition-colors hover:bg-[#0D1520]/80">
                     <td className="px-5 py-3.5">

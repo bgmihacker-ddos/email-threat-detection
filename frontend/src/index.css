@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,43 +10,43 @@
 @layer base {
   :root {
     /* Base palette - near-black security operations */
-    --color-bg-deep: #030508;
-    --color-bg-primary: #05080D;
-    --color-bg-surface: #080D14;
-    --color-bg-elevated: #0B111A;
-    --color-bg-hover: #0E1520;
-    --color-bg-active: #101722;
+    --color-bg-deep: #071014;
+    --color-bg-primary: #0a1217;
+    --color-bg-surface: #101b21;
+    --color-bg-elevated: #16242a;
+    --color-bg-hover: #1b2b31;
+    --color-bg-active: #21343a;
 
     /* Border colors */
-    --color-border-subtle: #0A0F16;
-    --color-border-default: #151D28;
-    --color-border-muted: #1C2A3D;
-    --color-border-strong: #263449;
+    --color-border-subtle: #102027;
+    --color-border-default: #1b3037;
+    --color-border-muted: #29454b;
+    --color-border-strong: #3b5e60;
 
     /* Text colors */
-    --color-text-primary: #F3F4F6;
-    --color-text-secondary: #D1D5DB;
-    --color-text-muted: #9CA3AF;
-    --color-text-subtle: #6B7280;
-    --color-text-disabled: #4B5563;
+    --color-text-primary: #f3f7f5;
+    --color-text-secondary: #d6e1de;
+    --color-text-muted: #9aadaa;
+    --color-text-subtle: #718581;
+    --color-text-disabled: #516963;
 
     /* Accent colors - restrained cybersecurity palette */
-    --color-cyan: #06B6D4;
-    --color-cyan-muted: #0891B2;
-    --color-cyan-subtle: #155E75;
+    --color-cyan: #58d6c0;
+    --color-cyan-muted: #2eaa9d;
+    --color-cyan-subtle: #1f615f;
     --color-blue: #3B82F6;
-    --color-violet: #8B5CF6;
-    --color-purple: #A78BFA;
+    --color-violet: #9a8ed3;
+    --color-purple: #b1a8df;
     --color-green: #10B981;
     --color-green-muted: #059669;
-    --color-amber: #F59E0B;
-    --color-amber-muted: #D97706;
-    --color-red: #EF4444;
-    --color-red-muted: #DC2626;
+    --color-amber: #f0b35a;
+    --color-amber-muted: #c8812f;
+    --color-red: #ed756d;
+    --color-red-muted: #c45450;
 
     /* Typography */
-    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-    --font-mono: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', monospace;
+    --font-sans: 'Space Grotesk', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
     /* Spacing */
     --space-1: 0.25rem;
@@ -64,10 +66,20 @@
     --radius-xl: 12px;
   }
 
-  html { background: var(--color-bg-primary); }
+  html {
+    background: var(--color-bg-primary);
+    scroll-behavior: smooth;
+  }
   body {
     min-width: 320px;
-    background: var(--color-bg-primary);
+    background:
+      linear-gradient(rgba(22, 47, 51, 0.15) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(22, 47, 51, 0.15) 1px, transparent 1px),
+      radial-gradient(circle at 10% 0%, rgba(49, 126, 116, 0.14), transparent 32rem),
+      radial-gradient(circle at 92% 18%, rgba(125, 93, 70, 0.1), transparent 28rem),
+      var(--color-bg-primary);
+    background-size: 44px 44px, 44px 44px, auto, auto, auto;
+    background-attachment: fixed;
     color: var(--color-text-secondary);
     font-family: var(--font-sans);
   }
@@ -95,11 +107,13 @@
 @layer components {
   /* SOC Panel - primary container */
   .soc-panel {
-    @apply rounded-lg border border-[#151D28] bg-[#080D14];
+    @apply rounded-lg border border-[#1b3037] bg-[#101b21]/90;
+    box-shadow: 0 18px 50px rgba(2, 12, 15, 0.22), inset 0 1px 0 rgba(207, 255, 243, 0.035);
   }
 
   .soc-panel-elevated {
-    @apply rounded-lg border border-[#1C2A3D] bg-[#0B111A] shadow-lg;
+    @apply rounded-lg border border-[#29454b] bg-[#16242a] shadow-lg;
+    box-shadow: 0 22px 65px rgba(2, 12, 15, 0.3), inset 0 1px 0 rgba(207, 255, 243, 0.05);
   }
 
   /* Labels */

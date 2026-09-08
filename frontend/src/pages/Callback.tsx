@@ -34,7 +34,7 @@ export default function Callback() {
   }, [searchParams, navigate, checkAuth, addToast]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#05080D] text-white">
+    <div className="min-h-screen flex items-center justify-center bg-[#081216] text-white">
       Processing authentication...
     </div>
   );

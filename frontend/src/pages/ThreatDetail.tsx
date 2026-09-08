@@ -46,7 +46,7 @@ export default function ThreatDetail() {
       <div className="flex items-center gap-4">
         <button
           onClick={() => navigate('/threats')}
-          className="p-1.5 bg-[#080D14] border border-[#151D28] text-gray-400 hover:text-white rounded"
+          className="p-1.5 bg-[#101b21] border border-[#1b3037] text-gray-400 hover:text-white rounded"
         >
           <ArrowLeft size={16} />
         </button>
@@ -61,7 +61,7 @@ export default function ThreatDetail() {
 
       {/* Top Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
+        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">SEVERITY / RISK</p>
           <div className="mt-2 flex items-center gap-2">
             <SeverityBadge severity={threat.severity} />
@@ -69,28 +69,28 @@ export default function ThreatDetail() {
           </div>
         </div>
 
-        <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
+        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">THREAT TYPE / MALWARE</p>
           <p className="text-base font-bold text-cyan-400 mt-1 truncate" title={`${threat.type} / ${threat.malwareFamily}`}>{threat.type} / {threat.malwareFamily !== 'Unknown' ? threat.malwareFamily : 'Unknown'}</p>
         </div>
 
-        <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
+        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">ORIGIN LOCATION</p>
           <p className="text-base font-bold text-white mt-1">{threat.location}</p>
         </div>
 
-        <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
+        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">CURRENT STATUS</p>
           <p className="text-base font-bold text-yellow-400 mt-1 uppercase">{threat.status}</p>
         </div>
       </div>
 
       {/* Description & Target */}
-      <div className="bg-[#080D14] p-5 rounded border border-[#151D28] space-y-3">
+      <div className="bg-[#101b21] p-5 rounded border border-[#1b3037] space-y-3">
         <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Threat Summary</h2>
         <p className="text-xs text-gray-300 leading-relaxed">{threat.description}</p>
-        <div className="flex flex-wrap gap-6 text-xs text-gray-400 pt-2 border-t border-[#151D28]">
-          {threat.indicator && <div><span className="text-gray-500 block text-[10px] uppercase mb-1">Indicator</span> <span className="font-mono text-cyan-400 break-all bg-[#151D28]/40 px-1.5 py-0.5 rounded border border-[#1C2A3D]">{threat.indicator}</span></div>}
+        <div className="flex flex-wrap gap-6 text-xs text-gray-400 pt-2 border-t border-[#1b3037]">
+          {threat.indicator && <div><span className="text-gray-500 block text-[10px] uppercase mb-1">Indicator</span> <span className="font-mono text-cyan-400 break-all bg-[#1b3037]/40 px-1.5 py-0.5 rounded border border-[#29454b]">{threat.indicator}</span></div>}
           <div><span className="text-gray-500 block text-[10px] uppercase mb-1">Target / Victim</span> <span className="font-mono text-white">{threat.target}</span></div>
           {threat.sender && <div><span className="text-gray-500 block text-[10px] uppercase mb-1">{threat.source === 'Local Analysis' ? 'Sender' : 'Reporter'}</span> <span className="font-mono text-gray-300">{threat.sender}</span></div>}
           {threat.source && <div><span className="text-gray-500 block text-[10px] uppercase mb-1">Provenance</span> <span className="font-mono text-yellow-400">{threat.source}</span></div>}
@@ -100,7 +100,7 @@ export default function ThreatDetail() {
 
       {/* Attack Stages / Timeline */}
       {threat.attackStages && (
-        <div className="bg-[#080D14] p-5 rounded border border-[#151D28] space-y-4">
+        <div className="bg-[#101b21] p-5 rounded border border-[#1b3037] space-y-4">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
             <Clock size={14} className="text-cyan-400" />
             Attack Chain Execution Pipeline
@@ -114,7 +114,7 @@ export default function ThreatDetail() {
                     ? 'bg-[#0B151A] border-cyan-800 text-cyan-300'
                     : stage.status === 'active'
                     ? 'bg-[#1A0F0B] border-red-800 text-red-300 animate-pulse'
-                    : 'bg-[#05080D] border-[#151D28] text-gray-600'
+                    : 'bg-[#081216] border-[#1b3037] text-gray-600'
                 }`}
               >
                 <div>
@@ -141,19 +141,19 @@ export default function ThreatDetail() {
 
       {/* Associated Indicators & Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 bg-[#080D14] p-5 rounded border border-[#151D28] space-y-3">
+        <div className="md:col-span-2 bg-[#101b21] p-5 rounded border border-[#1b3037] space-y-3">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Observed IOCs & Network Indicators</h2>
           {threat.indicators && threat.indicators.length > 0 ? (
             <div className="space-y-2">
               {threat.indicators.map((ioc, idx) => (
-                <div key={idx} className="flex justify-between items-center bg-[#05080D] p-2.5 rounded border border-[#151D28] text-xs font-mono">
+                <div key={idx} className="flex justify-between items-center bg-[#081216] p-2.5 rounded border border-[#1b3037] text-xs font-mono">
                   <span className="text-cyan-400 truncate mr-2">{ioc}</span>
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(ioc);
                       addToast('IOC copied to clipboard', 'info');
                     }}
-                    className="text-[10px] bg-[#151D28] hover:bg-cyan-900 px-2 py-1 rounded text-white"
+                    className="text-[10px] bg-[#1b3037] hover:bg-cyan-900 px-2 py-1 rounded text-white"
                   >
                     COPY
                   </button>
@@ -166,7 +166,7 @@ export default function ThreatDetail() {
         </div>
 
         {/* Remediation & Response */}
-        <div className="bg-[#080D14] p-5 rounded border border-[#151D28] space-y-3">
+        <div className="bg-[#101b21] p-5 rounded border border-[#1b3037] space-y-3">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Recommended Actions</h2>
           <div className="flex flex-col gap-2">
             <button
@@ -177,7 +177,7 @@ export default function ThreatDetail() {
             </button>
             <button
               onClick={() => handleAction('Block Source Domain')}
-              className="w-full py-2 px-3 bg-[#101722] border border-[#151D28] hover:bg-[#152030] text-gray-300 text-xs font-bold rounded"
+              className="w-full py-2 px-3 bg-[#21343a] border border-[#1b3037] hover:bg-[#152030] text-gray-300 text-xs font-bold rounded"
             >
               Block Domain
             </button>

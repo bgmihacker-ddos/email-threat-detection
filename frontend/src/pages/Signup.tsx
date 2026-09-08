@@ -1,254 +1,92 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, type ReactNode } from 'react';
+import { Activity, AlertTriangle, ArrowLeft, ArrowUpRight, CheckCircle2, Fingerprint, KeyRound, LockKeyhole, Mail, Network, Shield, UserRound } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Shield, User, Mail, Lock, AlertTriangle, Activity, Wifi, CheckCircle2 } from 'lucide-react';
 import { SecurityEnvironmentBackground } from '../components/common/SecurityEnvironmentBackground';
 
 export default function Signup() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [name, setName] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { signup } = useAuth();
   const { addToast } = useToast();
 
-  const validatePassword = (pwd: string) => {
-    return pwd.length >= 8;
-  };
+  const requirements = [
+    ['8+ characters', password.length >= 8],
+    ['Upper + lowercase', /[A-Z]/.test(password) && /[a-z]/.test(password)],
+    ['Numeric digit', /[0-9]/.test(password)],
+    ['Special symbol', /[^A-Za-z0-9]/.test(password)],
+  ] as const;
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
+  async function handleSignup(event: React.FormEvent) {
+    event.preventDefault();
     setIsLoading(true);
-
     if (password !== confirmPassword) {
       addToast('Passwords do not match', 'error');
       setIsLoading(false);
       return;
     }
-
-    if (!validatePassword(password)) {
+    if (password.length < 8) {
       addToast('Password must be at least 8 characters', 'error');
       setIsLoading(false);
       return;
     }
-
     try {
       await signup({ name, email, password });
       addToast('Analyst account registered successfully. Authenticate to proceed.', 'success');
       navigate('/login');
-    } catch (err: any) {
-      addToast(err.message || 'Registration failed', 'error');
+    } catch (reason: any) {
+      addToast(reason.message || 'Registration failed', 'error');
       setIsLoading(false);
     }
-  };
-
-  const passwordRequirements = [
-    { label: 'Minimum 8 characters', met: password.length >= 8 },
-    { label: 'Uppercase & Lowercase letters', met: /[A-Z]/.test(password) && /[a-z]/.test(password) },
-    { label: 'Numeric digits (0-9)', met: /[0-9]/.test(password) },
-    { label: 'Special character symbol', met: /[^A-Za-z0-9]/.test(password) },
-  ];
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#030508] text-gray-100 overflow-hidden relative p-4">
+    <main className="relative min-h-screen overflow-hidden bg-transparent text-[#d6e1de]">
       <SecurityEnvironmentBackground profile="auth" intensity="moderate" />
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1500px] flex-col px-5 py-5 sm:px-8 lg:px-12">
+        <header className="flex items-center justify-between border-b border-[#29454b] pb-5">
+          <Link to="/login" className="group flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#3b5e60] bg-[#142b2d] text-[#58d6c0]"><Shield size={19} /></span>
+            <span><strong className="block text-sm tracking-[0.12em] text-white">EMAIL THREAT</strong><span className="font-mono text-[9px] uppercase tracking-[0.24em] text-[#58d6c0]">Forensic intelligence</span></span>
+          </Link>
+          <Link to="/login" className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-[#718581] hover:text-[#58d6c0]"><ArrowLeft size={13} /> Back to secure access</Link>
+        </header>
 
-      <div className="relative z-10 flex w-full max-w-4xl bg-[#080D14]/90 border border-[#151D28] rounded-xl overflow-hidden shadow-2xl backdrop-blur-md">
-        {/* Left panel - Info */}
-        <div className="hidden lg:flex w-1/2 p-10 bg-gradient-to-br from-[#080D14] via-[#0B111A] to-[#080D14] border-r border-[#151D28] flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="rounded border border-cyan-500/30 bg-cyan-950/40 p-2.5 text-cyan-400">
-                <Shield size={22} />
-              </div>
-              <div>
-                <h1 className="text-sm font-bold tracking-widest text-white uppercase font-mono">EMAIL THREAT</h1>
-                <p className="text-[9px] font-bold tracking-[0.2em] text-cyan-500 uppercase font-mono">FORENSIC SUITE</p>
-              </div>
-            </div>
+        <div className="grid flex-1 items-center gap-12 py-10 lg:grid-cols-[1fr_500px] lg:gap-24">
+          <section className="max-w-2xl">
+            <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#58d6c0]">Controlled access provisioning</p>
+            <h1 className="mt-5 max-w-xl text-5xl font-semibold leading-[1.02] tracking-[-0.045em] text-white sm:text-6xl">Build your analyst identity.</h1>
+            <p className="mt-6 max-w-lg text-base leading-8 text-[#9aadaa]">Create an operator profile for investigations that need a clear chain from message evidence to defensible decisions.</p>
+            <div className="mt-10 grid max-w-xl gap-3 sm:grid-cols-3"><Capability icon={<Network size={16} />} label="Casework" detail="Persisted investigations" /><Capability icon={<Fingerprint size={16} />} label="Evidence" detail="Traceable findings" /><Capability icon={<KeyRound size={16} />} label="Access" detail="Role-based controls" /></div>
+            <div className="mt-12 rounded-xl border border-[#29454b] bg-[#101f24]/70 p-5"><div className="flex items-start gap-3"><LockKeyhole size={17} className="mt-0.5 shrink-0 text-[#58d6c0]" /><div><p className="text-sm font-medium text-[#d6e1de]">Every action stays attributable.</p><p className="mt-1 text-xs leading-6 text-[#718581]">Operator activity is associated with your account for auditability and forensic integrity.</p></div></div></div>
+          </section>
 
-            <h2 className="text-2xl font-semibold text-white tracking-tight mb-3">Operator Enrolment</h2>
-            <p className="text-gray-400 text-xs leading-relaxed mb-6">
-              Provision an authorized forensic analyst workspace with access to deep header telemetry, MITRE ATT&CK correlation, and real-time threat intelligence.
-            </p>
-
-            <div className="space-y-3">
-              <Feature icon={<Activity size={14} />} title="Deterministic Analysis" desc="Rule-based header forensics, hop validation, and divergence telemetry" />
-              <Feature icon={<Wifi size={14} />} title="IOC Workbench" desc="Automated extraction and categorization of network and file indicators" />
-              <Feature icon={<Shield size={14} />} title="Export & SIEM Integration" desc="STIX 2.1 bundles, Splunk/KQL detection rules, and blocklists" />
-            </div>
-          </div>
-
-          <div className="pt-6 border-t border-[#151D28]">
-            <p className="text-[10px] text-gray-500 font-mono leading-relaxed">
-              All analyst actions are logged to immutable audit streams for compliance and forensic integrity.
-            </p>
-          </div>
-        </div>
-
-        {/* Right panel - Form */}
-        <div className="w-full lg:w-1/2 p-8 md:p-10 flex flex-col justify-center bg-[#080D14]/60">
-          <div className="max-w-sm mx-auto w-full">
-            <div className="lg:hidden flex items-center gap-3 mb-6 justify-center">
-              <div className="rounded border border-cyan-500/30 bg-cyan-950/30 p-2 text-cyan-400">
-                <Shield size={20} />
-              </div>
-              <div>
-                <h1 className="text-sm font-bold tracking-wide text-white">EMAIL THREAT</h1>
-                <p className="text-[9px] font-bold tracking-[0.2em] text-cyan-500">INTELLIGENCE</p>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-cyan-500 bg-cyan-950/30 px-2 py-0.5 rounded border border-cyan-800/30">
-                NEW ANALYST
-              </span>
-              <h2 className="text-xl font-bold text-white mt-2">Create Workspace</h2>
-              <p className="text-xs text-gray-500 mt-1">Configure your forensic operator credentials</p>
-            </div>
-
-            <form onSubmit={handleSignup} className="space-y-3.5">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 font-mono">Full Name / Call-sign</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-2.5 text-gray-600" size={15} />
-                  <input
-                    type="text"
-                    placeholder="Analyst Name"
-                    className="soc-input pl-10 text-xs py-2 font-mono"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 font-mono">Work Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 text-gray-600" size={15} />
-                  <input
-                    type="email"
-                    placeholder="analyst@domain.corp"
-                    className="soc-input pl-10 text-xs py-2 font-mono"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={isLoading}
-                    autoComplete="email"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 font-mono">Password</label>
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="text-[10px] text-cyan-400 hover:text-cyan-300 font-mono"
-                  >
-                    {showPassword ? 'HIDE' : 'SHOW'}
-                  </button>
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-2.5 text-gray-600" size={15} />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Min 8 characters"
-                    className="soc-input pl-10 text-xs py-2 font-mono"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={isLoading}
-                    autoComplete="new-password"
-                  />
-                </div>
-              </div>
-
-              {password && (
-                <div className="bg-[#05080D] border border-[#151D28] rounded p-2.5 text-[11px] space-y-1.5 font-mono">
-                  <p className="text-gray-400 font-semibold text-[10px] uppercase">Entropy Check</p>
-                  <div className="grid grid-cols-2 gap-1">
-                    {passwordRequirements.map((req, idx) => (
-                      <div key={idx} className={`flex items-center gap-1.5 ${req.met ? 'text-emerald-400' : 'text-gray-600'}`}>
-                        {req.met ? <CheckCircle2 size={11} /> : <span className="h-1.5 w-1.5 rounded-full bg-gray-700" />}
-                        <span className="text-[10px] truncate">{req.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 font-mono">Confirm Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-2.5 text-gray-600" size={15} />
-                  <input
-                    type="password"
-                    placeholder="Repeat password"
-                    className="soc-input pl-10 text-xs py-2 font-mono"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    disabled={isLoading}
-                    autoComplete="new-password"
-                  />
-                </div>
-              </div>
-
-              {password && confirmPassword && password !== confirmPassword && (
-                <div className="flex items-center gap-1.5 text-xs text-red-400 font-mono">
-                  <AlertTriangle size={13} />
-                  <span>Passwords do not match</span>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isLoading || !validatePassword(password)}
-                className={`btn-primary w-full py-2.5 mt-2 shadow-lg shadow-cyan-950/30 ${isLoading || !validatePassword(password) ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {isLoading ? (
-                  <>
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-                    <span className="font-mono text-xs">ENROLLING OPERATOR...</span>
-                  </>
-                ) : (
-                  <>
-                    <Shield size={15} />
-                    <span className="font-mono text-xs">REGISTER ANALYST ACCOUNT</span>
-                  </>
-                )}
-              </button>
+          <section className="rounded-2xl border border-[#3b5e60] bg-[#0c171c]/90 p-6 shadow-[0_28px_90px_rgba(2,12,15,0.42)] backdrop-blur-xl sm:p-8">
+            <div className="flex items-center justify-between"><div><p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#58d6c0]">Analyst gateway</p><h2 className="mt-3 text-2xl font-semibold text-white">Request access</h2></div><div className="rounded-lg border border-[#29454b] bg-[#142b2d] p-3 text-[#58d6c0]"><UserRound size={18} /></div></div>
+            <p className="mt-3 text-sm leading-6 text-[#9aadaa]">Provision your operator credentials. An administrator may review access according to local policy.</p>
+            <form onSubmit={handleSignup} className="mt-7 space-y-5">
+              <Field label="Full name / call-sign" icon={<UserRound size={16} />} value={name} onChange={setName} placeholder="Analyst name" type="text" disabled={isLoading} />
+              <Field label="Work email" icon={<Mail size={16} />} value={email} onChange={setEmail} placeholder="analyst@domain.corp" type="email" disabled={isLoading} />
+              <div><div className="mb-2 flex items-center justify-between"><label className="field-label">Access key</label><button type="button" onClick={() => setShowPassword(!showPassword)} className="font-mono text-[10px] uppercase text-[#58d6c0]">{showPassword ? 'Hide' : 'Show'}</button></div><Field icon={<KeyRound size={16} />} value={password} onChange={setPassword} placeholder="Create access key" type={showPassword ? 'text' : 'password'} disabled={isLoading} />{password && <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-[#29454b] bg-[#081216] p-3">{requirements.map(([label, met]) => <div key={label} className={`flex items-center gap-2 text-[10px] ${met ? 'text-emerald-300' : 'text-[#718581]'}`}>{met ? <CheckCircle2 size={12} /> : <span className="h-1.5 w-1.5 rounded-full bg-[#516963]" />}{label}</div>)}</div>}</div>
+              <Field label="Confirm access key" icon={<KeyRound size={16} />} value={confirmPassword} onChange={setConfirmPassword} placeholder="Repeat access key" type="password" disabled={isLoading} />
+              {password && confirmPassword && password !== confirmPassword && <p className="flex items-center gap-2 font-mono text-xs text-[#f2aaa2]"><AlertTriangle size={13} /> Access keys do not match</p>}
+              <button type="submit" disabled={isLoading || password.length < 8} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#58d6c0] px-4 py-3.5 text-xs font-bold uppercase tracking-[0.14em] text-[#09201e] transition hover:bg-[#82e5d2] disabled:cursor-not-allowed disabled:opacity-50">{isLoading ? <><Activity size={15} className="animate-pulse" /> Provisioning operator</> : <><Shield size={15} /> Create analyst account</>}</button>
             </form>
-
-            <p className="mt-6 text-center text-xs text-gray-500">
-              Already authorized?{' '}
-              <Link to="/login" className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors">
-                Sign in to console
-              </Link>
-            </p>
-          </div>
+            <div className="my-7 flex items-center gap-3"><span className="h-px flex-1 bg-[#29454b]" /><span className="font-mono text-[9px] uppercase tracking-[0.18em] text-[#718581]">Existing operator</span><span className="h-px flex-1 bg-[#29454b]" /></div>
+            <Link to="/login" className="flex w-full items-center justify-center gap-3 rounded-lg border border-[#3b5e60] bg-[#101f24] px-4 py-3 text-xs font-medium text-[#d6e1de] hover:border-[#58d6c0]">Sign in to console <ArrowUpRight size={13} /></Link>
+          </section>
         </div>
+        <footer className="flex justify-between border-t border-[#29454b] pt-4 font-mono text-[9px] uppercase tracking-[0.15em] text-[#516963]"><span>Protected investigation surface</span><span className="inline-flex items-center gap-2"><UserRound size={11} /> Authorized personnel only</span></footer>
       </div>
-    </div>
+    </main>
   );
 }
 
-function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
-  return (
-    <div className="flex items-start gap-3 p-2.5 rounded border border-[#151D28] bg-[#05080D]/60">
-      <div className="text-cyan-400 mt-0.5">{icon}</div>
-      <div>
-        <p className="text-xs font-semibold text-white font-mono">{title}</p>
-        <p className="text-[11px] text-gray-400">{desc}</p>
-      </div>
-    </div>
-  );
-}
+function Field({ label, icon, value, onChange, placeholder, type, disabled }: { label?: string; icon: ReactNode; value: string; onChange: (value: string) => void; placeholder: string; type: string; disabled: boolean }) { return <label className="block">{label && <span className="field-label">{label}</span>}<span className="relative block"><span className="pointer-events-none absolute left-3.5 top-3.5 text-[#718581]">{icon}</span><input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} required disabled={disabled} autoComplete={type === 'email' ? 'email' : type === 'password' ? 'new-password' : undefined} className="w-full rounded-lg border border-[#29454b] bg-[#081216] py-3.5 pl-11 pr-4 text-sm text-[#eef8f4] placeholder:text-[#516963] focus:border-[#58d6c0] focus:outline-none" /></span></label>; }
+function Capability({ icon, label, detail }: { icon: ReactNode; label: string; detail: string }) { return <div className="rounded-lg border border-[#29454b] bg-[#101f24]/65 p-4"><div className="text-[#58d6c0]">{icon}</div><p className="mt-5 text-sm font-medium text-[#d6e1de]">{label}</p><p className="mt-1 text-[11px] leading-5 text-[#718581]">{detail}</p></div>; }

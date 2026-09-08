@@ -79,7 +79,7 @@ export default function AdminSettings() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-[#151D28] flex gap-1 overflow-x-auto">
+      <div className="border-b border-[#1b3037] flex gap-1 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -87,7 +87,7 @@ export default function AdminSettings() {
             className={`flex items-center gap-2 px-4 py-3 text-xs font-bold transition-colors whitespace-nowrap ${
               activeTab === tab.id
                 ? 'border-b-2 border-cyan-500 text-cyan-400'
-                : 'text-gray-400 hover:text-gray-300 hover:bg-[#0B111A]'
+                : 'text-gray-400 hover:text-gray-300 hover:bg-[#16242a]'
             }`}
           >
             {tab.icon}
@@ -96,7 +96,7 @@ export default function AdminSettings() {
         ))}
       </div>
 
-      <div className="bg-[#080D14] p-5 rounded border border-[#151D28]">
+      <div className="bg-[#101b21] p-5 rounded border border-[#1b3037]">
         {activeTab === 'platform' && (
           <div className="space-y-4">
             <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Platform Configuration</h2>
@@ -107,7 +107,7 @@ export default function AdminSettings() {
                   type="text"
                   value={settings.platformName}
                   onChange={(e) => setSettings({ ...settings, platformName: e.target.value })}
-                  className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
                 />
               </div>
               <div>
@@ -115,7 +115,7 @@ export default function AdminSettings() {
                 <select
                   value={settings.environment}
                   onChange={(e) => setSettings({ ...settings, environment: e.target.value })}
-                  className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
                 >
                   <option value="development">Development</option>
                   <option value="staging">Staging</option>
@@ -128,10 +128,10 @@ export default function AdminSettings() {
                   type="number"
                   value={settings.sessionTimeout}
                   onChange={(e) => setSettings({ ...settings, sessionTimeout: e.target.value })}
-                  className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
                 />
               </div>
-              <div className="flex items-center justify-between p-3 bg-[#0B111A] border border-[#151D28] rounded">
+              <div className="flex items-center justify-between p-3 bg-[#16242a] border border-[#1b3037] rounded">
                 <div>
                   <p className="text-sm text-white font-bold">Maintenance Mode</p>
                   <p className="text-xs text-gray-500">Lock out all non-admin users</p>
@@ -159,7 +159,7 @@ export default function AdminSettings() {
                  { key: 'requireMFA', label: 'Require MFA for all users', desc: 'Enforce multi-factor auth across platform' },
                  { key: 'loginProtection', label: 'Brute Force Protection', desc: 'Auto-lock accounts after 5 failed attempts' },
                ].map((item) => (
-                 <div key={item.key} className="flex items-center justify-between p-3 bg-[#0B111A] border border-[#151D28] rounded">
+                 <div key={item.key} className="flex items-center justify-between p-3 bg-[#16242a] border border-[#1b3037] rounded">
                     <div>
                       <p className="text-sm text-white font-bold">{item.label}</p>
                       <p className="text-xs text-gray-500">{item.desc}</p>
@@ -180,7 +180,7 @@ export default function AdminSettings() {
                   <select
                     value={settings.sessionSecurity}
                     onChange={(e) => setSettings({ ...settings, sessionSecurity: e.target.value })}
-                    className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
+                    className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
                   >
                     <option value="strict">Strict (Bind to IP)</option>
                     <option value="standard">Standard</option>
@@ -193,7 +193,7 @@ export default function AdminSettings() {
                     placeholder="e.g. 192.168.1.0/24"
                     value={settings.ipRestrictions}
                     onChange={(e) => setSettings({ ...settings, ipRestrictions: e.target.value })}
-                    className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
+                    className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
                   />
                </div>
              </div>
@@ -209,7 +209,7 @@ export default function AdminSettings() {
                  { key: 'urlAnalysis', label: 'Deep URL Analysis', desc: 'Explode and sandbox suspicious URLs' },
                  { key: 'headerAnalysis', label: 'Heuristic Header Analysis', desc: 'Advanced spoofing and SPF/DKIM validation' },
                ].map((item) => (
-                 <div key={item.key} className="flex items-center justify-between p-3 bg-[#0B111A] border border-[#151D28] rounded">
+                 <div key={item.key} className="flex items-center justify-between p-3 bg-[#16242a] border border-[#1b3037] rounded">
                     <div>
                       <p className="text-sm text-white font-bold">{item.label}</p>
                       <p className="text-xs text-gray-500">{item.desc}</p>
@@ -230,7 +230,7 @@ export default function AdminSettings() {
                   <select
                     value={settings.detectionThreshold}
                     onChange={(e) => setSettings({ ...settings, detectionThreshold: e.target.value })}
-                    className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
+                    className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
                   >
                     <option value="aggressive">Aggressive</option>
                     <option value="high">High Sensitivity</option>
@@ -243,7 +243,7 @@ export default function AdminSettings() {
                   <select
                     value={settings.threatScoring}
                     onChange={(e) => setSettings({ ...settings, threatScoring: e.target.value })}
-                    className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
+                    className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
                   >
                     <option value="dynamic">Dynamic AI Scoring</option>
                     <option value="static">Static Ruleset</option>
@@ -262,7 +262,7 @@ export default function AdminSettings() {
                  { key: 'autoSync', label: 'Automatic Sync', desc: 'Pull indicators from configured providers' },
                  { key: 'enrichment', label: 'Intelligence Enrichment', desc: 'Automatically enrich domains and IPs' },
                ].map((item) => (
-                 <div key={item.key} className="flex items-center justify-between p-3 bg-[#0B111A] border border-[#151D28] rounded">
+                 <div key={item.key} className="flex items-center justify-between p-3 bg-[#16242a] border border-[#1b3037] rounded">
                     <div>
                       <p className="text-sm text-white font-bold">{item.label}</p>
                       <p className="text-xs text-gray-500">{item.desc}</p>
@@ -284,7 +284,7 @@ export default function AdminSettings() {
                     type="number"
                     value={settings.syncInterval}
                     onChange={(e) => setSettings({ ...settings, syncInterval: e.target.value })}
-                    className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
+                    className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
                   />
                </div>
              </div>
@@ -300,7 +300,7 @@ export default function AdminSettings() {
                  { key: 'adminAlerts', label: 'Administrative Alerts', desc: 'Notify on configuration changes' },
                  { key: 'healthAlerts', label: 'System Health Alerts', desc: 'Notify when services are degraded' },
                ].map((item) => (
-                 <div key={item.key} className="flex items-center justify-between p-3 bg-[#0B111A] border border-[#151D28] rounded">
+                 <div key={item.key} className="flex items-center justify-between p-3 bg-[#16242a] border border-[#1b3037] rounded">
                     <div>
                       <p className="text-sm text-white font-bold">{item.label}</p>
                       <p className="text-xs text-gray-500">{item.desc}</p>
@@ -328,7 +328,7 @@ export default function AdminSettings() {
                  { key: 'auditLogging', label: 'Audit Logging', desc: 'Record all user and system events' },
                  { key: 'debugMode', label: 'Debug Mode', desc: 'Enable verbose engine logging' },
                ].map((item) => (
-                 <div key={item.key} className="flex items-center justify-between p-3 bg-[#0B111A] border border-[#151D28] rounded">
+                 <div key={item.key} className="flex items-center justify-between p-3 bg-[#16242a] border border-[#1b3037] rounded">
                     <div>
                       <p className="text-sm text-white font-bold">{item.label}</p>
                       <p className="text-xs text-gray-500">{item.desc}</p>
@@ -349,7 +349,7 @@ export default function AdminSettings() {
                   <select
                     value={settings.logRetention}
                     onChange={(e) => setSettings({ ...settings, logRetention: e.target.value })}
-                    className="w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
+                    className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
                   >
                     <option value="30">30 Days</option>
                     <option value="90">90 Days</option>

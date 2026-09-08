@@ -35,7 +35,7 @@ export default function SystemHealth() {
       case 'Operational': return 'bg-green-900/30 text-green-300 border-green-700';
       case 'Degraded': return 'bg-yellow-900/30 text-yellow-300 border-yellow-700';
       case 'Offline': return 'bg-red-900/30 text-red-300 border-red-700';
-      default: return 'bg-[#151D28] text-gray-400 border-[#1E2A3D]';
+      default: return 'bg-[#1b3037] text-gray-400 border-[#1E2A3D]';
     }
   };
 
@@ -73,28 +73,28 @@ export default function SystemHealth() {
 
       {/* Overall Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
+        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">OPERATIONAL SERVICES</p>
           <p className="text-2xl font-bold text-green-400 mt-2">
             {services.filter(s => s.status === 'Operational').length}
           </p>
         </div>
 
-        <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
+        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">AVG UPTIME</p>
           <p className="text-2xl font-bold text-cyan-400 mt-2">
             {services.length > 0 ? (services.reduce((acc, s) => acc + s.uptimePct, 0) / services.length).toFixed(2) : 0}%
           </p>
         </div>
 
-        <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
+        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">TOTAL ERRORS (24H)</p>
           <p className="text-2xl font-bold text-red-400 mt-2">
             {services.reduce((acc, s) => acc + s.errorCount24h, 0)}
           </p>
         </div>
 
-        <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
+        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">DEGRADED SERVICES</p>
           <p className="text-2xl font-bold text-yellow-400 mt-2">
             {services.filter(s => s.status === 'Degraded').length}
@@ -103,7 +103,7 @@ export default function SystemHealth() {
       </div>
 
       {/* Services Table */}
-      <div className="bg-[#080D14] rounded border border-[#151D28] overflow-hidden">
+      <div className="bg-[#101b21] rounded border border-[#1b3037] overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-gray-400 font-mono text-xs animate-pulse">
             LOADING SYSTEM HEALTH STATUS...
@@ -111,7 +111,7 @@ export default function SystemHealth() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#0B111A] text-gray-400 border-b border-[#151D28]">
+              <thead className="bg-[#16242a] text-gray-400 border-b border-[#1b3037]">
                 <tr>
                   <th className="p-3 font-semibold">SERVICE</th>
                   <th className="p-3 font-semibold">STATUS</th>
@@ -122,9 +122,9 @@ export default function SystemHealth() {
                   <th className="p-3 font-semibold text-right">ACTIONS</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#151D28]">
+              <tbody className="divide-y divide-[#1b3037]">
                 {services.map((service) => (
-                  <tr key={service.id} className="hover:bg-[#0E1520] transition-colors">
+                  <tr key={service.id} className="hover:bg-[#1b2b31] transition-colors">
                     <td className="p-3">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-cyan-900/30 flex items-center justify-center">
@@ -143,7 +143,7 @@ export default function SystemHealth() {
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-16 h-1.5 bg-[#151D28] rounded-full overflow-hidden">
+                        <div className="w-16 h-1.5 bg-[#1b3037] rounded-full overflow-hidden">
                           <div
                             className="h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500"
                             style={{ width: `${service.uptimePct}%` }}
@@ -196,7 +196,7 @@ export default function SystemHealth() {
 
       {/* Health Legend */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
+        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Latency Guidelines</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-xs">
@@ -214,7 +214,7 @@ export default function SystemHealth() {
           </div>
         </div>
 
-        <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
+        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Uptime SLA</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-xs">
@@ -232,7 +232,7 @@ export default function SystemHealth() {
           </div>
         </div>
 
-        <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
+        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Error Thresholds</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-xs">

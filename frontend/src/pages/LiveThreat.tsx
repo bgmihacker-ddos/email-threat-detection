@@ -28,11 +28,11 @@ export default function LiveThreat() {
     <div className="mx-auto max-w-[1680px] space-y-6 font-sans">
       <SecurityEnvironmentBackground profile="live_threat" intensity="moderate" />
 
-      <header className="relative z-10 flex flex-col gap-4 border-b border-[#151D28] pb-6 lg:flex-row lg:items-end lg:justify-between">
+      <header className="relative z-10 flex flex-col gap-4 overflow-hidden rounded-xl border border-[#29454b] bg-[#101b21]/80 p-6 shadow-[0_20px_60px_rgba(2,12,15,0.22)] lg:flex-row lg:items-end lg:justify-between">
         <div>
            <div className="flex items-center gap-2">
-            <span className="flex h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-cyan-400">TELEMETRY & GEOSPATIAL CENTER</p>
+            <span className="flex h-2 w-2 rounded-full bg-[#58d6c0] shadow-[0_0_10px_rgba(88,214,192,0.8)] animate-pulse" />
+            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[#58d6c0]">TELEMETRY & GEOSPATIAL CENTER</p>
           </div>
           <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-white">Live Threat Intelligence Feed</h1>
           <p className="mt-1 text-xs text-gray-400 font-mono">Real-time geospatial infrastructure attribution and threat campaign telemetry.</p>
@@ -66,7 +66,7 @@ export default function LiveThreat() {
 
       <div className="relative z-10 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         {/* Map Section */}
-        <section className="flex flex-col rounded-lg border border-[#151D28] bg-[#080D14]/90 p-5 shadow-lg min-h-[650px]">
+        <section className="flex flex-col rounded-xl border border-[#1b3037] bg-[#101b21]/90 p-6 shadow-[0_18px_45px_rgba(2,12,15,0.2)] min-h-[650px]">
            <div className="mb-4 flex items-center justify-between">
              <div className='flex items-center gap-2'>
                 <Terminal size={15} className='text-cyan-400'/>
@@ -81,7 +81,7 @@ export default function LiveThreat() {
                <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-cyan-400" /> Low</span>
              </div>
            </div>
-           <div className="flex-1 overflow-hidden rounded-lg border border-[#151D28] bg-[#05080D]">
+           <div className="flex-1 overflow-hidden rounded-lg border border-[#1b3037] bg-[#081216]">
              {loading ? (
                 <div className="flex h-full items-center justify-center font-mono text-xs text-cyan-400 animate-pulse">
                   CALIBRATING GEOSPATIAL TELEMETRY...
@@ -93,8 +93,8 @@ export default function LiveThreat() {
         </section>
 
         {/* Aside Feed */}
-        <aside className="flex flex-col rounded-lg border border-[#151D28] bg-[#080D14]/90 p-5 shadow-lg min-h-[650px]">
-          <div className="flex items-start justify-between border-b border-[#151D28] pb-4">
+        <aside className="flex flex-col rounded-xl border border-[#1b3037] bg-[#101b21]/90 p-6 shadow-[0_18px_45px_rgba(2,12,15,0.2)] min-h-[650px]">
+          <div className="flex items-start justify-between border-b border-[#1b3037] pb-4">
             <div>
                <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-gray-600 font-mono">Live Ingestion</p>
                <h2 className="mt-1 text-sm font-semibold text-gray-200">Event Feed <span className="font-mono text-gray-500 font-normal">({threatEvents.length})</span></h2>
@@ -102,7 +102,7 @@ export default function LiveThreat() {
             <button
                onClick={loadThreats}
                title="Refresh feed"
-               className="rounded p-1.5 text-gray-500 transition-colors hover:bg-[#151D28] hover:text-cyan-300"
+               className="rounded p-1.5 text-gray-500 transition-colors hover:bg-[#1b3037] hover:text-cyan-300"
             >
                <RefreshCw size={14} />
             </button>
@@ -110,13 +110,13 @@ export default function LiveThreat() {
 
           <div className="mt-4 flex-1 space-y-2 overflow-y-auto pr-1">
              {!loading && !threatEvents.length && (
-                <p className="rounded border border-dashed border-[#263449] p-4 text-center font-mono text-xs text-gray-600">No live threat events available.</p>
+                <p className="rounded border border-dashed border-[#3b5e60] p-4 text-center font-mono text-xs text-gray-600">No live threat events available.</p>
              )}
              {threatEvents.map(event => (
                <button
                  key={event.id}
                  onClick={() => setSelectedId(event.id)}
-                 className={`w-full rounded border p-3 text-left transition-all hover:border-[#263449] ${selectedId === event.id ? 'border-cyan-500/40 bg-cyan-950/20' : 'border-[#151D28] bg-[#060A10]'}`}
+                 className={`w-full rounded border p-3 text-left transition-all hover:border-[#3b5e60] ${selectedId === event.id ? 'border-cyan-500/40 bg-cyan-950/20' : 'border-[#1b3037] bg-[#0b171c]'}`}
                >
                  <div className="flex items-center justify-between gap-2 mb-2">
                     <SeverityBadge severity={event.severity} />
@@ -129,8 +129,8 @@ export default function LiveThreat() {
           </div>
 
           {selected && (
-            <div className="mt-4 rounded-lg border border-cyan-500/20 bg-[#05080D]/95 p-4 font-mono text-[11px] text-gray-300 space-y-2">
-              <div className="flex items-center justify-between border-b border-[#151D28] pb-2">
+            <div className="mt-4 rounded-lg border border-cyan-500/20 bg-[#081216]/95 p-4 font-mono text-[11px] text-gray-300 space-y-2">
+              <div className="flex items-center justify-between border-b border-[#1b3037] pb-2">
                 <p className="text-[9px] font-bold uppercase tracking-wider text-cyan-400">Selected Event Telemetry</p>
                 <span className="text-[9px] text-gray-500">{selected.source}</span>
               </div>
@@ -186,7 +186,7 @@ export default function LiveThreat() {
 
 function HudMetric({ label, value, icon: Icon, tone = 'text-cyan-400' }: { label: string; value: string | number; icon: typeof Activity; tone?: string }) {
   return (
-    <div className="rounded-lg border border-[#151D28] bg-[#080D14]/90 p-4 shadow-lg">
+    <div className="rounded-lg border border-[#1b3037] bg-[#101b21]/90 p-4 shadow-lg">
       <div className="flex items-center justify-between">
         <p className="text-[9px] font-bold uppercase tracking-wider text-gray-600 font-mono">{label}</p>
         <Icon size={14} className={tone} />

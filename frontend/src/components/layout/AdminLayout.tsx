@@ -11,7 +11,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#05080D] text-gray-100 antialiased">
+    <div className="flex h-screen overflow-hidden bg-transparent text-gray-100 antialiased">
       {/* Procedural background */}
       <div className="fixed inset-0 bg-security-grid pointer-events-none z-0" />
       <div className="fixed inset-0 bg-telemetry pointer-events-none z-0" />
@@ -19,11 +19,11 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       <AdminSidebar collapsed={sidebarCollapsed} />
 
       <div className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-[#151D28] bg-[#080D14]/95 px-4 md:px-6 backdrop-blur-sm">
+        <header className="flex h-[4.5rem] shrink-0 items-center justify-between border-b border-[#1b3037] bg-[#0c171c]/90 px-4 backdrop-blur-xl md:px-7">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="hidden md:flex items-center justify-center w-8 h-8 rounded border border-[#151D28] text-gray-500 hover:text-gray-300 hover:border-[#263449] transition-colors"
+              className="hidden md:flex items-center justify-center w-8 h-8 rounded-md border border-[#29454b] text-[#718581] hover:text-[#d6e1de] hover:border-[#58d6c0] transition-colors"
               aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {sidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
@@ -44,13 +44,13 @@ export function AdminLayout({ children }: { children: ReactNode }) {
 
           <div className="flex items-center gap-3">
             {/* Alerts indicator */}
-            <button className="relative flex items-center justify-center w-9 h-9 rounded border border-[#151D28] text-gray-500 hover:text-gray-300 hover:border-[#263449] transition-colors">
+            <button className="relative flex items-center justify-center w-9 h-9 rounded-md border border-[#29454b] text-[#718581] hover:text-[#d6e1de] hover:border-[#58d6c0] transition-colors">
               <Bell size={15} />
               <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500" />
             </button>
 
             {/* Platform status */}
-            <div className="flex items-center gap-2 rounded border border-emerald-500/15 bg-emerald-950/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+            <div className="flex items-center gap-2 rounded-md border border-[#31514e] bg-[#142b2d] px-2.5 py-2 text-[10px] font-bold uppercase tracking-wider text-emerald-300">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
               Platform services online
             </div>
@@ -75,16 +75,16 @@ function AdminSidebar({ collapsed }: { collapsed: boolean }) {
   };
 
   return (
-    <aside className={`hidden md:flex flex-col border-r border-[#151D28] bg-[#080D14] transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'}`}>
-      <div className={`border-b border-[#151D28] px-5 py-5 ${collapsed ? 'px-3 flex justify-center' : ''}`}>
+    <aside className={`hidden md:flex flex-col border-r border-[#1b3037] bg-[#0c171c] transition-all duration-300 ${collapsed ? 'w-16' : 'w-72'}`}>
+      <div className={`border-b border-[#1b3037] px-5 py-5 ${collapsed ? 'px-3 flex justify-center' : ''}`}>
         <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
-          <div className="rounded border border-red-500/20 bg-red-950/30 p-2 text-red-400">
+          <div className="rounded-lg border border-[#8e4c48]/50 bg-[#3b2424] p-2 text-[#ed756d]">
             <LockKeyhole size={collapsed ? 18 : 18} />
           </div>
           {!collapsed && (
             <div>
               <h1 className="text-sm font-bold tracking-wide text-white">EMAIL THREAT</h1>
-              <p className="text-[9px] font-bold tracking-[0.2em] text-red-400">ADMINISTRATION</p>
+              <p className="text-[9px] font-bold tracking-[0.2em] text-[#ed756d]">ADMINISTRATION</p>
             </div>
           )}
         </div>
@@ -105,7 +105,7 @@ function AdminSidebar({ collapsed }: { collapsed: boolean }) {
           </div>
         </div>
 
-        <div className={`pt-4 border-t border-[#151D28] mt-4 ${collapsed ? 'px-2' : 'px-3'}`}>
+        <div className={`pt-4 border-t border-[#1b3037] mt-4 ${collapsed ? 'px-2' : 'px-3'}`}>
           <p className={`mb-2 ${collapsed ? 'text-[9px] text-center' : 'text-[9px]'} font-bold uppercase tracking-[0.18em] text-gray-600`}>
             {collapsed ? 'SYS' : 'Platform'}
           </p>
@@ -115,11 +115,11 @@ function AdminSidebar({ collapsed }: { collapsed: boolean }) {
         </div>
       </nav>
 
-      <div className="border-t border-[#151D28] p-3">
-        <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} rounded bg-[#060A10] p-2.5`}>
+      <div className="border-t border-[#1b3037] p-3">
+        <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} rounded-lg border border-[#1b3037] bg-[#101f24] p-2.5`}>
           {!collapsed && (
             <div className="flex min-w-0 items-center gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-red-950 text-sm font-bold text-red-300">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#8e4c48]/50 bg-[#3b2424] text-sm font-bold text-[#f2aaa2]">
                 {user?.name?.charAt(0) || '?'}
               </div>
               <div className="min-w-0">
@@ -150,7 +150,7 @@ function AdminNavItem({ to, icon: Icon, name, collapsed, end }: { to: string; ic
         `group flex items-center gap-3 rounded px-3 py-2 text-xs font-medium transition-colors ${
           isActive
             ? 'border border-red-500/20 bg-red-950/30 text-red-200'
-            : 'text-gray-500 hover:bg-[#101722] hover:text-gray-200'
+            : 'text-gray-500 hover:bg-[#21343a] hover:text-gray-200'
         } ${collapsed ? 'justify-center' : ''}`
       }
       title={collapsed ? name : undefined}

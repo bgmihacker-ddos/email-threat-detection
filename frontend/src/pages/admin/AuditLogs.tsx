@@ -10,7 +10,7 @@ export default function AuditLogs() {
         <p className="text-xs text-gray-400">Platform audit-event visibility</p>
       </div>
 
-      <section className="bg-[#080D14] border border-[#151D28] rounded p-8 text-center max-w-3xl">
+      <section className="bg-[#101b21] border border-[#1b3037] rounded p-8 text-center max-w-3xl">
         <FileText className="mx-auto text-gray-600 mb-4" size={32} />
         <h2 className="text-sm font-bold text-gray-200">No audit-event feed is available</h2>
         <p className="text-xs text-gray-500 leading-relaxed mt-3">

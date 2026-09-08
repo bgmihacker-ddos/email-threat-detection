@@ -195,7 +195,7 @@ export function ThreatMap({ threatEvents }: ThreatMapProps) {
     return (
         <div
             ref={containerWrapperRef}
-            className="relative bg-[#060A10] rounded-lg border border-[#151D28] w-full h-[500px] overflow-hidden shadow-2xl flex flex-col"
+            className="relative bg-[#0b171c] rounded-lg border border-[#1b3037] w-full h-[500px] overflow-hidden shadow-2xl flex flex-col"
         >
             {/* HUD / Map Overlay */}
             <div className="absolute top-3 left-3 z-10 bg-[#0A101D]/90 backdrop-blur border border-[#1E293B] px-3 py-2 rounded text-[11px] font-mono text-gray-300 shadow-md space-y-1 pointer-events-none">
@@ -241,7 +241,7 @@ export function ThreatMap({ threatEvents }: ThreatMapProps) {
                 <button
                     onClick={toggleFullscreen}
                     title="Toggle Fullscreen"
-                    className="p-2 bg-[#0A101D]/90 hover:bg-[#1E293B] text-gray-300 hover:text-white rounded border border-[#151D28] shadow transition-colors"
+                    className="p-2 bg-[#0A101D]/90 hover:bg-[#1E293B] text-gray-300 hover:text-white rounded border border-[#1b3037] shadow transition-colors"
                 >
                     {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
                 </button>
@@ -249,14 +249,14 @@ export function ThreatMap({ threatEvents }: ThreatMapProps) {
 
             {/* Error Overlay if key is missing or load failed */}
             {loadError && (
-                <div className="absolute inset-0 z-20 flex items-center justify-center p-6 bg-[#060A10]/95">
+                <div className="absolute inset-0 z-20 flex items-center justify-center p-6 bg-[#0b171c]/95">
                     <div className="max-w-md p-4 bg-[#0F172A] border border-yellow-700/50 rounded-lg text-center space-y-3 shadow-2xl">
                         <AlertTriangle className="w-8 h-8 text-yellow-400 mx-auto" />
                         <h4 className="text-sm font-bold text-white font-mono">MAP CONFIGURATION REQUIRED</h4>
                         <p className="text-xs text-gray-400 leading-relaxed">
                             {loadError}
                         </p>
-                        <div className="text-[10px] text-gray-500 font-mono bg-[#060A10] p-2 rounded border border-[#1E293B] break-all">
+                        <div className="text-[10px] text-gray-500 font-mono bg-[#0b171c] p-2 rounded border border-[#1E293B] break-all">
                             frontend/.env: VITE_GEOAPIFY_API_KEY=your_key_here
                         </div>
                     </div>
@@ -273,7 +273,7 @@ export function ThreatMap({ threatEvents }: ThreatMapProps) {
 
             {/* Threat Detail Popup */}
             {selectedThreat && (
-                <div className="absolute bottom-4 right-4 z-20 bg-[#0B111A]/95 backdrop-blur border border-[#1E293B] p-4 rounded-lg text-xs text-gray-300 w-72 shadow-2xl space-y-2">
+                <div className="absolute bottom-4 right-4 z-20 bg-[#16242a]/95 backdrop-blur border border-[#1E293B] p-4 rounded-lg text-xs text-gray-300 w-72 shadow-2xl space-y-2">
                     <div className="flex justify-between items-start">
                         <div>
                             <span className="text-[9px] uppercase tracking-wider text-cyan-400 font-mono">
@@ -285,7 +285,7 @@ export function ThreatMap({ threatEvents }: ThreatMapProps) {
                             onClick={() => setSelectedThreat(null)}
                             className="text-gray-400 hover:text-white font-mono text-xs px-1.5 py-0.5 bg-[#1E293B] rounded"
                         >
-                            ✕
+                            ✓
                         </button>
                     </div>
 
@@ -321,7 +321,7 @@ export function ThreatMap({ threatEvents }: ThreatMapProps) {
                         {selectedThreat.indicator && (
                             <div className="pt-1">
                                 <span className="text-gray-400 block text-[10px]">Indicator:</span>
-                                <span className="text-cyan-300 break-all bg-[#060A10] p-1 rounded block text-[10px] border border-[#151D28]">
+                                <span className="text-cyan-300 break-all bg-[#0b171c] p-1 rounded block text-[10px] border border-[#1b3037]">
                                     {selectedThreat.indicator}
                                 </span>
                             </div>

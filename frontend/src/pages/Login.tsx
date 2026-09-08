@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Activity, ArrowUpRight, Check, Fingerprint, Globe2, KeyRound, LockKeyhole, LogIn, Mail, Network, Shield, UserRound } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, LogIn, AlertTriangle, Shield, Activity, Globe, Server, Wifi } from 'lucide-react';
 import { SecurityEnvironmentBackground } from '../components/common/SecurityEnvironmentBackground';
 
 export default function Login() {
@@ -13,21 +13,18 @@ export default function Login() {
   const { login, user } = useAuth();
 
   useEffect(() => {
-    if (user) {
-      if (user.role === 'admin') navigate('/admin');
-      else navigate('/');
-    }
+    if (user) navigate(user.role === 'admin' ? '/admin' : '/');
   }, [user, navigate]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError('');
     setIsLoading(true);
 
     try {
       await login(email, password);
-    } catch (err: any) {
-      setError(err.message || 'Invalid credentials or connection error');
+    } catch (reason: any) {
+      setError(reason.message || 'Invalid credentials or connection error');
       setIsLoading(false);
     }
   };
@@ -45,191 +42,49 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#030508] text-gray-100 overflow-hidden relative p-4">
+    <main className="relative min-h-screen overflow-hidden bg-transparent text-[#d6e1de]">
       <SecurityEnvironmentBackground profile="auth" intensity="moderate" />
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1500px] flex-col px-5 py-5 sm:px-8 lg:px-12">
+        <header className="flex items-center justify-between border-b border-[#29454b] pb-5">
+          <Link to="/login" className="group flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#3b5e60] bg-[#142b2d] text-[#58d6c0] shadow-[0_0_25px_rgba(88,214,192,0.12)] transition-transform group-hover:-rotate-6"><Shield size={19} /></span>
+            <span><strong className="block text-sm tracking-[0.12em] text-white">EMAIL THREAT</strong><span className="font-mono text-[9px] font-semibold uppercase tracking-[0.24em] text-[#58d6c0]">Forensic intelligence</span></span>
+          </Link>
+          <div className="hidden items-center gap-3 font-mono text-[10px] uppercase tracking-[0.18em] text-[#718581] sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-[#58d6c0] shadow-[0_0_10px_rgba(88,214,192,0.8)]" /> local analysis node <span className="text-[#3b5e60]">/</span> secure access</div>
+        </header>
 
-      <div className="relative z-10 flex w-full max-w-5xl bg-[#080D14]/90 border border-[#151D28] rounded-xl overflow-hidden shadow-2xl backdrop-blur-md">
-        {/* Left panel - Security atmosphere */}
-        <div className="hidden lg:flex w-1/2 p-12 bg-gradient-to-br from-[#080D14] via-[#0B111A] to-[#080D14] border-r border-[#151D28] flex-col relative justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-8">
-              <div className="rounded border border-cyan-500/30 bg-cyan-950/40 p-3 text-cyan-400 shadow-lg shadow-cyan-950/50">
-                <Shield size={26} />
-              </div>
-              <div>
-                <h1 className="text-sm font-bold tracking-widest text-white uppercase font-mono">EMAIL THREAT</h1>
-                <p className="text-[9px] font-bold tracking-[0.25em] text-cyan-500 uppercase font-mono">FORENSIC INTELLIGENCE</p>
-              </div>
+        <div className="grid flex-1 items-center gap-14 py-12 lg:grid-cols-[1fr_460px] lg:gap-24 lg:py-16">
+          <section className="max-w-2xl">
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.24em] text-[#58d6c0]">Evidence before assumption</p>
+            <h1 className="mt-5 max-w-xl text-5xl font-semibold leading-[1.02] tracking-[-0.045em] text-white sm:text-6xl">See the message behind the verdict.</h1>
+            <p className="mt-6 max-w-lg text-base leading-8 text-[#9aadaa]">A focused workspace for tracing email identity, transport, authentication, and threat intelligence back to the original message.</p>
+            <div className="mt-10 grid max-w-xl gap-3 sm:grid-cols-3"><Capability icon={<Network size={16} />} label="Mail flow" detail="Received-chain reconstruction" /><Capability icon={<Fingerprint size={16} />} label="Identity" detail="SPF · DKIM · DMARC" /><Capability icon={<Globe2 size={16} />} label="Intel" detail="Provider-aware enrichment" /></div>
+            <div className="mt-12 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-[#29454b] pt-5 font-mono text-[10px] uppercase tracking-[0.14em] text-[#718581]"><span className="inline-flex items-center gap-2"><Check size={13} className="text-[#58d6c0]" /> RFC 5322 parsing</span><span className="inline-flex items-center gap-2"><Check size={13} className="text-[#58d6c0]" /> STIX 2.1 export</span><span className="inline-flex items-center gap-2"><Check size={13} className="text-[#58d6c0]" /> ATT&amp;CK context</span></div>
+          </section>
+
+          <section className="relative rounded-2xl border border-[#3b5e60] bg-[#0c171c]/90 p-6 shadow-[0_28px_90px_rgba(2,12,15,0.42)] backdrop-blur-xl sm:p-8">
+            <div className="absolute right-0 top-0 h-28 w-28 overflow-hidden rounded-bl-[5rem] bg-[#58d6c0]/[0.05]" />
+            <div className="relative">
+              <div className="flex items-center justify-between"><div><p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-[#58d6c0]">Analyst gateway</p><h2 className="mt-3 text-2xl font-semibold tracking-tight text-white">Sign in to console</h2></div><div className="rounded-lg border border-[#29454b] bg-[#142b2d] p-3 text-[#58d6c0]"><LockKeyhole size={18} /></div></div>
+              <p className="mt-3 text-sm leading-6 text-[#9aadaa]">Use your authorized operator credentials to open the investigation workspace.</p>
+              {error && <div className="mt-6 rounded-lg border border-[#8e4c48] bg-[#3b2424]/60 p-3 text-xs leading-5 text-[#f2aaa2]">{error}</div>}
+              <form onSubmit={handleLogin} className="mt-7 space-y-5"><Field label="Operator email" icon={<Mail size={16} />} value={email} onChange={setEmail} placeholder="analyst@soc.domain" type="email" disabled={isLoading} /><Field label="Access key" icon={<KeyRound size={16} />} value={password} onChange={setPassword} placeholder="Enter access key" type="password" disabled={isLoading} /><button type="submit" disabled={isLoading} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#58d6c0] px-4 py-3.5 text-xs font-bold uppercase tracking-[0.14em] text-[#09201e] shadow-[0_12px_28px_rgba(88,214,192,0.16)] transition hover:bg-[#82e5d2] disabled:cursor-wait disabled:opacity-60">{isLoading ? <><Activity size={15} className="animate-pulse" /> Verifying access</> : <><LogIn size={15} /> Authenticate operator</>}</button></form>
+              <div className="my-7 flex items-center gap-3"><span className="h-px flex-1 bg-[#29454b]" /><span className="font-mono text-[9px] uppercase tracking-[0.18em] text-[#718581]">Federated identity</span><span className="h-px flex-1 bg-[#29454b]" /></div>
+              <button type="button" onClick={handleGoogleLogin} disabled={isLoading} className="flex w-full items-center justify-center gap-3 rounded-lg border border-[#3b5e60] bg-[#101f24] px-4 py-3 text-xs font-medium text-[#d6e1de] transition hover:border-[#58d6c0] hover:bg-[#142b2d] disabled:opacity-60"><GoogleMark /> Continue with Google SSO <ArrowUpRight size={13} className="text-[#718581]" /></button>
+              <p className="mt-7 text-center text-xs text-[#718581]">Need an operator account? <Link to="/signup" className="font-medium text-[#58d6c0] hover:text-[#9cefe1]">Request access</Link></p>
             </div>
-
-            <h2 className="text-2xl font-semibold text-white tracking-tight mb-3">Enterprise Defense & Forensic Lab</h2>
-            <p className="text-gray-400 text-xs leading-relaxed mb-8">
-              Production-grade digital forensics engine for email threat analysis, header validation, behavioral heuristics, and MITRE ATT&CK campaign mapping.
-            </p>
-
-            <div className="space-y-3">
-              <ServiceStatus icon={<Activity size={14} />} name="Forensic Parser Engine" status="Operational" />
-              <ServiceStatus icon={<Wifi size={14} />} name="Threat Intelligence Feeds" status="Connected" />
-              <ServiceStatus icon={<Globe size={14} />} name="Global Telemetry Node" status="Live" />
-              <ServiceStatus icon={<Server size={14} />} name="SSRF & Guard Sandbox" status="Secured" />
-            </div>
-          </div>
-
-          <div className="pt-8 border-t border-[#151D28]">
-            <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500 mb-3">Verification Standards</p>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-[#05080D]/80 p-2.5 rounded border border-[#151D28]">
-                <p className="text-base font-bold text-cyan-400 font-mono">RFC 5322</p>
-                <p className="text-[9px] text-gray-500">Spec Compliant</p>
-              </div>
-              <div className="bg-[#05080D]/80 p-2.5 rounded border border-[#151D28]">
-                <p className="text-base font-bold text-emerald-400 font-mono">STIX 2.1</p>
-                <p className="text-[9px] text-gray-500">Threat Bundles</p>
-              </div>
-              <div className="bg-[#05080D]/80 p-2.5 rounded border border-[#151D28]">
-                <p className="text-base font-bold text-violet-400 font-mono">ATT&CK</p>
-                <p className="text-[9px] text-gray-500">v14 Mapped</p>
-              </div>
-            </div>
-          </div>
+          </section>
         </div>
 
-        {/* Right panel - Authentication */}
-        <div className="w-full lg:w-1/2 p-8 md:p-12 flex flex-col justify-center bg-[#080D14]/60">
-          <div className="max-w-sm mx-auto w-full">
-            <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-              <div className="rounded border border-cyan-500/30 bg-cyan-950/30 p-2 text-cyan-400">
-                <Shield size={20} />
-              </div>
-              <div>
-                <h1 className="text-sm font-bold tracking-wide text-white">EMAIL THREAT</h1>
-                <p className="text-[9px] font-bold tracking-[0.2em] text-cyan-500">INTELLIGENCE</p>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-cyan-500 bg-cyan-950/30 px-2 py-0.5 rounded border border-cyan-800/30">
-                SECURE AUTHENTICATION
-              </span>
-              <h2 className="text-xl font-bold text-white mt-2">Sign in to Console</h2>
-              <p className="text-xs text-gray-500 mt-1">Authenticate with authorized SOC credentials</p>
-            </div>
-
-            {error && (
-              <div className="mb-6 p-3 rounded border border-red-800/50 bg-red-950/30 flex items-start gap-3">
-                <AlertTriangle className="text-red-400 shrink-0 mt-0.5" size={15} />
-                <p className="text-xs text-red-300 font-mono leading-relaxed">{error}</p>
-              </div>
-            )}
-
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 font-mono">Operator ID / Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 text-gray-600" size={15} />
-                  <input
-                    type="email"
-                    placeholder="analyst@soc.domain"
-                    className="soc-input pl-10 text-xs py-2.5 font-mono"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={isLoading}
-                    autoComplete="email"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 font-mono">Access Key / Password</label>
-                  <span className="text-[10px] text-gray-600 font-mono">ENCRYPTED</span>
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-2.5 text-gray-600" size={15} />
-                  <input
-                    type="password"
-                    placeholder="••••••••••••"
-                    className="soc-input pl-10 text-xs py-2.5 font-mono"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={isLoading}
-                    autoComplete="current-password"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="btn-primary w-full py-2.5 mt-2 transition-all shadow-lg shadow-cyan-950/30"
-              >
-                {isLoading ? (
-                  <>
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-                    <span className="font-mono text-xs">AUTHENTICATING...</span>
-                  </>
-                ) : (
-                  <>
-                    <LogIn size={15} />
-                    <span className="font-mono text-xs">AUTHENTICATE OPERATOR</span>
-                  </>
-                )}
-              </button>
-            </form>
-
-            <div className="flex items-center gap-4 my-6">
-              <div className="flex-1 border-t border-[#151D28]" />
-              <span className="text-[9px] text-gray-600 font-mono uppercase tracking-wider">FEDERATED ACCESS</span>
-              <div className="flex-1 border-t border-[#151D28]" />
-            </div>
-
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              className="w-full py-2.5 rounded border border-[#263449] bg-[#05080D] text-gray-300 text-xs font-mono font-medium flex items-center justify-center gap-2 hover:border-cyan-500/50 hover:text-white transition-colors"
-              disabled={isLoading}
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              Enterprise SSO via Google
-            </button>
-
-            <p className="mt-8 text-center text-xs text-gray-500">
-              Need forensic operator credentials?{' '}
-              <Link to="/signup" className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors">
-                Request analyst account
-              </Link>
-            </p>
-          </div>
-        </div>
+        <footer className="flex flex-col gap-2 border-t border-[#29454b] pt-4 font-mono text-[9px] uppercase tracking-[0.15em] text-[#516963] sm:flex-row sm:items-center sm:justify-between"><span>Protected investigation surface</span><span className="inline-flex items-center gap-2"><UserRound size={11} /> Authorized personnel only · local instance</span></footer>
       </div>
-
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 text-[10px] text-gray-600 font-mono">
-        SECURE INVESTIGATION NODE • LOCAL INSTANCE
-      </div>
-    </div>
+    </main>
   );
 }
 
-function ServiceStatus({ icon, name, status }: { icon: React.ReactNode; name: string; status: string }) {
-  return (
-    <div className="flex items-center justify-between py-1.5 px-3 rounded bg-[#05080D]/60 border border-[#151D28]/60">
-      <div className="flex items-center gap-2.5">
-        <div className="text-cyan-400">
-          {icon}
-        </div>
-        <span className="text-xs text-gray-300 font-mono">{name}</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-400">{status}</span>
-      </div>
-    </div>
-  );
+function Field({ label, icon, value, onChange, placeholder, type, disabled }: { label: string; icon: ReactNode; value: string; onChange: (value: string) => void; placeholder: string; type: string; disabled: boolean }) {
+  return <label className="block"><span className="mb-2 block font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-[#9aadaa]">{label}</span><span className="relative block"><span className="pointer-events-none absolute left-3.5 top-3.5 text-[#718581]">{icon}</span><input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} required disabled={disabled} autoComplete={type === 'email' ? 'email' : 'current-password'} className="w-full rounded-lg border border-[#29454b] bg-[#081216] py-3.5 pl-11 pr-4 text-sm text-[#eef8f4] placeholder:text-[#516963] transition focus:border-[#58d6c0] focus:outline-none focus:ring-2 focus:ring-[#58d6c0]/10 disabled:opacity-60" /></span></label>;
 }
+
+function Capability({ icon, label, detail }: { icon: ReactNode; label: string; detail: string }) { return <div className="rounded-lg border border-[#29454b] bg-[#101f24]/65 p-4"><div className="text-[#58d6c0]">{icon}</div><p className="mt-5 text-sm font-medium text-[#d6e1de]">{label}</p><p className="mt-1 text-[11px] leading-5 text-[#718581]">{detail}</p></div>; }
+function GoogleMark() { return <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white font-bold text-[11px] text-[#4285f4]">G</span>; }
