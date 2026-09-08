@@ -15,4 +15,4 @@ export default function Threats() {
 }
 function FilterSelect({ value, setValue, options, label }: { value: string; setValue: (value: string) => void; options: string[]; label: string }) { return <select aria-label={label} value={value} onChange={event => setValue(event.target.value)} className="rounded border border-[#263449] bg-[#060A10] px-2.5 py-2 text-xs text-gray-400 outline-none focus:border-cyan-500/70">{options.map(option => <option key={option} value={option}>{option === 'ALL' ? `All ${label}` : option}</option>)}</select>; }
 function LoadingRows() { return <div className="space-y-2 p-5">{[1, 2, 3, 4].map(row => <div key={row} className="h-12 animate-pulse rounded bg-[#0D1520]" />)}</div>; }
-function formatDate(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? 'Unavailable' : date.toLocaleString(); }
+function formatDate(value: string) { if (!value || value === 'Not reported' || value === 'Unavailable') return 'Not reported by source'; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString(); }

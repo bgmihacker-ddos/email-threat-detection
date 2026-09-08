@@ -29,3 +29,8 @@ class EmailAnalysisSchema(BaseModel):
     ml_analysis: Dict[str, Any] = {}
     risk_breakdown: List[Dict[str, Any]] = []
     extended_reasoning: Dict[str, Any] = {}
+    sender_intelligence: Dict[str, Any] = {}
+    evidence_graph: Dict[str, Any] = {}
+    timeline: Dict[str, Any] = {}
+    mitre_techniques: List[Dict[str, Any]] = []
+    related_investigations: List[Dict[str, Any]] = []

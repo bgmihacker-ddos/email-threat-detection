@@ -66,6 +66,8 @@ class ThreatFoxService:
                     country_code=item.get("country_code"),
                     first_seen=item.get("first_seen"),
                     last_seen=item.get("last_seen"),
+                    reporter=item.get("reporter"),
+                    threat_type=item.get("threat_type"),
                 ))
             return {"data": indicators, "status": "ok", "error_message": None}
         except httpx.TimeoutException:

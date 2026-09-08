@@ -1,0 +1,12 @@
+Delivered-To: victim@enterprise.corp
+Received: from mail.attacker.net (mail.attacker.net [198.51.100.24])
+    by mx.google.com with ESMTPS id ...
+Authentication-Results: mx.google.com;
+    spf=fail (google.com: domain does not designate 198.51.100.24)
+From: "Security Alert" <security@update-service.com>
+To: victim@enterprise.corp
+Subject: Urgent: Verify Account Access Immediately
+Date: Tue, 08 Sep 2026 10:00:00 +0000
+Content-Type: text/html; charset="UTF-8"
+
+Please verify your credentials at http://suspicious-login-portal.com/login

@@ -211,6 +211,41 @@ class HeaderForensicsAnalyzer:
         # Identify legitimate infrastructure providers
         identified_providers = HeaderForensicsAnalyzer._identify_providers(mail_flow, domains)
 
+        # Extract extended headers and mail characteristics (Phase 4)
+        extended_headers = {
+            "x_originating_ip": _as_list(headers.get("x-originating-ip") or headers.get("x-sender-ip") or headers.get("x-client-ip")),
+            "x_mailer": headers.get("x-mailer"),
+            "user_agent": headers.get("user-agent"),
+            "x_priority": headers.get("x-priority"),
+            "importance": headers.get("importance"),
+            "list_unsubscribe": headers.get("list-unsubscribe"),
+            "list_unsubscribe_post": headers.get("list-unsubscribe-post"),
+            "list_id": headers.get("list-id"),
+            "precedence": headers.get("precedence"),
+            "auto_submitted": headers.get("auto-submitted"),
+            "feedback_id": headers.get("feedback-id"),
+            "provider_headers": {
+                key: value for key, value in headers.items()
+                if str(key).lower().startswith(("x-gm-", "x-ms-", "x-forefront-"))
+            },
+        }
+        has_list_headers = bool(
+            extended_headers["list_unsubscribe"]
+            or extended_headers["list_id"]
+            or extended_headers["feedback_id"]
+        )
+        is_automated = bool(
+            extended_headers["auto_submitted"]
+            or (str(extended_headers["precedence"] or "").lower() in ("bulk", "list", "junk"))
+            or has_list_headers
+        )
+        mail_characteristics = {
+            "is_bulk_sender": bool(has_list_headers or (str(extended_headers["precedence"] or "").lower() == "bulk")),
+            "is_transactional": bool(identified_providers and not has_list_headers),
+            "is_automated": is_automated,
+            "has_list_headers": has_list_headers,
+        }
+
         ip_counts = {
             "public": sum(ip["classification"] == "public" for ip in mail_flow["ip_addresses"]),
             "private": sum(ip["classification"] == "private" for ip in mail_flow["ip_addresses"]),
@@ -251,6 +286,8 @@ class HeaderForensicsAnalyzer:
             "authentication_evidence": authentication,
             "forensic_findings": findings,
             "forensic_summary": summary,
+            "extended_headers": extended_headers,
+            "mail_characteristics": mail_characteristics,
         }
 
     @staticmethod

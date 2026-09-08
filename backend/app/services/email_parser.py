@@ -341,9 +341,10 @@ class EmailParser:
         all_urls = _dedup_urls(text_urls + html_text_urls + html_href_urls)
 
         # ------------------------------------------------------------------
-        # 8. Attachments
+        # 8. Attachments and MIME tree summary
         # ------------------------------------------------------------------
         attachments = EmailParser._extract_attachments(msg)
+        mime_summary = EmailParser._summarize_mime_tree(msg)
 
         # ------------------------------------------------------------------
         # 9. Derive simple RuleEngine compat values from auth headers
@@ -387,6 +388,7 @@ class EmailParser:
             "headers": all_headers,
             "received_chain": received_chain,
             "authentication_headers": authentication_headers,
+            "mime_summary": mime_summary,
             "message_id": message_id,
             "in_reply_to": in_reply_to,
             "references": references,
@@ -459,6 +461,37 @@ class EmailParser:
                     logger.warning("Could not decode text/html part: %s", exc)
 
         return plain_text or "", html_body or ""
+
+    # ------------------------------------------------------------------
+    # MIME tree summary
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _summarize_mime_tree(msg: Any) -> Dict[str, Any]:
+        """Summarize MIME parts without exposing decoded content."""
+        parts: List[Dict[str, Any]] = []
+        max_depth = 0
+        def visit(part: Any, depth: int) -> None:
+            nonlocal max_depth
+            max_depth = max(max_depth, depth)
+            parts.append({
+                "content_type": part.get_content_type(),
+                "content_disposition": part.get("content-disposition"),
+                "filename": part.get_filename(),
+                "is_multipart": part.is_multipart(),
+                "depth": depth,
+            })
+            if part.is_multipart():
+                for child in part.iter_parts():
+                    visit(child, depth + 1)
+
+        visit(msg, 0)
+        return {
+            "part_count": len(parts),
+            "max_depth": max_depth,
+            "content_types": [item["content_type"] for item in parts],
+            "parts": parts,
+        }
 
     # ------------------------------------------------------------------
     # Attachment extraction
@@ -551,6 +584,7 @@ class EmailParser:
                 "return_path": None,
             },
             "headers": {},
+            "mime_summary": {"part_count": 0, "max_depth": 0, "content_types": [], "parts": []},
             "received_chain": [],
             "authentication_headers": {},
             "message_id": None,

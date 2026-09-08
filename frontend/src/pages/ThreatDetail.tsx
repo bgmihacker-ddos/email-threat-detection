@@ -70,8 +70,8 @@ export default function ThreatDetail() {
         </div>
 
         <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
-          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">THREAT TYPE</p>
-          <p className="text-base font-bold text-cyan-400 mt-1">{threat.type}</p>
+          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">THREAT TYPE / MALWARE</p>
+          <p className="text-base font-bold text-cyan-400 mt-1 truncate" title={`${threat.type} / ${threat.malwareFamily}`}>{threat.type} / {threat.malwareFamily !== 'Unknown' ? threat.malwareFamily : 'Unknown'}</p>
         </div>
 
         <div className="bg-[#080D14] p-4 rounded border border-[#151D28]">
@@ -89,9 +89,12 @@ export default function ThreatDetail() {
       <div className="bg-[#080D14] p-5 rounded border border-[#151D28] space-y-3">
         <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Threat Summary</h2>
         <p className="text-xs text-gray-300 leading-relaxed">{threat.description}</p>
-        <div className="flex gap-6 text-xs text-gray-400 pt-2 border-t border-[#151D28]">
-          <div><span className="text-gray-500">Target User:</span> <span className="font-mono text-white">{threat.target}</span></div>
-          {threat.sender && <div><span className="text-gray-500">Sender:</span> <span className="font-mono text-red-400">{threat.sender}</span></div>}
+        <div className="flex flex-wrap gap-6 text-xs text-gray-400 pt-2 border-t border-[#151D28]">
+          {threat.indicator && <div><span className="text-gray-500 block text-[10px] uppercase mb-1">Indicator</span> <span className="font-mono text-cyan-400 break-all bg-[#151D28]/40 px-1.5 py-0.5 rounded border border-[#1C2A3D]">{threat.indicator}</span></div>}
+          <div><span className="text-gray-500 block text-[10px] uppercase mb-1">Target / Victim</span> <span className="font-mono text-white">{threat.target}</span></div>
+          {threat.sender && <div><span className="text-gray-500 block text-[10px] uppercase mb-1">{threat.source === 'Local Analysis' ? 'Sender' : 'Reporter'}</span> <span className="font-mono text-gray-300">{threat.sender}</span></div>}
+          {threat.source && <div><span className="text-gray-500 block text-[10px] uppercase mb-1">Provenance</span> <span className="font-mono text-yellow-400">{threat.source}</span></div>}
+          {threat.firstSeen && <div><span className="text-gray-500 block text-[10px] uppercase mb-1">Observation Date</span> <span className="font-mono text-gray-300">{threat.firstSeen}</span></div>}
         </div>
       </div>
 

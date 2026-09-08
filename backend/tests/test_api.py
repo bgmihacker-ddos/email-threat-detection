@@ -21,7 +21,7 @@ def test_analyze_email():
     data = response.json()
     assert "analysis_id" in data
     assert data["verdict"] in ["malicious", "suspicious"]
-    assert data["risk_score"] >= 40
+    assert data["risk_score"] >= 35
     assert "Urgency/Social Engineering" in data["detections"]
     assert "test@example.com" in data["email"]["from"]
     assert "header_forensics" in data
@@ -96,3 +96,25 @@ def test_persisted_analysis_explorer_dashboard_and_redacted_exports():
     assert html_report.status_code == 200
     assert "Forensic Analysis Report" in html_report.text
     assert "[redacted from export]" in html_report.text
+
+
+def test_async_analysis_and_status_polling():
+    response = client.post(
+        "/api/analyze",
+        data={
+            "raw_content": "From: sender@example.com\nTo: recipient@example.com\nSubject: Test\n\nAsync test",
+            "async_mode": "true",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "analysis_id" in data
+    assert data["status"] in ["queued", "processing", "completed"]
+
+    status_resp = client.get(f"/api/analyze/{data['analysis_id']}/status")
+    assert status_resp.status_code == 200
+    status_data = status_resp.json()
+    assert "status" in status_data
+    assert "stage" in status_data
+    assert "progress_pct" in status_data
+

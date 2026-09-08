@@ -1,8 +1,12 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends
 from typing import List, Optional
+from sqlalchemy.orm import Session
+from app.api.dependencies import get_db
 from app.schemas.indicator import ThreatIndicator
 from app.integrations.threatfox import ThreatFoxService
 from app.integrations.urlhaus import URLhausService
+from app.models.analysis import AnalysisResult
+import json
 
 router = APIRouter()
 
@@ -13,7 +17,8 @@ async def get_indicators(
     risk: Optional[str] = None,
     search: Optional[str] = None,
     limit: int = 100,
-    offset: int = 0
+    offset: int = 0,
+    db: Session = Depends(get_db)
 ):
     tf = ThreatFoxService()
     uh = URLhausService()
@@ -38,14 +43,37 @@ async def get_indicators(
 
     paginated_data = filtered_data[offset : offset + limit]
 
+    # Enrichment: Find related investigations from local analysis
+    # We can fetch recent analyses and scan their result object
+    # For performance, this is bounded.
+    records = db.query(AnalysisResult).order_by(AnalysisResult.created_at.desc()).limit(100).all()
+
+    enriched_data = []
+    for item in paginated_data:
+        item_dict = item.model_dump()
+        val = item_dict.get("indicator", "").lower()
+        related = []
+        if val:
+            for record in records:
+                # search the serialized JSON text for a fast heuristic check
+                try:
+                    str_res = json.dumps(record.result).lower()
+                    if val in str_res:
+                        related.append(record.id)
+                except Exception:
+                    pass
+        item_dict["related_investigations"] = list(set(related))
+        item_dict["relatedThreats"] = list(set(related))
+        enriched_data.append(item_dict)
+
     return {
-        "data": paginated_data,
+        "data": enriched_data,
         "meta": {
             "count": len(paginated_data),
             "total": len(filtered_data),
             "providers": [
-                {"source": "ThreatFox", "status": tf_response["status"], "error": tf_response["error_message"]},
-                {"source": "URLhaus", "status": uh_response["status"], "error": uh_response["error_message"]}
+                {"source": "ThreatFox", "status": tf_response.get("status"), "error": tf_response.get("error_message")},
+                {"source": "URLhaus", "status": uh_response.get("status"), "error": uh_response.get("error_message")}
             ]
         }
     }

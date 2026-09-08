@@ -238,11 +238,27 @@ def test_dkim_dmarc_auth_mismatch_detection():
     assert any(f["finding_id"] == "auth.dmarc.fail" for f in res["auth"]["findings"])
 
 
+def test_benign_transactional_provider():
+    """Verify that a legitimate authenticated transactional/provider-routed email is benign."""
+    path = FIXTURES_DIR / "benign_transactional_provider.eml"
+    assert path.exists()
+
+    with open(path, "rb") as f:
+        res = _run_pipeline(f.read())
+
+    assert res["risk"]["verdict"] == "benign"
+    assert res["risk"]["risk_score"] < 25
+    assert res["auth"]["spf"]["status"] == "pass"
+    assert res["auth"]["dkim"]["status"] == "pass"
+    assert res["auth"]["dmarc"]["status"] == "pass"
+
+
 def test_overall_confusion_matrix_and_metrics():
     """Calculate overall detection metrics (TP, TN, FP, FN) over all validation fixtures."""
     fixtures = [
         ("benign_internal_newsletter.eml", "benign"),
         ("benign_customer_invoice.eml", "benign"),
+        ("benign_transactional_provider.eml", "benign"),
         ("phishing_credential_harvesting.eml", "threat"),
         ("bec_wire_transfer_fraud.eml", "threat"),
         ("sender_spoofing_spf_fail.eml", "threat"),
@@ -280,7 +296,7 @@ def test_overall_confusion_matrix_and_metrics():
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0
 
     assert tp == 6, f"Expected 6 True Positives, got {tp}"
-    assert tn == 2, f"Expected 2 True Negatives, got {tn}"
+    assert tn == 3, f"Expected 3 True Negatives, got {tn}"
     assert fp == 0, f"Expected 0 False Positives, got {fp}"
     assert fn == 0, f"Expected 0 False Negatives, got {fn}"
     assert accuracy == 1.0

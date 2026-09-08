@@ -51,11 +51,13 @@ class URLhausService:
                     severity=self._map_severity(item.get("threat")),
                     confidence=self._confidence(item),
                     source="URLhaus",
-                    status="active" if item.get("url_status") == "online" else "inactive",
+                    status=str(item.get("url_status")) if item.get("url_status") else "unknown",
                     tags=[str(tag) for tag in tags],
                     reference_url=item.get("urlhaus_reference"),
                     first_seen=item.get("date_added"),
                     last_seen=item.get("last_online"),
+                    reporter=item.get("reporter"),
+                    threat_type=item.get("threat"),
                 ))
             return {"data": indicators, "status": "ok", "error_message": None}
         except httpx.TimeoutException:

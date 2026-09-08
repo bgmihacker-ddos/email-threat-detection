@@ -32,15 +32,24 @@ async def get_live_threats():
             "id": f"TF-{item.id}",
             "indicator": item.indicator,
             "indicator_type": item.indicator_type,
-            "country": item.country or "Unknown",
+            "country": item.country,
             "country_code": item.country_code,
+            "city": None,
             "latitude": item.latitude,
             "longitude": item.longitude,
             "severity": item.severity,
             "confidence": item.confidence,
             "source": item.source,
             "timestamp": item.first_seen or item.last_seen or "",
-            "geo_source": None
+            "geo_source": None,
+            "malware": item.malware,
+            "tags": item.tags,
+            "reference_url": item.reference_url,
+            "reporter": item.reporter,
+            "threat_type": item.threat_type,
+            "status": item.status,
+            "first_seen": item.first_seen,
+            "last_seen": item.last_seen,
         })
 
     for item in uh_response.get("data", []):
@@ -48,15 +57,24 @@ async def get_live_threats():
             "id": f"UH-{item.id}",
             "indicator": item.indicator,
             "indicator_type": item.indicator_type,
-            "country": item.country or "Unknown",
+            "country": item.country,
             "country_code": item.country_code,
+            "city": None,
             "latitude": item.latitude,
             "longitude": item.longitude,
             "severity": item.severity,
             "confidence": item.confidence,
             "source": item.source,
             "timestamp": item.first_seen or item.last_seen or "",
-            "geo_source": None
+            "geo_source": None,
+            "malware": item.malware,
+            "tags": item.tags,
+            "reference_url": item.reference_url,
+            "reporter": item.reporter,
+            "threat_type": item.threat_type,
+            "status": item.status,
+            "first_seen": item.first_seen,
+            "last_seen": item.last_seen,
         })
 
     # 2. Extract public IPs for enrichment
@@ -115,6 +133,8 @@ async def get_live_threats():
             event["country"] = cached_result["country"]
             if cached_result.get("country_code"):
                 event["country_code"] = cached_result["country_code"]
+            if cached_result.get("city"):
+                event["city"] = cached_result["city"]
             event["geo_source"] = cached_result["geo_source"]
 
     return {

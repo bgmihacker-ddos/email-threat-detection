@@ -14,7 +14,9 @@ class ThreatIndicator(BaseModel):
     longitude: Optional[float] = None
     first_seen: Optional[str] = None
     last_seen: Optional[str] = None
-    status: str          # active|inactive|unknown
+    status: str          # active|inactive|unknown|online|offline
     malware: Optional[str] = None
     tags: List[str] = []
     reference_url: Optional[str] = None
+    reporter: Optional[str] = None
+    threat_type: Optional[str] = None

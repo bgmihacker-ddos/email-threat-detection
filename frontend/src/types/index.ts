@@ -14,20 +14,35 @@ export interface AuthState {
 
 export type ThreatType = 'Phishing' | 'BEC' | 'Malware' | 'Credential Theft' | 'Suspicious';
 export type Severity = 'Safe' | 'Low' | 'Medium' | 'High' | 'Critical';
-export type ThreatStatus = 'Open' | 'In Progress' | 'Resolved' | 'Quarantined';
+export type ThreatStatus = 'Open' | 'In Progress' | 'Resolved' | 'Quarantined' | 'active' | 'inactive' | 'online' | 'offline' | 'unknown' | 'analyzed';
 
 export interface Threat {
   id: string;
   type: ThreatType;
+  indicator?: string;
+  indicator_type?: string;
+  threat_type?: string;
   severity: Severity;
   confidence: number;
   target: string;
   location: string;
+  country?: string | null;
+  country_code?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   firstSeen: string;
   lastSeen: string;
-  status: ThreatStatus;
+  status: ThreatStatus | string;
   description?: string;
   sender?: string;
+  source?: string;
+  malware?: string;
+  malwareFamily?: string;
+  tags?: string[];
+  reference_url?: string;
+  reference?: string;
+  reporter?: string;
+  related_investigations?: string[];
   indicators?: string[];
   attackStages?: { stage: string; status: 'completed' | 'active' | 'pending'; description: string }[];
 }
@@ -36,15 +51,34 @@ export type IOCType = 'IP' | 'Domain' | 'URL' | 'Email' | 'Hash';
 
 export interface ThreatIndicator {
   id: string;
-  ioc: string;
-  type: IOCType;
-  risk: Severity;
+  indicator: string;
+  indicator_type: 'IP' | 'Domain' | 'URL' | 'Email' | 'Hash';
+  severity: Severity;
   confidence: number;
   source: string;
-  firstSeen: string;
-  lastSeen: string;
-  relatedThreats: string[];
-  status: 'Active' | 'Inactive';
+  country?: string | null;
+  country_code?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  first_seen?: string | null;
+  last_seen?: string | null;
+  status?: string | null; // 'active' | 'inactive' | 'online' | 'offline' | 'unknown' - provider-specific
+  malware?: string | null;
+  tags?: string[];
+  reference_url?: string | null;
+  reporter?: string | null;
+  threat_type?: string | null;
+  related_investigations?: string[];
+  // For Local Analysis fields only
+  analysis_id?: string;
+  email_subject?: string;
+  email_sender?: string;
+  verdict?: string;
+  risk_score?: number;
+  created_at?: string;
+  context?: string;
+  // Legacy field - deprecated
+  relatedThreats?: string[];
 }
 
 export interface ThreatMapEvent {

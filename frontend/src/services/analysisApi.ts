@@ -37,19 +37,34 @@ export interface DashboardSummary {
   data_source: string;
 }
 
+export interface AnalysisStatus {
+  analysis_id: string;
+  status: 'queued' | 'processing' | 'completed' | 'failed';
+  stage: string;
+  progress_pct: number;
+  error: string | null;
+}
+
 export const analyzeEmail = async (content: string, file?: File): Promise<any> => {
   const formData = new FormData();
   if (file) formData.append('file', file);
   else formData.append('raw_content', content);
+  formData.append('async_mode', 'true');
 
   const response = await fetch(`${BASE_URL}/api/analyze`, {
     method: 'POST',
     body: formData,
     headers: authHeaders(),
   });
-  if (!response.ok) throw new Error('Analysis failed');
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || `Analysis failed: ${response.statusText}`);
+  }
   return response.json();
 };
+
+export const getAnalysisStatus = async (id: string): Promise<AnalysisStatus> =>
+  apiFetch(`/api/analyze/${encodeURIComponent(id)}/status`, { headers: authHeaders() });
 
 export const getAnalysisById = async (id: string): Promise<any> =>
   apiFetch(`/api/analyze/${encodeURIComponent(id)}`, { headers: authHeaders() });
