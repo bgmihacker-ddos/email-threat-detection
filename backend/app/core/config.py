@@ -57,7 +57,7 @@ class Settings:
     WHOIS_API_KEY = os.getenv("WHOIS_API_KEY")
     GEOLOCATION_API_URL = os.getenv("GEOLOCATION_API_URL", "https://ipapi.co")
     GEOLOCATION_API_TIMEOUT_SECONDS = float(os.getenv("GEOLOCATION_API_TIMEOUT_SECONDS", "3"))
-    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173,https://email-threat-detection1.vercel.app")
 
 
 settings = Settings()
