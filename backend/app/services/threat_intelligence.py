@@ -4,17 +4,18 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import hashlib
 import ipaddress
-import re
 import time
+import logging
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Set
 from urllib.parse import urlparse
 
 import httpx
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 ProviderResult = Dict[str, Any]
 _TIMEOUT = httpx.Timeout(5.0, connect=2.0)
@@ -50,18 +51,39 @@ def _normalize_indicator(indicator_type: str, indicator: str) -> Optional[str]:
     return None
 
 
-@dataclass(frozen=True)
+@dataclass
 class ThreatIntelProvider:
     name: str
     api_key: Optional[str]
+    _circuit_breaker_until: float = 0.0
 
-    async def lookup(self, indicator_type: str, indicator: str) -> ProviderResult:
+    async def lookup(self, indicator_type: str, indicator: str, client: Optional[httpx.AsyncClient] = None) -> ProviderResult:
         raise NotImplementedError
 
-    def unavailable(self, indicator_type: str, indicator: str, reason: str) -> ProviderResult:
-        return _result(self.name, indicator, indicator_type, "not_configured", error=reason)
+    def is_healthy(self) -> bool:
+        if not _configured(self.api_key):
+            return False
+        return time.monotonic() >= self._circuit_breaker_until
 
-    def invalid(self, indicator_type: str, indicator: str) -> ProviderResult:
+    def trip_circuit_breaker(self, duration: float = 300.0) -> None:
+        """Trip circuit breaker for providers on unauthorized or persistent errors."""
+        self._circuit_breaker_until = time.monotonic() + duration
+        logger.warning(f"Circuit breaker tripped for provider {self.name} due to auth/persistent error.")
+
+    def unavailability_reason(self) -> str:
+        if not _configured(self.api_key):
+            return "not_configured"
+        if time.monotonic() < self._circuit_breaker_until:
+            return "circuit_broken"
+        return "available"
+
+    def unavailable_result(self, indicator_type: str, indicator: str) -> ProviderResult:
+        reason = self.unavailability_reason()
+        error_msg = f"{self.name} API key is not configured." if reason == "not_configured" else f"{self.name} is temporarily disabled (unauthorized/rate-limited)."
+        status = "not_configured" if reason == "not_configured" else "skipped"
+        return _result(self.name, indicator, indicator_type, status, error=error_msg)
+
+    def invalid_result(self, indicator_type: str, indicator: str) -> ProviderResult:
         return _result(self.name, indicator, indicator_type, "error", error="Unsupported or malformed indicator.")
 
 
@@ -71,15 +93,24 @@ class VirusTotalProvider(ThreatIntelProvider):
     def __init__(self) -> None:
         super().__init__("VirusTotal", settings.VIRUSTOTAL_API_KEY)
 
-    async def lookup(self, indicator_type: str, indicator: str) -> ProviderResult:
-        if not _configured(self.api_key):
-            return self.unavailable(indicator_type, indicator, "VirusTotal API key is not configured.")
+    async def lookup(self, indicator_type: str, indicator: str, client: Optional[httpx.AsyncClient] = None) -> ProviderResult:
+        if not self.is_healthy():
+            return self.unavailable_result(indicator_type, indicator)
         value = _normalize_indicator(indicator_type, indicator)
         endpoint_type = {"url": "urls", "domain": "domains", "ip": "ip_addresses", "ipv6": "ip_addresses", "hash": "files"}.get(indicator_type)
         if not value or not endpoint_type:
-            return self.invalid(indicator_type, indicator)
+            return self.invalid_result(indicator_type, indicator)
         target = base64.urlsafe_b64encode(value.encode()).decode().rstrip("=") if indicator_type == "url" else value
-        return await _get_object(self.name, value, indicator_type, f"https://www.virustotal.com/api/v3/{endpoint_type}/{target}", {"x-apikey": self.api_key})
+
+        if client is not None:
+            result = await _get_object(self, value, indicator_type, f"https://www.virustotal.com/api/v3/{endpoint_type}/{target}", {"x-apikey": self.api_key}, client)
+        else:
+            async with httpx.AsyncClient(timeout=_TIMEOUT) as local_client:
+                result = await _get_object(self, value, indicator_type, f"https://www.virustotal.com/api/v3/{endpoint_type}/{target}", {"x-apikey": self.api_key}, local_client)
+
+        if result["status"] in {"unavailable", "rate_limited"}:
+            self.trip_circuit_breaker()
+        return result
 
 
 class URLhausProvider(ThreatIntelProvider):
@@ -88,16 +119,22 @@ class URLhausProvider(ThreatIntelProvider):
     def __init__(self) -> None:
         super().__init__("URLhaus", settings.URLHAUS_API_KEY)
 
-    async def lookup(self, indicator_type: str, indicator: str) -> ProviderResult:
-        if not _configured(self.api_key):
-            return self.unavailable(indicator_type, indicator, "URLhaus API key is not configured.")
+    async def lookup(self, indicator_type: str, indicator: str, client: Optional[httpx.AsyncClient] = None) -> ProviderResult:
+        if not self.is_healthy():
+            return self.unavailable_result(indicator_type, indicator)
         value = _normalize_indicator(indicator_type, indicator)
         if indicator_type != "url" or not value:
-            return self.invalid(indicator_type, indicator)
+            return self.invalid_result(indicator_type, indicator)
         try:
-            async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+            if client is not None:
                 response = await client.post("https://urlhaus-api.abuse.ch/v1/url/", data={"url": value}, headers={"Auth-Key": self.api_key})
-            return _urlhaus_result(self.name, value, indicator_type, response)
+            else:
+                async with httpx.AsyncClient(timeout=_TIMEOUT) as local_client:
+                    response = await local_client.post("https://urlhaus-api.abuse.ch/v1/url/", data={"url": value}, headers={"Auth-Key": self.api_key})
+            result = _urlhaus_result(self.name, value, indicator_type, response)
+            if result["status"] in {"unauthorized", "rate_limited"}:
+                self.trip_circuit_breaker()
+            return result
         except httpx.TimeoutException:
             return _result(self.name, value, indicator_type, "timeout", error="Provider request timed out.")
         except httpx.HTTPError:
@@ -110,16 +147,22 @@ class ThreatFoxProvider(ThreatIntelProvider):
     def __init__(self) -> None:
         super().__init__("ThreatFox", settings.THREATFOX_API_KEY)
 
-    async def lookup(self, indicator_type: str, indicator: str) -> ProviderResult:
-        if not _configured(self.api_key):
-            return self.unavailable(indicator_type, indicator, "ThreatFox API key is not configured.")
+    async def lookup(self, indicator_type: str, indicator: str, client: Optional[httpx.AsyncClient] = None) -> ProviderResult:
+        if not self.is_healthy():
+            return self.unavailable_result(indicator_type, indicator)
         value = _normalize_indicator(indicator_type, indicator)
         if indicator_type not in {"url", "domain", "ip", "ipv6", "hash"} or not value:
-            return self.invalid(indicator_type, indicator)
+            return self.invalid_result(indicator_type, indicator)
         try:
-            async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+            if client is not None:
                 response = await client.post("https://threatfox-api.abuse.ch/api/v1/", json={"query": "search_ioc", "search_term": value}, headers={"Auth-Key": self.api_key})
-            return _threatfox_result(self.name, value, indicator_type, response)
+            else:
+                async with httpx.AsyncClient(timeout=_TIMEOUT) as local_client:
+                    response = await local_client.post("https://threatfox-api.abuse.ch/api/v1/", json={"query": "search_ioc", "search_term": value}, headers={"Auth-Key": self.api_key})
+            result = _threatfox_result(self.name, value, indicator_type, response)
+            if result["status"] in {"unauthorized", "rate_limited"}:
+                self.trip_circuit_breaker()
+            return result
         except httpx.TimeoutException:
             return _result(self.name, value, indicator_type, "timeout", error="Provider request timed out.")
         except httpx.HTTPError:
@@ -132,26 +175,32 @@ class AbuseIPDBProvider(ThreatIntelProvider):
     def __init__(self) -> None:
         super().__init__("AbuseIPDB", settings.ABUSEIPDB_API_KEY)
 
-    async def lookup(self, indicator_type: str, indicator: str) -> ProviderResult:
-        if not _configured(self.api_key):
-            return self.unavailable(indicator_type, indicator, "AbuseIPDB API key is not configured.")
+    async def lookup(self, indicator_type: str, indicator: str, client: Optional[httpx.AsyncClient] = None) -> ProviderResult:
+        if not self.is_healthy():
+            return self.unavailable_result(indicator_type, indicator)
         value = _normalize_indicator(indicator_type, indicator)
         if indicator_type not in {"ip", "ipv6"} or not value:
-            return self.invalid(indicator_type, indicator)
+            return self.invalid_result(indicator_type, indicator)
         try:
-            async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+            if client is not None:
                 response = await client.get("https://api.abuseipdb.com/api/v2/check", headers={"Key": self.api_key, "Accept": "application/json"}, params={"ipAddress": value, "maxAgeInDays": 90})
-            return _abuse_result(self.name, value, indicator_type, response)
+            else:
+                async with httpx.AsyncClient(timeout=_TIMEOUT) as local_client:
+                    response = await local_client.get("https://api.abuseipdb.com/api/v2/check", headers={"Key": self.api_key, "Accept": "application/json"}, params={"ipAddress": value, "maxAgeInDays": 90})
+            result = _abuse_result(self.name, value, indicator_type, response)
+            if result["status"] in {"unauthorized", "rate_limited"}:
+                self.trip_circuit_breaker()
+            return result
         except httpx.TimeoutException:
             return _result(self.name, value, indicator_type, "timeout", error="Provider request timed out.")
         except httpx.HTTPError:
             return _result(self.name, value, indicator_type, "error", error="Provider request failed.")
 
 
-async def _get_object(provider: str, indicator: str, kind: str, endpoint: str, headers: Dict[str, str]) -> ProviderResult:
+async def _get_object(provider_obj: ThreatIntelProvider, indicator: str, kind: str, endpoint: str, headers: Dict[str, str], client: httpx.AsyncClient) -> ProviderResult:
+    provider = provider_obj.name
     try:
-        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            response = await client.get(endpoint, headers=headers)
+        response = await client.get(endpoint, headers=headers)
         status = _http_status(provider, indicator, kind, response)
         if status:
             return status
@@ -184,7 +233,8 @@ def _urlhaus_result(provider: str, indicator: str, kind: str, response: httpx.Re
         return _result(provider, indicator, kind, "ok", "malicious", 1, 90, tags, payload.get("date_added"), payload.get("last_online"), [payload["urlhaus_reference"]] if payload.get("urlhaus_reference") else [])
     except (ValueError, TypeError, AttributeError):
         return _result(provider, indicator, kind, "error", error="Provider response was malformed.")
-
+    except Exception as e:
+        return _result(provider, indicator, kind, "error", error=f"Provider response error {str(e)}")
 
 def _threatfox_result(provider: str, indicator: str, kind: str, response: httpx.Response) -> ProviderResult:
     status = _http_status(provider, indicator, kind, response)
@@ -218,33 +268,55 @@ def _result(provider: str, indicator: str, indicator_type: str, status: str, rep
 
 
 class ThreatIntelligenceService:
-    """Bounded, deduplicated provider enrichment with TTL caching."""
+    """Bounded, deduplicated provider enrichment with TTL caching and Connection Pooling."""
 
     _cache: Dict[Tuple[str, str], Tuple[float, List[ProviderResult]]] = {}
     _CACHE_TTL_SECONDS = 300
     _CACHE_MAX_ENTRIES = 512
 
-    def __init__(self, providers: Optional[Iterable[ThreatIntelProvider]] = None) -> None:
-        self.providers = list(providers) if providers is not None else [VirusTotalProvider(), URLhausProvider(), ThreatFoxProvider(), AbuseIPDBProvider()]
+    # Global list of provider instances to preserve circuit breaker states across requests
+    _GLOBAL_PROVIDERS = [VirusTotalProvider(), URLhausProvider(), ThreatFoxProvider(), AbuseIPDBProvider()]
 
-    async def enrich_ioc(self, indicator_type: str, indicator: str) -> List[ProviderResult]:
+    def __init__(self, providers: Optional[Iterable[ThreatIntelProvider]] = None) -> None:
+        self.providers = list(providers) if providers is not None else self._GLOBAL_PROVIDERS
+
+    async def enrich_ioc(self, indicator_type: str, indicator: str, client: Optional[httpx.AsyncClient] = None) -> List[ProviderResult]:
         key = (indicator_type.lower(), indicator.lower())
-        now = time.monotonic(); cached = self._cache.get(key)
+        now = time.monotonic()
+        cached = self._cache.get(key)
         if cached and now - cached[0] < self._CACHE_TTL_SECONDS: return cached[1]
+
         if cached: self._cache.pop(key, None)
-        results = await asyncio.gather(*(p.lookup(indicator_type, indicator) for p in self.providers), return_exceptions=True)
-        normalized = [r for r in results if isinstance(r, dict)]
+
+        # Bounded concurrency across providers
+        results = await asyncio.gather(*(p.lookup(indicator_type, indicator, client) for p in self.providers), return_exceptions=True)
+        normalized = [r if isinstance(r, dict) else _result(p.name, indicator, indicator_type, "error", error=f"Unhandled exception: {str(r)}") for r, p in zip(results, self.providers)]
+
         if len(self._cache) >= self._CACHE_MAX_ENTRIES:
             oldest = min(self._cache, key=lambda item: self._cache[item][0]); self._cache.pop(oldest, None)
+
         self._cache[key] = (now, normalized)
         return normalized
 
     async def enrich_all(self, iocs: List[Dict[str, Any]]) -> List[ProviderResult]:
-        supported = {"url", "domain", "ip", "ipv6", "hash"}; unique = []; seen = set()
+        supported = {"url", "domain", "ip", "ipv6", "hash"}
+        unique = []
+        seen = set()
+
         for ioc in iocs:
-            kind = str(ioc.get("type") or ""); value = str(ioc.get("normalized_value") or ioc.get("value") or ""); key = (kind, value.lower())
+            kind = str(ioc.get("type") or "")
+            value = str(ioc.get("normalized_value") or ioc.get("value") or "")
+            key = (kind, value.lower())
             if kind in supported and value and key not in seen:
-                seen.add(key); unique.append((kind, value))
-            if len(unique) == 12: break
-        batches = await asyncio.gather(*(self.enrich_ioc(*item) for item in unique))
+                seen.add(key)
+                unique.append((kind, value))
+
+            if len(unique) == 12:  # Bounded item count to prevent abuse
+                break
+
+        # Connection pooling via a shared AsyncClient
+        limits = httpx.Limits(max_connections=12, max_keepalive_connections=8)
+        async with httpx.AsyncClient(timeout=_TIMEOUT, limits=limits) as client:
+            batches = await asyncio.gather(*(self.enrich_ioc(kind, val, client) for kind, val in unique))
+
         return [item for batch in batches for item in batch]

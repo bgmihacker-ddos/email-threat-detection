@@ -107,6 +107,10 @@
     @apply text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500;
   }
 
+  .report-kicker {
+    @apply font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500;
+  }
+
   /* Technical/monospace text */
   .font-tech {
     font-family: var(--font-mono);

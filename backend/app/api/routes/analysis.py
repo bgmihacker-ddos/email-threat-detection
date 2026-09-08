@@ -12,7 +12,6 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db, SessionLocal
-from app.api.routes.analysis_job_store import JOB_STORE
 from app.detection.rule_engine import RuleEngine
 from app.detection.risk_scorer import RiskEngine
 from app.models.analysis import AnalysisResult
@@ -91,8 +90,23 @@ def _analysis_summary(record: AnalysisResult) -> Dict[str, Any]:
         "sender": sender,
         "recipient": recipient or "(no recipient)",
         "created_at": _as_utc(record.created_at).isoformat(),
-        "status": "analyzed",
+        "status": record.status or "completed",
     }
+
+
+def _completed_result(record: AnalysisResult) -> Dict[str, Any]:
+    """Return a persisted result only when the analysis has usable output."""
+    if record.status not in {"completed", "partial"} or not isinstance(record.result, dict):
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "analysis_id": record.id,
+                "status": record.status or "processing",
+                "stage": record.current_stage,
+                "error": record.error_message,
+            },
+        )
+    return record.result
 
 
 def _result_iocs(result: Any) -> List[Dict[str, Any]]:
@@ -151,16 +165,36 @@ def _render_report_html(analysis_id: str, payload: Dict[str, Any], created_at: d
 </html>"""
 
 
+
+def _update_job_status(db: Session, analysis_id: str, status: str, stage: str, pct: int, error: Optional[str] = None):
+    try:
+        db_rec = db.query(AnalysisResult).filter(AnalysisResult.id == analysis_id).first()
+        if not db_rec:
+            db_rec = AnalysisResult(
+                id=analysis_id,
+                status=status,
+                current_stage=stage,
+                progress_percent=pct,
+                error_message=error,
+                started_at=datetime.now(timezone.utc)
+            )
+            db.add(db_rec)
+        else:
+            db_rec.status = status
+            db_rec.current_stage = stage
+            db_rec.progress_percent = pct
+            db_rec.error_message = error
+            db_rec.updated_at = datetime.now(timezone.utc)
+            if status in ("completed", "failed"):
+                db_rec.completed_at = datetime.now(timezone.utc)
+        db.commit()
+    except Exception:
+        db.rollback()
+
 async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Session) -> EmailAnalysisSchema:
     import asyncio
     try:
-        JOB_STORE[analysis_id] = {
-            "analysis_id": analysis_id,
-            "status": "processing",
-            "stage": "Parsing RFC 5322 MIME stream & headers...",
-            "progress_pct": 15,
-            "error": None,
-        }
+        _update_job_status(db, analysis_id, "processing", "Parsing RFC 5322 MIME stream & headers...", 15)
 
         # 1) Parsing and deterministic forensic components.
         parsed_email = EmailParser.parse_raw(raw_email)
@@ -168,13 +202,7 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
         authentication = AuthenticationAnalyzer.analyze(header_forensics, parsed_email)
         extracted_iocs = IOCExtractor.extract(parsed_email)
 
-        JOB_STORE[analysis_id] = {
-            "analysis_id": analysis_id,
-            "status": "processing",
-            "stage": "Inspecting attachment payloads & content semantics...",
-            "progress_pct": 35,
-            "error": None,
-        }
+        _update_job_status(db, analysis_id, "processing", "Inspecting attachment payloads & content semantics...", 35)
 
         urls = [ioc["value"] for ioc in extracted_iocs["iocs"] if ioc["type"] == "url"]
         url_analysis = URLIntelligence.analyze_batch(urls)
@@ -185,13 +213,7 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
         content_analysis = ContentAnalyzer.analyze(parsed_email)
         ml_analysis = get_ml_classifier().predict_email(parsed_email)
 
-        JOB_STORE[analysis_id] = {
-            "analysis_id": analysis_id,
-            "status": "processing",
-            "stage": "Correlating intelligence feeds (DNS/WHOIS/ThreatIntel)...",
-            "progress_pct": 60,
-            "error": None,
-        }
+        _update_job_status(db, analysis_id, "processing", "Correlating intelligence feeds (DNS/WHOIS/ThreatIntel)...", 60)
 
         # 2) Safe local intelligence enrichment. DNS is best-effort and never a verdict.
         async def enrich_domain(dom: str, det: dict):
@@ -215,13 +237,7 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
         # Optional threat intelligence. Failures remain localized in output.
         threat_intelligence = await ThreatIntelligenceService().enrich_all(extracted_iocs["iocs"])
 
-        JOB_STORE[analysis_id] = {
-            "analysis_id": analysis_id,
-            "status": "processing",
-            "stage": "Synthesizing MITRE ATT&CK techniques & evidence graph...",
-            "progress_pct": 80,
-            "error": None,
-        }
+        _update_job_status(db, analysis_id, "processing", "Synthesizing MITRE ATT&CK techniques & evidence graph...", 80)
 
         # 3) Preserve legacy RuleEngine data and use new fused score as final verdict.
         rule_result = RuleEngine.analyze(parsed_email)
@@ -328,36 +344,24 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
         )
         analysis.related_investigations = related_investigations
 
-        db_result = AnalysisResult(
-            id=analysis_id,
-            verdict=analysis.verdict,
-            risk_score=analysis.risk_score,
-            severity=analysis.severity,
-            confidence=analysis.confidence,
-            summary=analysis.summary,
-            result=analysis.model_dump(mode="json"),
-        )
-        db.add(db_result)
+        db_result = db.query(AnalysisResult).filter(AnalysisResult.id == analysis_id).first()
+        if not db_result:
+            db_result = AnalysisResult(id=analysis_id)
+            db.add(db_result)
+        db_result.verdict = analysis.verdict
+        db_result.risk_score = analysis.risk_score
+        db_result.severity = analysis.severity
+        db_result.confidence = analysis.confidence
+        db_result.summary = analysis.summary
+        db_result.result = analysis.model_dump(mode="json")
         db.commit()
 
-        JOB_STORE[analysis_id] = {
-            "analysis_id": analysis_id,
-            "status": "completed",
-            "stage": "Analysis finalized and persisted",
-            "progress_pct": 100,
-            "error": None,
-        }
+        _update_job_status(db, analysis_id, "completed", "Analysis finalized and persisted", 100)
 
         return analysis
     except Exception as exc:
         db.rollback()
-        JOB_STORE[analysis_id] = {
-            "analysis_id": analysis_id,
-            "status": "failed",
-            "stage": "Analysis failed",
-            "progress_pct": 0,
-            "error": str(exc) if isinstance(exc, ValueError) else "Email analysis could not be completed.",
-        }
+        _update_job_status(db, analysis_id, "failed", "Analysis failed", 0, error=str(exc) if isinstance(exc, ValueError) else "Email analysis could not be completed.")
         raise
 
 
@@ -390,13 +394,7 @@ async def analyze_email(
     analysis_id = str(uuid.uuid4())
 
     if async_mode:
-        JOB_STORE[analysis_id] = {
-            "analysis_id": analysis_id,
-            "status": "queued",
-            "stage": "Queued for forensic ingestion",
-            "progress_pct": 5,
-            "error": None,
-        }
+        _update_job_status(db, analysis_id, "queued", "Queued for forensic ingestion", 5)
         background_tasks.add_task(_background_analysis_task, raw_email, analysis_id)
         return {
             "analysis_id": analysis_id,
@@ -416,17 +414,14 @@ async def analyze_email(
 
 @router.get("/analyze/{analysis_id}/status")
 def get_analysis_status(analysis_id: str, db: Session = Depends(get_db)):
-    if analysis_id in JOB_STORE:
-        return JOB_STORE[analysis_id]
-
     db_result = db.query(AnalysisResult).filter(AnalysisResult.id == analysis_id).first()
     if db_result is not None:
         return {
             "analysis_id": analysis_id,
-            "status": "completed",
-            "stage": "Analysis finalized and persisted",
-            "progress_pct": 100,
-            "error": None,
+            "status": db_result.status or "completed",
+            "stage": db_result.current_stage or "Analysis finalized and persisted",
+            "progress_pct": db_result.progress_percent if db_result.progress_percent is not None else 100,
+            "error": db_result.error_message,
         }
 
     raise HTTPException(status_code=404, detail="Analysis job not found.")
@@ -438,7 +433,7 @@ async def get_analysis(analysis_id: str, db: Session = Depends(get_db)):
     if db_result is None:
         raise HTTPException(status_code=404, detail="Analysis not found.")
 
-    return EmailAnalysisSchema(**db_result.result)
+    return EmailAnalysisSchema(**_completed_result(db_result))
 
 
 @router.get("/analyses", response_model=dict)
@@ -530,7 +525,7 @@ def export_analysis_json(
     record = db.query(AnalysisResult).filter(AnalysisResult.id == analysis_id).first()
     if record is None:
         raise HTTPException(status_code=404, detail="Analysis not found.")
-    payload = _sanitize_result(record.result, include_raw_email=include_raw_email)
+    payload = _sanitize_result(_completed_result(record), include_raw_email=include_raw_email)
     return JSONResponse(
         content=payload,
         headers={"Content-Disposition": f'attachment; filename="analysis-{analysis_id}.json"'},
@@ -544,7 +539,7 @@ def export_analysis_stix(analysis_id: str, db: Session = Depends(get_db)):
     if record is None:
         raise HTTPException(status_code=404, detail="Analysis not found.")
     return JSONResponse(
-        content=export_stix_bundle(record.id, _sanitize_result(record.result)),
+        content=export_stix_bundle(record.id, _sanitize_result(_completed_result(record))),
         headers={"Content-Disposition": f'attachment; filename="analysis-{analysis_id}.stix.json"'},
         media_type="application/stix+json",
     )
@@ -557,7 +552,7 @@ def export_analysis_blocklist(analysis_id: str, db: Session = Depends(get_db)):
     if record is None:
         raise HTTPException(status_code=404, detail="Analysis not found.")
     from fastapi.responses import PlainTextResponse
-    response = PlainTextResponse(generate_blocklist(_sanitize_result(record.result)), media_type="text/csv")
+    response = PlainTextResponse(generate_blocklist(_sanitize_result(_completed_result(record))), media_type="text/csv")
     response.headers["Content-Disposition"] = f'attachment; filename="analysis-{analysis_id}-blocklist.csv"'
     return response
 
@@ -568,7 +563,7 @@ def export_analysis_queries(analysis_id: str, db: Session = Depends(get_db)):
     record = db.query(AnalysisResult).filter(AnalysisResult.id == analysis_id).first()
     if record is None:
         raise HTTPException(status_code=404, detail="Analysis not found.")
-    return generate_queries(_sanitize_result(record.result))
+    return generate_queries(_sanitize_result(_completed_result(record)))
 
 
 @router.get("/analyses/{analysis_id}/related")
@@ -590,7 +585,7 @@ def export_analysis_html(
     record = db.query(AnalysisResult).filter(AnalysisResult.id == analysis_id).first()
     if record is None:
         raise HTTPException(status_code=404, detail="Analysis not found.")
-    payload = _sanitize_result(record.result, include_raw_email=include_raw_email)
+    payload = _sanitize_result(_completed_result(record), include_raw_email=include_raw_email)
     response = HTMLResponse(_render_report_html(record.id, payload, record.created_at))
     response.headers["Content-Disposition"] = f'inline; filename="analysis-{analysis_id}.html"'
     return response

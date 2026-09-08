@@ -54,7 +54,7 @@ def _summary(record: AnalysisResult) -> Dict[str, Any]:
         "sender": sender or "(unknown sender)",
         "recipient": recipient or "(no recipient)",
         "created_at": _as_utc(record.created_at).isoformat(),
-        "status": "analyzed",
+        "status": record.status or "completed",
     }
 
 
@@ -66,6 +66,7 @@ def get_dashboard_summary(
     """Return honest dashboard aggregates over persisted local analyses."""
     records: List[AnalysisResult] = (
         db.query(AnalysisResult)
+        .filter(AnalysisResult.status.in_(["completed", "partial"]))
         .order_by(AnalysisResult.created_at.desc())
         .limit(1000)
         .all()

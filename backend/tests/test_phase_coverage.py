@@ -225,6 +225,7 @@ async def test_6f_virustotal_mocked():
             assert res_ok["detections"] == 12
 
         # Mocked 401 / 403
+        vt._circuit_breaker_until = 0
         with patch("httpx.AsyncClient.get") as mock_get:
             mock_resp = MagicMock()
             mock_resp.status_code = 401
@@ -233,6 +234,7 @@ async def test_6f_virustotal_mocked():
             assert res_unauth["status"] == "unavailable"
 
         # Mocked 429 Rate limit
+        vt._circuit_breaker_until = 0
         with patch("httpx.AsyncClient.get") as mock_get:
             mock_resp = MagicMock()
             mock_resp.status_code = 429
@@ -241,6 +243,7 @@ async def test_6f_virustotal_mocked():
             assert res_rl["status"] == "rate_limited"
 
         # Mocked Timeout
+        vt._circuit_breaker_until = 0
         with patch("httpx.AsyncClient.get", side_effect=httpx.TimeoutException("Timeout")):
             res_to = await vt.lookup("domain", "evil.com")
             assert res_to["status"] == "timeout"

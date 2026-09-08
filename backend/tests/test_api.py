@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.models.analysis import AnalysisResult
 
 client = TestClient(app)
 
@@ -117,4 +118,29 @@ def test_async_analysis_and_status_polling():
     assert "status" in status_data
     assert "stage" in status_data
     assert "progress_pct" in status_data
+
+
+def test_pending_analysis_does_not_expose_final_result(db_session):
+    pending = AnalysisResult(
+        id="pending-analysis",
+        status="processing",
+        current_stage="Threat intelligence",
+        progress_percent=60,
+    )
+    db_session.add(pending)
+    db_session.commit()
+
+    response = client.get("/api/analyze/pending-analysis")
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == {
+        "analysis_id": "pending-analysis",
+        "status": "processing",
+        "stage": "Threat intelligence",
+        "error": None,
+    }
+
+    listing = client.get("/api/analyses")
+    assert listing.status_code == 200
+    assert listing.json()["data"][0]["status"] == "processing"
 

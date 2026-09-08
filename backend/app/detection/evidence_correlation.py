@@ -280,7 +280,14 @@ class EvidenceCorrelator:
         records: List[EvidenceRecord] = []
         if not isinstance(ml_prediction, dict):
             return records
-        if ml_prediction.get("status") in ("unavailable", None) and not ml_prediction.get("prediction") and not ml_prediction.get("label"):
+        if ml_prediction.get("status") in {
+            "unavailable",
+            "not_configured",
+            "timeout",
+            "error",
+        }:
+            return records
+        if ml_prediction.get("status") is None and not ml_prediction.get("prediction") and not ml_prediction.get("label"):
             return records
 
         label = str(ml_prediction.get("label") or ml_prediction.get("prediction") or "").lower()

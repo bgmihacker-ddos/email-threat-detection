@@ -1,204 +1,69 @@
-import { useParams, Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import {
-  Download, Info, ArrowLeft, ShieldAlert
-} from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { ArrowLeft, ChevronDown, ChevronRight, CircleAlert, Download, FileSearch, Globe2, Mail, ShieldCheck, Timer, TriangleAlert } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
 import { downloadReport, getAnalysisById } from '../services/analysisApi';
-import { categorizeIoc } from '../utils/iocCategorization';
-import { SeverityBadge } from '../components/common/SeverityBadge';
-import { Panel } from '../components/common/Panel';
-import { SecurityEnvironmentBackground } from '../components/common/SecurityEnvironmentBackground';
 
-type AnyRecord = Record<string, any>;
+type RecordValue = Record<string, any>;
 
 export default function AnalysisResult() {
   const { id } = useParams();
-  const [analysis, setAnalysis] = useState<AnyRecord | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [analysis, setAnalysis] = useState<RecordValue | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({
-    reasoning: true, authentication: true, attackChain: true,
-    findings: true, iocs: true, raw: false
-  });
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState({ headers: false, raw: false });
 
   useEffect(() => {
     if (!id) return;
-    getAnalysisById(id)
-      .then(setAnalysis)
-      .catch((e) => setError(e.message || 'Failed to load analysis. Ensure backend is running.'))
-      .finally(() => setLoading(false));
+    getAnalysisById(id).then(setAnalysis).catch((reason) => setError(reason.message || 'Failed to load analysis.')).finally(() => setLoading(false));
   }, [id]);
 
   if (loading) return <LoadingState />;
-  if (error || !analysis) return <div className="mx-auto max-w-5xl rounded border border-red-800/60 bg-red-950/30 p-5 text-sm text-red-300 font-mono">{error || 'Analysis not found.'}</div>;
+  if (error || !analysis) return <div className="mx-auto max-w-5xl rounded border border-red-800/60 bg-red-950/30 p-5 text-sm text-red-300">{error || 'Analysis not found.'}</div>;
 
-  const authentication = analysis.authentication || {};
+  const email = analysis.email || {};
+  const metadata = email.metadata || {};
+  const auth = analysis.authentication || {};
+  const headers = analysis.header_forensics || {};
+  const flow = headers.mail_flow || {};
+  const content = analysis.content_analysis || {};
   const findings = Array.isArray(analysis.forensic_findings) ? analysis.forensic_findings : [];
   const iocs = extractedIocs(analysis);
-  const attackChain = Array.isArray(analysis.attack_chain_steps) ? analysis.attack_chain_steps : [];
-  const verdict = String(analysis.verdict || 'unknown');
+  const verdict = String(analysis.verdict || 'unknown').toLowerCase();
   const risk = Number(analysis.risk_score || 0);
+  const breakdown = Array.isArray(analysis.risk_breakdown) ? analysis.risk_breakdown : [];
+  const riskFindings = breakdown.filter((item: RecordValue) => item.points > 0 && (item.evidence_class === 'strong_risk_signal' || item.evidence_class === 'confirmed_malicious' || item.risk_relevance === 'risk_contributing'));
+  const contextFindings = findings.filter((item: RecordValue) => item.evidence_class === 'contextual_anomaly' || item.evidence_class === 'informational' || item.risk_relevance === 'contextual');
+  const subject = metadata.subject || email.subject || 'Untitled investigation';
+  const sender = metadata.from || email.from || 'Sender unavailable';
+  const recipient = firstRecipient(metadata.to || email.to);
 
-  return (
-    <div className="mx-auto max-w-[1550px] space-y-6 pb-12 font-sans text-gray-200">
-      <SecurityEnvironmentBackground profile="investigation" threatLevel={risk > 70 ? 'high' : risk > 40 ? 'medium' : 'safe'} />
-
-      <header className="relative z-10 flex flex-col gap-4 border-b border-[#151D28] pb-6 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <Link to="/history" className="mb-3 inline-flex items-center gap-1.5 text-xs text-gray-500 transition-colors hover:text-cyan-300 font-mono uppercase tracking-widest">
-            <ArrowLeft size={13} /> Return to Investigation History
-          </Link>
-          <div className="flex items-center gap-3">
-             <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-500 bg-cyan-950/30 px-2 py-0.5 rounded border border-cyan-800/30 font-mono">
-               FORENSIC ANALYSIS REPORT
-             </span>
-             <span className="text-[10px] font-mono text-gray-600 tracking-widest">ID: {analysis.analysis_id}</span>
-          </div>
-          <h1 className="mt-2 font-mono text-xl font-semibold text-white truncate max-w-3xl">{analysis.subject || 'Untitled investigation'}</h1>
-          <p className="mt-1.5 text-xs text-gray-400 font-mono">
-            {analysis.sender || 'Sender identity unavailable'} · {formatDate(analysis.created_at)}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => id && downloadReport(id, 'json')} className="btn-secondary">
-            <Download size={13} /> JSON Export
-          </button>
-          <button onClick={() => id && downloadReport(id, 'html')} className="btn-secondary">
-            <Download size={13} /> Printable Report
-          </button>
-        </div>
-      </header>
-
-      {/* Main Verdict Panel */}
-      <section className={`relative z-10 overflow-hidden rounded-lg border p-6 flex flex-col md:flex-row gap-8 ${verdictToneBorder(verdict)}`}>
-        <div className="absolute inset-y-0 left-0 w-1 bg-current opacity-80" />
-        <div className="flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500 font-mono mb-2">Executive Verdict</p>
-          <div className="flex flex-wrap items-center gap-4">
-            <span className={`text-3xl font-bold uppercase tracking-tight font-mono ${verdictTone(verdict)}`}>{verdict}</span>
-            <SeverityBadge severity={analysis.severity || verdict} />
-          </div>
-          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-gray-300 font-mono">{analysis.summary || 'No executive summary provided.'}</p>
-        </div>
-        <RiskGauge score={risk} />
-        <div className="flex flex-col gap-4 border-l border-[#1C2A3D] pl-6 min-w-[200px]">
-           <ScoreStat label="Data Integrity" value={analysis.confidence !== undefined ? `${analysis.confidence}%` : 'Unavailable'} help="Forensic metadata completeness" />
-           <ScoreStat label="Analysis Status" value={analysis.status || 'Completed'} />
-        </div>
-      </section>
-
-      {/* Primary Workspaces Grid */}
-      <div className="relative z-10 grid grid-cols-1 gap-5 lg:grid-cols-5">
-        <Panel title="AUTHENTICATION & IDENTITY" open={expanded.authentication} onToggle={() => setExpanded(e => ({...e, authentication: !e.authentication}))} className="lg:col-span-2">
-          <div className="grid grid-cols-2 gap-3">
-            {(['spf', 'dkim', 'dmarc', 'arc'] as const).map(name => {
-              const item = authentication[name] || {};
-              return <div key={name} className="rounded border border-[#1C2A3D] bg-[#060A10] p-3 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 font-mono">{name}</p>
-                <p className={`mt-2 text-sm font-bold uppercase font-mono ${authTone(item.status)}`}>{item.status || 'Missing'}</p>
-              </div>;
-            })}
-          </div>
-        </Panel>
-        <Panel title="THREAT REASONING" open={expanded.reasoning} onToggle={() => setExpanded(e => ({...e, reasoning: !e.reasoning}))} className="lg:col-span-3">
-          <p className="text-xs leading-relaxed text-gray-300 font-mono mb-6">{analysis.extended_reasoning?.summary || analysis.summary}</p>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <EvidenceColumn title="Critical Indicators" tone="text-red-400" items={(analysis.risk_breakdown || []).filter((item: any) => item.points > 5).map((item: any) => `${item.reason}`)} />
-            <EvidenceColumn title="Contextual Clues" tone="text-amber-400" items={(analysis.risk_breakdown || []).filter((item: any) => item.points <= 5).map((item: any) => item.reason)} />
-            <EvidenceColumn title="Positive Alignments" tone="text-emerald-400" items={(['spf', 'dkim', 'dmarc'] as const).filter(proto => authentication[proto]?.status === 'pass').map(proto => `${proto.toUpperCase()} Verified`)} />
-          </div>
-        </Panel>
-      </div>
-
-      {/* Forensic Pipeline Visualizations */}
-      {attackChain.length > 0 && (
-         <Panel title={`ATTACK CHAIN · ${attackChain.length} STAGES IDENTIFIED`} open={expanded.attackChain} onToggle={() => setExpanded(e => ({...e, attackChain: !e.attackChain}))}>
-           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
-            {attackChain.map((step: AnyRecord, index: number) => (
-              <div key={index} className="rounded border border-[#1C2A3D] bg-[#060A10] p-4 text-xs font-mono">
-                <div className="flex items-center gap-2 mb-3">
-                   <div className="flex h-5 w-5 items-center justify-center rounded-full border border-cyan-500/30 bg-cyan-950/30 text-[10px] text-cyan-300">{index + 1}</div>
-                   <span className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">STAGE {index + 1}</span>
-                </div>
-                <p className="text-gray-200 font-semibold mb-2">{step.title || step.stage}</p>
-                <div className="text-[11px] text-gray-500 leading-relaxed">{step.description}</div>
-              </div>
-            ))}
-           </div>
-         </Panel>
-      )}
-
-      {/* Findings & IOCs */}
-      <div className="relative z-10 grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <Panel title={`FORENSIC FINDINGS · ${findings.length}`} open={expanded.findings} onToggle={() => setExpanded(e => ({...e, findings: !e.findings}))}>
-          <FindingList findings={findings} />
-        </Panel>
-        <Panel title={`EXTRACTED INDICATORS (IOCs) · ${iocs.length}`} open={expanded.iocs} onToggle={() => setExpanded(e => ({...e, iocs: !e.iocs}))}>
-          <IocList iocs={iocs} />
-        </Panel>
-      </div>
-
-      {/* Raw Sources & Intel */}
-      {(analysis.raw_email || analysis.raw_content) && (
-        <Panel title="RAW EMAIL MIME SOURCE" open={expanded.raw} onToggle={() => setExpanded(e => ({...e, raw: !e.raw}))}>
-           <pre className="max-h-[300px] overflow-auto rounded border border-[#1C2A3D] bg-[#05080D] p-4 font-mono text-[11px] leading-relaxed text-gray-500">{analysis.raw_email || analysis.raw_content}</pre>
-        </Panel>
-      )}
-    </div>
-  );
+  return <div className="mx-auto max-w-[1500px] space-y-6 pb-14 text-gray-200">
+    <header className="border-b border-[#1C2A3D] pb-6"><div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><Link to="/history" className="mb-4 inline-flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-gray-500 hover:text-cyan-300"><ArrowLeft size={14} /> Case history</Link><p className="report-kicker">Case file · {subject}.eml</p><h1 className="mt-2 text-2xl font-semibold text-white">{subject}</h1><p className="mt-2 text-sm text-gray-400"><span className="text-gray-200">{sender}</span><span className="mx-2 text-gray-600">→</span>{recipient}</p><p className="mt-1 font-mono text-xs text-gray-500">{formatDate(metadata.date || email.date || analysis.created_at)} · analysis {analysis.analysis_id}</p></div><div className="flex gap-2"><button onClick={() => id && downloadReport(id, 'json')} className="btn-secondary"><Download size={14} /> JSON</button><button onClick={() => id && downloadReport(id, 'html')} className="btn-secondary"><Download size={14} /> Printable report</button></div></div></header>
+    <nav className="flex flex-wrap gap-2 border-b border-[#151D28] pb-4 font-mono text-[10px] uppercase tracking-widest text-gray-500">{['Verdict', 'Findings', 'Mail flow', 'Authentication', 'Headers', 'Content', 'Email preview', 'Infrastructure', 'Raw email'].map((item, index) => <a key={item} href={`#${slug(item)}`} className="rounded border border-[#1C2A3D] px-2.5 py-1.5 hover:border-cyan-700 hover:text-cyan-300"><span className="mr-1.5 text-cyan-500">{String(index + 1).padStart(2, '0')}</span>{item}</a>)}</nav>
+    <section id="verdict" className={`grid gap-6 rounded-lg border p-6 lg:grid-cols-[1fr_auto] ${verdictBorder(verdict)}`}><div><p className="report-kicker">Investigation complete · {subject}.eml</p><div className="mt-3 flex flex-wrap items-center gap-3"><h2 className={`text-4xl font-bold uppercase ${verdictTone(verdict)}`}>{displayVerdict(verdict)}</h2><span className="rounded border border-[#263449] px-2 py-1 font-mono text-[10px] uppercase text-gray-400">{analysis.severity || 'unknown'} severity</span></div><p className="mt-4 max-w-3xl text-sm leading-7 text-gray-300">{analysis.summary || 'No executive summary was returned.'}</p><div className="mt-5 flex flex-wrap gap-3 text-xs text-gray-400"><Metric icon={<Timer size={14} />} label="Status" value={analysis.status || 'completed'} /><Metric icon={<FileSearch size={14} />} label="Confidence" value={analysis.confidence !== undefined ? `${analysis.confidence}%` : 'unavailable'} /><Metric icon={<Globe2 size={14} />} label="Observed IOCs" value={String(iocs.length)} /></div></div><div className="min-w-[190px] border-l border-[#263449] pl-6 lg:self-center"><p className="report-kicker">Composite risk</p><p className={`mt-1 font-mono text-5xl font-bold ${verdictTone(verdict)}`}>{risk}<span className="text-lg text-gray-600">/100</span></p><div className="mt-3 h-2 overflow-hidden rounded-full bg-[#151D28]"><div className={`h-full ${risk >= 70 ? 'bg-red-500' : risk >= 40 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${Math.min(100, Math.max(0, risk))}%` }} /></div></div></section>
+    <ReportSection id="findings" title="Key findings" subtitle="Signal review"><div className="grid gap-5 lg:grid-cols-2"><EvidenceGroup title="Risk-contributing evidence" icon={<TriangleAlert size={16} />} tone="red" items={riskFindings.map((item: RecordValue) => `${item.reason || item.title || 'Observed risk signal'} · +${item.points} points`)} empty="No strong risk-contributing evidence was returned." /><EvidenceGroup title="Contextual and informational evidence" icon={<CircleAlert size={16} />} tone="amber" items={contextFindings.map((item: RecordValue) => item.title || item.description)} empty="No contextual or informational findings were returned." /></div></ReportSection>
+    <ReportSection id="mail-flow" title="Mail transfer flow" subtitle="SMTP path reconstruction"><div className="mb-5 flex flex-wrap gap-3 font-mono text-xs text-gray-400"><span>{flow.hop_count || 0} parsed hops</span><span className="text-gray-700">·</span><span>{flow.timeline?.length || 0} system stages</span><span className="text-gray-700">·</span><span>Origin {flow.origin_ip || 'unavailable'}</span></div><div className="grid gap-3 md:grid-cols-3">{(flow.hops || []).map((hop: RecordValue, index: number) => <div key={index} className="rounded border border-[#1C2A3D] bg-[#060A10] p-4"><p className="report-kicker">Hop {index + 1}</p><p className="mt-2 break-all font-mono text-sm text-white">{hop.from_server || hop.from_host || 'Observed relay'}</p><p className="my-2 text-xs text-cyan-400">↓ {hop.protocol || 'mail transport'} ↓</p><p className="break-all font-mono text-sm text-gray-300">{hop.by_server || hop.by_host || 'Destination relay'}</p><p className="mt-3 text-[11px] text-gray-500">{hop.source_ip || 'IP unavailable'} · {hop.timestamp_utc || hop.timestamp || 'timestamp unavailable'}</p></div>)}</div>{!flow.hops?.length && <Empty text="No Received-chain hops were parsed." />}</ReportSection>
+    <div className="grid gap-5 lg:grid-cols-2"><ReportSection id="authentication" title="Trust signals" subtitle="Authentication"><div className="grid grid-cols-2 gap-3">{['spf', 'dkim', 'dmarc', 'arc'].map((name) => <div key={name} className="rounded border border-[#1C2A3D] bg-[#060A10] p-4"><p className="report-kicker">{name}</p><p className={`mt-2 font-mono text-xl font-bold uppercase ${authTone(auth[name]?.status)}`}>{auth[name]?.status || 'not available'}</p><p className="mt-2 text-[11px] text-gray-500">{auth[name]?.verified ? 'Independently verified' : 'Parsed from message headers'}</p></div>)}</div><p className="mt-4 text-xs text-gray-500">Header authentication is evidence, not a verdict by itself.</p></ReportSection><ReportSection id="content" title="Content signals" subtitle="Message content"><div className="grid grid-cols-2 gap-3 text-xs">{[['HTML detected', email.html_body ? 'YES' : 'NO'], ['Active script', content.html_forensics?.javascript_references ? 'DETECTED' : 'NOT DETECTED'], ['Tracking pixels', String(content.html_forensics?.tracking_pixels || 0)], ['Attachments', String((email.attachments || []).length)]].map(([label, value]) => <div key={label} className="rounded border border-[#1C2A3D] bg-[#060A10] p-3"><p className="report-kicker">{label}</p><p className="mt-2 font-mono text-sm text-gray-200">{value}</p></div>)}</div><p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-gray-300">{email.plain_text || 'No plain-text body was returned.'}</p></ReportSection></div>
+    <ReportSection id="headers" title="Identity and transport evidence" subtitle="Header forensics"><div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">{[['Message-ID', metadata.message_id || email.message_id], ['Return-Path', metadata.return_path || email.return_path], ['MIME type', metadata.content_type || email.content_type], ['Sender domain', headers.domain_relationships?.from_domain]].map(([label, value]) => <DataField key={label} label={label} value={value || 'unavailable'} />)}</div><button className="mt-5 inline-flex items-center gap-2 text-xs text-cyan-400 hover:text-cyan-300" onClick={() => setOpen((state) => ({ ...state, headers: !state.headers }))}>{open.headers ? <ChevronDown size={14} /> : <ChevronRight size={14} />} View parsed headers</button>{open.headers && <pre className="mt-3 max-h-96 overflow-auto rounded border border-[#1C2A3D] bg-[#05080D] p-4 font-mono text-[11px] leading-6 text-gray-400">{JSON.stringify(email.headers || {}, null, 2)}</pre>}</ReportSection>
+    <div className="grid gap-5 lg:grid-cols-2"><ReportSection id="email-preview" title="Inbox view" subtitle="Message view"><div className="rounded border border-[#1C2A3D] bg-[#060A10] p-5"><p className="report-kicker">Rendered message</p><div className="mt-4 space-y-2 border-b border-[#1C2A3D] pb-4 text-sm"><DataField label="From" value={sender} /><DataField label="To" value={recipient} /><DataField label="Subject" value={subject} /></div><div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-gray-300">{email.plain_text || 'No preview content available.'}</div></div></ReportSection><ReportSection id="infrastructure" title="Observed infrastructure" subtitle="Evidence index"><ProviderTable results={analysis.threat_intelligence} /><div className="mt-5 grid grid-cols-2 gap-3"><IocMetric icon={<Globe2 size={15} />} label="Domains" value={uniqueIocs(iocs, 'domain').length} /><IocMetric icon={<ShieldCheck size={15} />} label="IPs" value={uniqueIocs(iocs, 'ip', 'ipv6').length} /><IocMetric icon={<Mail size={15} />} label="Emails" value={uniqueIocs(iocs, 'email').length} /><IocMetric icon={<FileSearch size={15} />} label="URLs" value={uniqueIocs(iocs, 'url').length} /></div></ReportSection></div>
+    <ReportSection id="raw-email" title="Raw email" subtitle="Source evidence"><button className="inline-flex items-center gap-2 text-xs text-cyan-400 hover:text-cyan-300" onClick={() => setOpen((state) => ({ ...state, raw: !state.raw }))}>{open.raw ? <ChevronDown size={14} /> : <ChevronRight size={14} />} {open.raw ? 'Hide raw source' : 'Show raw source'}</button>{open.raw && <pre className="mt-3 max-h-[500px] overflow-auto rounded border border-[#1C2A3D] bg-[#05080D] p-4 font-mono text-[11px] leading-6 text-gray-500">{email.raw_email || analysis.raw_email || 'Raw email was not included in this response.'}</pre>}</ReportSection>
+  </div>;
 }
 
-// Subcomponents as previously defined...
-function LoadingState() {
-  return (
-    <div className="mx-auto max-w-5xl space-y-4">
-      <div className="h-24 animate-pulse rounded border border-[#151D28] bg-[#080D14]" />
-      <div className="grid grid-cols-3 gap-4">
-        <div className="h-28 animate-pulse rounded border border-[#151D28] bg-[#080D14]" />
-        <div className="col-span-2 h-28 animate-pulse rounded border border-[#151D28] bg-[#080D14]" />
-      </div>
-      <p className="font-mono text-xs text-cyan-400 animate-pulse">LOADING FORENSIC ANALYSIS...</p>
-    </div>
-  );
-}
-
-function RiskGauge({ score }: { score: number }) {
-  const tone = score >= 75 ? 'text-red-400' : score >= 40 ? 'text-yellow-400' : 'text-emerald-400';
-  return (
-    <div className="flex flex-col justify-center pl-6 border-l border-[#1C2A3D]">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 font-mono">Risk score</p>
-      <p className={`mt-1 font-mono text-4xl font-bold ${tone}`}>{Math.round(score)}<span className="text-base text-gray-600">/100</span></p>
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#151D28]"><div className={`h-full rounded-full ${score >= 75 ? 'bg-red-500' : score >= 40 ? 'bg-yellow-500' : 'bg-emerald-500'}`} style={{ width: `${Math.max(0, Math.min(score, 100))}%` }} /></div>
-    </div>
-  );
-}
-
-function ScoreStat({ label, value, help }: { label: string; value: string; help?: string }) {
-  return (
-    <div className="border-l border-[#1C2A3D] pl-6 flex flex-col justify-center">
-      <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-500 font-mono">{label}{help && <span title={help}><Info size={11} /></span>}</p>
-      <p className="mt-1 text-sm font-semibold text-gray-200 font-mono">{value}</p>
-    </div>
-  );
-}
-
-function EvidenceColumn({ title, tone, items }: { title: string; tone: string; items: string[] }) {
-  return <div><p className={`text-[10px] font-bold uppercase tracking-wider font-mono ${tone}`}>{title}</p><ul className="mt-2 space-y-1.5 text-xs text-gray-400 font-mono">{items.length ? items.map((item, index) => <li key={index} className="flex gap-2"><span>•</span>{item}</li>) : <li className="text-gray-600 italic">None detected.</li>}</ul></div>;
-}
-
-function FindingList({ findings }: { findings: AnyRecord[] }) {
-  if (!findings.length) return <Empty text="No deterministic findings were returned." />;
-  return <div className="space-y-2">{findings.map((finding, index) => <div key={index} className="rounded border border-[#1C2A3D] bg-[#060A10] p-3 font-mono"><div className="flex items-start justify-between gap-3 mb-2"><div className="flex gap-2"><ShieldAlert size={15} className="mt-0.5 shrink-0 text-red-400" /><span className="text-xs font-medium text-gray-200">{finding.title}</span></div><SeverityBadge severity={finding.severity || 'info'} /></div><p className="text-[11px] leading-relaxed text-gray-500">{finding.description}</p></div>)}</div>;
-}
-
-function IocList({ iocs }: { iocs: AnyRecord[] }) {
-  if (!iocs.length) return <Empty text="No extracted indicators were returned." />;
-  return <div className="space-y-4">{(['Actual IOC', 'Infrastructure', 'Forensic Artifact'] as const).map(category => { const categoryIocs = iocs.filter(ioc => categorizeIoc(ioc) === category); if (!categoryIocs.length) return null; return <div key={category}><p className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-wider text-gray-500 font-mono mb-2"><span className={`h-1.5 w-1.5 rounded-full ${category === 'Actual IOC' ? 'bg-red-400' : category === 'Infrastructure' ? 'bg-yellow-400' : 'bg-cyan-400'}`} />{category}</p><div className="space-y-1">{categoryIocs.map((ioc, index) => <div key={index} className="flex items-center justify-between gap-3 rounded bg-[#060A10] px-2.5 py-1.5 font-mono text-[11px] text-gray-300"><span className="truncate" title={ioc.value}>{ioc.normalized_value || ioc.value}</span><span className="shrink-0 rounded bg-[#151D28] px-1.5 py-0.5 text-[9px] text-gray-500 uppercase">{ioc.type}</span></div>)}</div></div>; })}</div>;
-}
-
-function Empty({ text }: { text: string }) { return <p className="rounded border border-dashed border-[#1C2A3D] p-5 text-center font-mono text-[11px] text-gray-600">{text}</p>; }
-function extractedIocs(analysis: AnyRecord) { if (analysis.extracted_iocs?.iocs) return analysis.extracted_iocs.iocs; if (Array.isArray(analysis.iocs)) return analysis.iocs; return []; }
-function formatDate(value?: string) { if (!value) return 'N/A'; const date = new Date(value); return date.toLocaleString(); }
-function verdictTone(v: string) { return ['malicious', 'critical'].includes(v.toLowerCase()) ? 'text-red-400' : ['suspicious'].includes(v.toLowerCase()) ? 'text-yellow-400' : 'text-emerald-400'; }
-function verdictToneBorder(v: string) { return ['malicious', 'critical'].includes(v.toLowerCase()) ? 'border-red-500/30 bg-red-950/20' : ['suspicious'].includes(v.toLowerCase()) ? 'border-yellow-500/30 bg-yellow-950/20' : 'border-emerald-500/25 bg-emerald-950/20'; }
-function authTone(s?: string) { return s === 'pass' ? 'text-emerald-400' : s === 'fail' ? 'text-red-400' : 'text-gray-500'; }
+function ReportSection({ id, title, subtitle, children }: { id: string; title: string; subtitle: string; children: ReactNode }) { return <section id={id} className="scroll-mt-5 border-t border-[#1C2A3D] pt-5"><p className="report-kicker">{subtitle}</p><h2 className="mt-1 text-xl font-semibold text-white">{title}</h2><div className="mt-4">{children}</div></section>; }
+function EvidenceGroup({ title, icon, tone, items, empty }: { title: string; icon: ReactNode; tone: 'red' | 'amber'; items: string[]; empty: string }) { return <div className="rounded border border-[#1C2A3D] bg-[#080D14] p-5"><div className={`flex items-center gap-2 text-sm font-semibold ${tone === 'red' ? 'text-red-300' : 'text-amber-300'}`}>{icon}{title}</div>{items.length ? <ul className="mt-4 space-y-3 text-sm text-gray-300">{items.map((item, index) => <li key={`${item}-${index}`} className="border-l-2 border-current pl-3">{item}</li>)}</ul> : <p className="mt-4 text-sm text-gray-600">{empty}</p>}</div>; }
+function ProviderTable({ results }: { results: any }) { const providers = [...new Map((Array.isArray(results) ? results : []).map((item: RecordValue) => [item.provider, item.status || 'unknown'])).entries()]; return <div className="overflow-hidden rounded border border-[#1C2A3D]"><div className="grid grid-cols-[1fr_auto] bg-[#060A10] px-3 py-2 report-kicker"><span>Provider</span><span>Status</span></div>{providers.length ? providers.map(([name, status]) => <div key={name} className="grid grid-cols-[1fr_auto] border-t border-[#1C2A3D] px-3 py-3 text-xs"><span className="text-gray-300">{name}</span><span className={`font-mono uppercase ${status === 'not_found' ? 'text-emerald-400' : status === 'timeout' || status === 'error' ? 'text-amber-400' : 'text-gray-400'}`}>{status}</span></div>) : <p className="p-4 text-xs text-gray-600">No provider results returned.</p>}</div>; }
+function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) { return <span className="inline-flex items-center gap-2 rounded border border-[#1C2A3D] bg-[#060A10] px-3 py-2"><span className="text-cyan-400">{icon}</span><span className="text-gray-500">{label}</span><span className="font-mono text-gray-200">{value}</span></span>; }
+function IocMetric({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) { return <div className="rounded border border-[#1C2A3D] bg-[#060A10] p-3"><div className="flex items-center gap-2 text-xs text-gray-500">{icon}{label}</div><p className="mt-2 font-mono text-xl text-gray-200">{value}</p></div>; }
+function DataField({ label, value }: { label: string; value: any }) { return <div className="flex min-w-0 gap-2 text-xs"><strong className="shrink-0 text-gray-500">{label}</strong><span className="break-all text-gray-300">{String(value)}</span></div>; }
+function LoadingState() { return <div className="mx-auto max-w-5xl space-y-4"><div className="h-28 animate-pulse rounded border border-[#151D28] bg-[#080D14]" /><div className="h-64 animate-pulse rounded border border-[#151D28] bg-[#080D14]" /><p className="font-mono text-xs text-cyan-400">LOADING FORENSIC REPORT...</p></div>; }
+function Empty({ text }: { text: string }) { return <p className="rounded border border-dashed border-[#1C2A3D] p-5 text-center text-xs text-gray-600">{text}</p>; }
+function extractedIocs(analysis: RecordValue) { return Array.isArray(analysis.extracted_iocs?.iocs) ? analysis.extracted_iocs.iocs : Array.isArray(analysis.iocs) ? analysis.iocs : []; }
+function uniqueIocs(iocs: RecordValue[], ...types: string[]) { return [...new Set(iocs.filter((ioc) => types.includes(ioc.type)).map((ioc) => ioc.normalized_value || ioc.value).filter(Boolean))]; }
+function firstRecipient(value: any) { return Array.isArray(value) ? value.slice(0, 3).join(', ') || 'Recipient unavailable' : value || 'Recipient unavailable'; }
+function formatDate(value?: string) { if (!value) return 'Date unavailable'; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString(); }
+function slug(value: string) { return value.toLowerCase().replace(/ /g, '-'); }
+function displayVerdict(value: string) { return value === 'benign' ? 'Legitimate' : value; }
+function verdictTone(value: string) { return value === 'malicious' ? 'text-red-400' : value === 'suspicious' ? 'text-amber-400' : value === 'benign' ? 'text-emerald-400' : 'text-gray-300'; }
+function verdictBorder(value: string) { return value === 'malicious' ? 'border-red-500/30 bg-red-950/20' : value === 'suspicious' ? 'border-amber-500/30 bg-amber-950/20' : 'border-emerald-500/25 bg-emerald-950/20'; }
+function authTone(value?: string) { return value === 'pass' ? 'text-emerald-400' : ['fail', 'reject'].includes(value || '') ? 'text-red-400' : 'text-gray-500'; }

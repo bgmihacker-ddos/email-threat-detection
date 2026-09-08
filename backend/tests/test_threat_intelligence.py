@@ -214,6 +214,7 @@ async def test_error_status_mapping_and_rate_limiting():
             assert res["status"] == "rate_limited"
 
         # 401 / 403 Unauthorized
+        provider._circuit_breaker_until = 0
         with patch("httpx.AsyncClient.get") as mock_get:
             mock_resp = MagicMock()
             mock_resp.status_code = 401
@@ -222,6 +223,7 @@ async def test_error_status_mapping_and_rate_limiting():
             assert res["status"] == "unavailable"
 
         # Timeout
+        provider._circuit_breaker_until = 0
         with patch("httpx.AsyncClient.get", side_effect=httpx.TimeoutException("Timeout")):
             res = await provider.lookup("domain", "example.com")
             assert res["status"] == "timeout"

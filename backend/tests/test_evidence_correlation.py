@@ -136,6 +136,18 @@ def test_ml_signal_bounded_and_penalty():
     assert res.confidence <= 60
 
 
+def test_unavailable_ml_does_not_create_unknown_risk_signal():
+    res = EvidenceCorrelator.correlate(
+        ml_prediction={
+            "status": "unavailable",
+            "label": "unknown",
+            "confidence": 0.0,
+        }
+    )
+
+    assert res.scoring_records == []
+
+
 def test_attachment_weaponization():
     att_data = {
         "attachments": [
