@@ -31,6 +31,12 @@ def test_analyze_email():
     assert "ip_classifications" in data["header_forensics"]
     assert "authentication_evidence" in data["header_forensics"]
     assert "forensic_findings" in data["header_forensics"]
+    assert data["evidence_ledger"]["algorithm"] == "SHA-256"
+    assert len(data["evidence_ledger"]["entries"]) == 5
+
+    verification = client.get(f"/api/analyze/{data['analysis_id']}/evidence/verify")
+    assert verification.status_code == 200
+    assert verification.json()["verification"]["valid"] is True
 
 
 def test_persisted_analysis_includes_header_forensics():
@@ -143,4 +149,3 @@ def test_pending_analysis_does_not_expose_final_result(db_session):
     listing = client.get("/api/analyses")
     assert listing.status_code == 200
     assert listing.json()["data"][0]["status"] == "processing"
-

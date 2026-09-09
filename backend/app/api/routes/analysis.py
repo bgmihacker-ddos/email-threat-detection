@@ -37,6 +37,7 @@ from app.services.campaign_correlation import correlate_campaigns
 from app.services.mitre_mapper import map_mitre_techniques
 from app.services.stix_exporter import export_stix_bundle
 from app.services.response_artifacts import generate_blocklist, generate_queries
+from app.services.evidence_ledger import build_evidence_ledger, verify_evidence_ledger
 
 router = APIRouter()
 
@@ -343,6 +344,27 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
             historical_records,
         )
         analysis.related_investigations = related_investigations
+        analysis.evidence_ledger = build_evidence_ledger(
+            raw_email,
+            {
+                "parsed_email": parsed_email,
+                "header_forensics": header_forensics,
+                "intelligence": {
+                    "extracted_iocs": extracted_iocs,
+                    "threat_intelligence": threat_intelligence,
+                    "sender_intelligence": sender_intelligence,
+                    "related_investigations": related_investigations,
+                },
+                "assessment": {
+                    "verdict": analysis.verdict,
+                    "risk_score": analysis.risk_score,
+                    "severity": analysis.severity,
+                    "confidence": analysis.confidence,
+                    "evidence_graph": evidence_graph,
+                    "timeline": timeline,
+                },
+            },
+        )
 
         db_result = db.query(AnalysisResult).filter(AnalysisResult.id == analysis_id).first()
         if not db_result:
@@ -434,6 +456,25 @@ async def get_analysis(analysis_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Analysis not found.")
 
     return EmailAnalysisSchema(**_completed_result(db_result))
+
+
+@router.get("/analyze/{analysis_id}/evidence/verify")
+def verify_analysis_evidence(analysis_id: str, db: Session = Depends(get_db)):
+    """Verify the persisted tamper-evident chain for an investigation."""
+    db_result = db.query(AnalysisResult).filter(AnalysisResult.id == analysis_id).first()
+    if db_result is None:
+        raise HTTPException(status_code=404, detail="Analysis not found.")
+
+    result = _completed_result(db_result)
+    ledger = result.get("evidence_ledger")
+    if not isinstance(ledger, dict):
+        raise HTTPException(status_code=409, detail="Evidence ledger is not available.")
+
+    return {
+        "analysis_id": analysis_id,
+        "verification": verify_evidence_ledger(ledger),
+        "ledger": ledger,
+    }
 
 
 @router.get("/analyses", response_model=dict)
