@@ -34,3 +34,4 @@ class EmailAnalysisSchema(BaseModel):
     timeline: Dict[str, Any] = {}
     mitre_techniques: List[Dict[str, Any]] = []
     related_investigations: List[Dict[str, Any]] = []
+    evidence_ledger: Dict[str, Any] = {}
