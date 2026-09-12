@@ -42,26 +42,26 @@ export default function Dashboard() {
   const totalIOCs = summary.top_indicators.reduce((acc, curr) => acc + curr.count, 0);
 
   return (
-    <div className="relative mx-auto max-w-[1680px] space-y-7">
+    <div className="dashboard-shell relative mx-auto max-w-[1680px] space-y-5">
       <SecurityEnvironmentBackground profile="dashboard" intensity="subtle" />
       {/* Top Banner / Hero Header */}
-      <header className="relative z-10 flex flex-col gap-5 overflow-hidden rounded-xl border border-[#29454b] bg-[#101b21]/80 p-6 shadow-[0_24px_70px_rgba(2,12,15,0.25)] lg:flex-row lg:items-end lg:justify-between">
+      <header className="dashboard-hero relative z-10 flex flex-col gap-5 overflow-hidden border-b border-[#29454b] p-2 pb-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="pointer-events-none absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-[#58d6c0]/[0.07] to-transparent" />
         <div>
           <div className="flex items-center gap-2">
             <span className="flex h-2 w-2 rounded-full bg-[#58d6c0] shadow-[0_0_12px_rgba(88,214,192,0.8)] animate-pulse" />
-            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#58d6c0]">SOC telemetry hub · local investigation</p>
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#58d6c0]">Security operations · email forensics</p>
           </div>
           <h1 className="mt-3 flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
-            Email Threat Operations Overview
+            Investigation overview
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#9aadaa]">
-            Deterministic forensic telemetry, SPF/DKIM/DMARC divergence tracking, and MITRE ATT&CK alignment.
+            A measured view of recent email investigations, risk posture, and infrastructure evidence.
           </p>
         </div>
 
         <div className="relative flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-          <div className="hidden rounded-md border border-[#29454b] bg-[#0c171c]/70 px-3 py-2 sm:block"><p className="font-mono text-[9px] uppercase tracking-wider text-[#718581]">Operating posture</p><p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-emerald-300"><span className="h-1.5 w-1.5 rounded-full bg-emerald-300" /> Evidence collection active</p></div>
+          <div className="hidden border-l border-[#29454b] pl-4 sm:block"><p className="font-mono text-[9px] uppercase tracking-wider text-[#718581]">Operating posture</p><p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-emerald-300"><span className="h-1.5 w-1.5 rounded-full bg-emerald-300" /> Evidence collection active</p></div>
           <Link
             to="/analyze"
             className="btn-primary shadow-lg shadow-[#2eaa9d]/20"
@@ -74,7 +74,7 @@ export default function Dashboard() {
       </header>
 
       {/* Telemetry Strip */}
-      <div className="relative z-10 grid grid-cols-2 gap-3 rounded-lg border border-[#1b3037] bg-[#101b21]/85 p-3 text-xs font-mono shadow-[0_14px_35px_rgba(2,12,15,0.18)] md:grid-cols-4">
+      <div className="dashboard-telemetry relative z-10 grid grid-cols-2 gap-3 border-y border-[#1b3037] py-3 text-xs font-mono md:grid-cols-4">
         <div className="flex items-center gap-2.5 px-2">
           <Database size={14} className="shrink-0 text-[#58d6c0]" />
           <div className="min-w-0">
@@ -144,11 +144,11 @@ export default function Dashboard() {
       {/* Analytical Charts & Threat Indicators */}
       <section className="relative z-10 grid grid-cols-1 gap-4 xl:grid-cols-12">
         {/* Activity Volume Chart */}
-        <div className="xl:col-span-5 rounded-lg border border-[#1b3037] bg-[#101b21]/90 p-5 shadow-[0_18px_45px_rgba(2,12,15,0.2)]">
+        <div className="dashboard-panel xl:col-span-6 rounded-lg border border-[#1b3037] bg-[#101b21]/90 p-5 shadow-[0_18px_45px_rgba(2,12,15,0.2)]">
           <SectionTitle eyebrow="INVESTIGATION CHRONOLOGY" title="Threat Activity Volume" />
           <div className="mt-4">
             {summary.activity.length ? (
-              <ResponsiveContainer width="100%" height={230}>
+              <ResponsiveContainer width="100%" height={190}>
                 <BarChart data={summary.activity} barGap={4}>
                   <XAxis dataKey="date" tick={{ fill: '#64748B', fontSize: 10, fontFamily: 'monospace' }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={tooltipStyle} cursor={{ fill: '#1b3037' }} />
@@ -163,12 +163,12 @@ export default function Dashboard() {
         </div>
 
         {/* Severity Distribution */}
-        <div className="xl:col-span-3 rounded-lg border border-[#1b3037] bg-[#101b21]/90 p-5 shadow-[0_18px_45px_rgba(2,12,15,0.2)]">
+        <div className="dashboard-panel xl:col-span-3 rounded-lg border border-[#1b3037] bg-[#101b21]/90 p-5 shadow-[0_18px_45px_rgba(2,12,15,0.2)]">
           <SectionTitle eyebrow="RISK POSTURE" title="Severity Distribution" />
           <div className="mt-4">
             {summary.distribution.length ? (
               <div className="relative">
-                <ResponsiveContainer width="100%" height={230}>
+                <ResponsiveContainer width="100%" height={190}>
                   <PieChart>
                     <Pie data={summary.distribution} innerRadius={58} outerRadius={84} paddingAngle={4} dataKey="value">
                       {summary.distribution.map((entry) => (
@@ -190,11 +190,11 @@ export default function Dashboard() {
         </div>
 
         {/* Top Indicators */}
-        <div className="xl:col-span-4 rounded-lg border border-[#1b3037] bg-[#101b21]/90 p-5 shadow-[0_18px_45px_rgba(2,12,15,0.2)]">
+        <div className="dashboard-panel xl:col-span-3 rounded-lg border border-[#1b3037] bg-[#101b21]/90 p-5 shadow-[0_18px_45px_rgba(2,12,15,0.2)]">
           <SectionTitle eyebrow="FORENSIC ARTIFACTS" title="Observed Intelligence Indicators" />
           <div className="mt-4">
             {summary.top_indicators.length ? (
-              <div className="space-y-1.5 max-h-[230px] overflow-y-auto pr-1">
+              <div className="space-y-1.5 max-h-[190px] overflow-y-auto pr-1">
                 {summary.top_indicators.map((item, index) => (
                   <div key={item.indicator} className="flex items-center justify-between gap-3 rounded bg-[#081216] border border-[#1b3037]/60 px-3 py-2 transition-colors hover:border-cyan-500/30">
                     <div className="flex items-center gap-2.5 min-w-0">

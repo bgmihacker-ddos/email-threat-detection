@@ -1,3 +1,6 @@
+import asyncio
+import time
+
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional
 from sqlalchemy.orm import Session
@@ -7,9 +10,64 @@ from app.schemas.indicator import ThreatIndicator
 from app.integrations.threatfox import ThreatFoxService
 from app.integrations.urlhaus import URLhausService
 from app.services.geo_enricher import GeoEnricher
+from app.services.threat_intelligence import ThreatIntelligenceService
 import json
 
 router = APIRouter()
+
+
+_HEALTH_PROBES = {
+    "url": "https://example.com",
+    "domain": "example.com",
+    "ip": "8.8.8.8",
+    "ipv6": "2001:4860:4860::8888",
+    "hash": "0" * 64,
+}
+
+
+async def _probe_provider(provider):
+    supported = sorted(provider.supported_indicator_types)
+    if not supported:
+        return provider.name, "error", False, 0, "No supported indicator types configured.", supported
+
+    indicator_type = next((kind for kind in ("domain", "url", "ip", "ipv6", "hash") if kind in provider.supported_indicator_types), supported[0])
+    indicator = _HEALTH_PROBES[indicator_type]
+    started = time.perf_counter()
+    try:
+        result = await asyncio.wait_for(provider.lookup(indicator_type, indicator), timeout=8.0)
+        latency_ms = round((time.perf_counter() - started) * 1000)
+        provider_status = str(result.get("status") or "error")
+        reachable = provider_status in {"ok", "not_found"}
+        if reachable:
+            status = "connected"
+        elif provider_status in {"timeout", "rate_limited", "unavailable", "skipped"}:
+            status = "degraded"
+        else:
+            status = "offline"
+        return provider.name, status, reachable, latency_ms, result.get("error"), supported
+    except asyncio.TimeoutError:
+        return provider.name, "degraded", False, 8000, "Health probe timed out.", supported
+    except Exception as exc:
+        return provider.name, "offline", False, round((time.perf_counter() - started) * 1000), "Health probe failed.", supported
+
+
+@router.get("/threats/providers", response_model=dict)
+async def get_threat_intelligence_providers():
+    """Return live health probes for the providers used by the analysis engine."""
+    results = await asyncio.gather(*(_probe_provider(provider) for provider in ThreatIntelligenceService._GLOBAL_PROVIDERS))
+    providers = [
+        {
+            "name": name,
+            "status": status,
+            "configured": bool(getattr(provider, "api_key", None)),
+            "reachable": reachable,
+            "latency_ms": latency_ms,
+            "error": error,
+            "supported_indicator_types": supported,
+        }
+        for provider, (name, status, reachable, latency_ms, error, supported) in zip(ThreatIntelligenceService._GLOBAL_PROVIDERS, results)
+    ]
+    return {"data": providers, "count": len(providers), "checked_at": time.time()}
 
 @router.get("/threats", response_model=dict)
 async def get_threats(limit: int = 100):

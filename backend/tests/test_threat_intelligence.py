@@ -3,18 +3,96 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import MagicMock, patch
+import time
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
 
 from app.services.threat_intelligence import (
     AbuseIPDBProvider,
+    CIRCLHashlookupProvider,
+    CertificateTransparencyProvider,
+    AlienVaultOTXProvider,
+    GoogleSafeBrowsingProvider,
+    RDAPProvider,
     ThreatFoxProvider,
     ThreatIntelligenceService,
     URLhausProvider,
     VirusTotalProvider,
 )
+
+
+@pytest.mark.asyncio
+async def test_google_safe_browsing_match_is_malicious():
+    with patch("app.services.threat_intelligence.settings.GOOGLE_SAFE_BROWSING_API_KEY", "test_google_key"):
+        provider = GoogleSafeBrowsingProvider()
+        with patch("httpx.AsyncClient.post") as mock_post:
+            response = MagicMock(status_code=200)
+            response.json.return_value = {"matches": [{"threatType": "SOCIAL_ENGINEERING"}]}
+            mock_post.return_value = response
+            result = await provider.lookup("url", "https://example.com/login")
+
+    assert result["status"] == "ok"
+    assert result["reputation"] == "malicious"
+    assert result["categories"] == ["SOCIAL_ENGINEERING"]
+
+
+@pytest.mark.asyncio
+async def test_otx_pulse_context_is_not_auto_malicious():
+    with patch.dict("os.environ", {"OTX_API_KEY": "test_otx_key"}):
+        provider = AlienVaultOTXProvider()
+        with patch("httpx.AsyncClient.get") as mock_get:
+            response = MagicMock(status_code=200)
+            response.json.return_value = {"pulse_info": {"count": 2, "pulses": [{"name": "Test pulse"}]}}
+            mock_get.return_value = response
+            result = await provider.lookup("domain", "example.com")
+
+    assert result["status"] == "ok"
+    assert result["reputation"] == "suspicious"
+    assert result["metadata"]["pulse_count"] == 2
+
+
+@pytest.mark.asyncio
+async def test_keyless_rdap_provider_returns_registration_context():
+    provider = RDAPProvider()
+    with patch("httpx.AsyncClient.get") as mock_get:
+        response = MagicMock(status_code=200)
+        response.json.return_value = {"name": "example.com", "status": ["active"]}
+        mock_get.return_value = response
+        result = await provider.lookup("domain", "example.com")
+
+    assert result["status"] == "ok"
+    assert result["reputation"] == "unknown"
+    assert result["metadata"]["name"] == "example.com"
+
+
+@pytest.mark.asyncio
+async def test_keyless_certificate_provider_returns_history_context():
+    provider = CertificateTransparencyProvider()
+    with patch("httpx.AsyncClient.get") as mock_get:
+        response = MagicMock(status_code=200)
+        response.json.return_value = [{"issuer_name": "Test CA", "name_value": "example.com"}]
+        mock_get.return_value = response
+        result = await provider.lookup("domain", "example.com")
+
+    assert result["status"] == "ok"
+    assert result["detections"] == 1
+    assert result["reputation"] == "unknown"
+
+
+@pytest.mark.asyncio
+async def test_keyless_hashlookup_provider_returns_known_file_context():
+    provider = CIRCLHashlookupProvider()
+    with patch("httpx.AsyncClient.get") as mock_get:
+        response = MagicMock(status_code=200)
+        response.json.return_value = {"SHA-256": "a" * 64, "FileName": "sample.bin"}
+        mock_get.return_value = response
+        result = await provider.lookup("hash", "a" * 64)
+
+    assert result["status"] == "ok"
+    assert result["reputation"] == "unknown"
+    assert result["metadata"]["file_name"] == "sample.bin"
 
 
 @pytest.mark.asyncio
@@ -230,6 +308,43 @@ async def test_error_status_mapping_and_rate_limiting():
 
 
 @pytest.mark.asyncio
+async def test_enrich_ioc_skips_unconfigured_providers():
+    provider_a = VirusTotalProvider()
+    provider_b = URLhausProvider()
+    provider_a.api_key = None
+    provider_b.api_key = None
+
+    with (
+        patch.object(provider_a, "lookup", new_callable=AsyncMock) as mock_a,
+        patch.object(provider_b, "lookup", new_callable=AsyncMock) as mock_b,
+    ):
+        service = ThreatIntelligenceService(providers=[provider_a, provider_b])
+        service._cache.clear()
+        results = await service.enrich_ioc("domain", "example.com")
+
+    assert len(results) == 2
+    assert all(item["status"] == "not_configured" for item in results)
+    assert mock_a.await_count == 0
+    assert mock_b.await_count == 0
+
+
+@pytest.mark.asyncio
+async def test_enrich_ioc_skips_circuit_broken_providers():
+    provider = VirusTotalProvider()
+    provider.api_key = "configured"
+    provider._circuit_breaker_until = time.monotonic() + 60
+
+    with patch.object(provider, "lookup", new_callable=AsyncMock) as mock_lookup:
+        service = ThreatIntelligenceService(providers=[provider])
+        service._cache.clear()
+        results = await service.enrich_ioc("domain", "example.com")
+
+    assert len(results) == 1
+    assert results[0]["status"] == "skipped"
+    assert mock_lookup.await_count == 0
+
+
+@pytest.mark.asyncio
 async def test_caching_and_enrich_all():
     service = ThreatIntelligenceService(providers=[])
     # Manually test cache TTL and storage
@@ -241,3 +356,14 @@ async def test_caching_and_enrich_all():
     # Repeat call uses cache
     res2 = await service.enrich_ioc("domain", "example.com")
     assert res == res2
+
+
+def test_ioc_priority_prefers_infrastructure_and_threat_artifacts():
+    received_ip = {"type": "ip", "source": "received_chain", "confidence": 90}
+    suspicious_url = {"type": "url", "context": "credential phishing URL", "confidence": 80}
+    attachment_hash = {"type": "hash", "source": "attachment", "confidence": 90}
+    ordinary_domain = {"type": "domain", "source": "header", "confidence": 70}
+
+    assert ThreatIntelligenceService._ioc_priority(received_ip) > ThreatIntelligenceService._ioc_priority(ordinary_domain)
+    assert ThreatIntelligenceService._ioc_priority(suspicious_url) > ThreatIntelligenceService._ioc_priority(ordinary_domain)
+    assert ThreatIntelligenceService._ioc_priority(attachment_hash) > ThreatIntelligenceService._ioc_priority(ordinary_domain)

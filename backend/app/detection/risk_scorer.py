@@ -39,6 +39,7 @@ class RiskEngine:
 
         score_breakdown: List[Dict[str, Any]] = []
         total_score = 0
+        evidence_ledger: List[Dict[str, Any]] = []
 
         # 2. Translate correlated records into score_breakdown format
         source_labels = {
@@ -55,29 +56,40 @@ class RiskEngine:
             total_score += rec.base_points
             reason = rec.title
             if rec.source_family == "model":
-                reason = f"Model classified as {rec.title.split('(')[0].strip().lower()}"
-            score_breakdown.append({
+                label = rec.title.removeprefix("ML classified as ").split("(")[0].strip().lower()
+                reason = f"Model classified as {label}"
+            item = {
+                "analysis_id": None,
                 "source": source_labels.get(rec.source, rec.source),
                 "reason": reason,
                 "points": rec.base_points,
                 "confidence": rec.confidence,
                 "signal": rec.finding_id,
                 "evidence_class": rec.evidence_class,
+                "risk_relevance": "risk_contributing",
                 "evidence_refs": rec.evidence_refs
-            })
+            }
+            score_breakdown.append(item)
+            evidence_ledger.append(item)
 
         # 3. Handle Mitigating records (negative impact)
         for rec in correlation.mitigating_records:
             total_score += rec.base_points
-            score_breakdown.append({
+            item = {
+                "analysis_id": None,
                 "source": source_labels.get(rec.source, rec.source),
                 "reason": rec.title,
                 "points": rec.base_points,
                 "confidence": rec.confidence,
                 "signal": rec.finding_id,
                 "evidence_class": rec.evidence_class,
+                "risk_relevance": "mitigating",
                 "evidence_refs": rec.evidence_refs
-            })
+            }
+            score_breakdown.append(item)
+            evidence_ledger.append(item)
+
+        total_score = sum(item["points"] for item in evidence_ledger)
 
         # Clamp total score
         final_score = min(100, max(0, total_score))
@@ -99,6 +111,7 @@ class RiskEngine:
             "severity": severity,
             "confidence": correlation.confidence,
             "score_breakdown": score_breakdown,
+            "evidence_ledger": evidence_ledger,
             "correlation_summary": correlation.summary_notes,
             "correlation_clusters": correlation.clusters,
             "evidence_count": len(correlation.evidence_records),

@@ -1,6 +1,9 @@
 """Email analysis, persisted-analysis exploration, and forensic exports."""
 
+import asyncio
+import hashlib
 import html
+from app.services.stage_timing import StageTimer
 import json
 import uuid
 from copy import deepcopy
@@ -15,6 +18,7 @@ from app.database.session import get_db, SessionLocal
 from app.detection.rule_engine import RuleEngine
 from app.detection.risk_scorer import RiskEngine
 from app.models.analysis import AnalysisResult
+from app.models.analysis_job import AnalysisJob, AnalysisIndicator
 from app.schemas.analysis import EmailAnalysisSchema
 from app.services.email_parser import EmailParser
 from app.services.header_forensics import HeaderForensicsAnalyzer
@@ -31,14 +35,21 @@ from app.detection.ml_classifier import get_ml_classifier
 from app.services.sender_intelligence import SenderIntelligenceAnalyzer
 from app.services.dns_intelligence import DNSIntelligenceService
 from app.services.whois_intelligence import WHOISIntelligenceService
+from app.services.geo_enricher import GeoEnricher
 from app.services.evidence_graph import build_evidence_graph
 from app.services.case_timeline import build_case_timeline
 from app.services.campaign_correlation import correlate_campaigns
 from app.services.mitre_mapper import map_mitre_techniques
 from app.services.stix_exporter import export_stix_bundle
 from app.services.response_artifacts import generate_blocklist, generate_queries
+from app.services.alert_dispatcher import dispatch_analysis_alert
+from app.core.config import settings
 
 router = APIRouter()
+
+
+class AnalysisCancelled(Exception):
+    """Raised internally when an analysis is cancelled by an operator."""
 
 
 _REDACTED_EMAIL_FIELDS = {"raw_email", "plain_text", "html_body"}
@@ -58,7 +69,7 @@ def _sanitize_result(result: Any, include_raw_email: bool = False) -> Dict[str, 
     into raw-email inclusion.
     """
     payload = deepcopy(result) if isinstance(result, dict) else {}
-    if include_raw_email:
+    if include_raw_email and not settings.MASK_RAW_EMAIL_EXPORTS:
         return payload
 
     email = payload.get("email")
@@ -119,6 +130,39 @@ def _result_iocs(result: Any) -> List[Dict[str, Any]]:
     return [item for item in iocs if isinstance(item, dict)] if isinstance(iocs, list) else []
 
 
+async def _enrich_domain_record(analysis_id: str, domain: str, details: Dict[str, Any], stage_timings: List[Dict[str, Any]]) -> None:
+    """Run DNS + WHOIS enrichment for one domain in parallel while capturing truthful stage timings."""
+    async def _lookup_dns() -> Dict[str, Any]:
+        dns_timer = StageTimer(analysis_id, f"dns:{domain}", 1)
+        try:
+            result = await DNSIntelligenceService.resolve_domain_async(domain)
+        except Exception:
+            result = {"status": "error", "error": "DNS enrichment failed."}
+        status = result.get("status", "completed")
+        stage_timings.append(dns_timer.complete(
+            "completed" if status in {"success", "not_found"} else status,
+            result.get("error"),
+        ))
+        return result
+
+    async def _lookup_whois() -> Dict[str, Any]:
+        whois_timer = StageTimer(analysis_id, f"whois:{domain}", 1)
+        try:
+            result = await WHOISIntelligenceService.lookup_domain(domain)
+        except Exception:
+            result = {"status": "error"}
+        status = result.get("status", "completed")
+        stage_timings.append(whois_timer.complete(
+            "completed" if status == "ok" else status,
+            result.get("error"),
+        ))
+        return result
+
+    dns_result, whois_result = await asyncio.gather(_lookup_dns(), _lookup_whois())
+    details["dns"] = dns_result
+    details["whois"] = whois_result
+
+
 def _render_report_html(analysis_id: str, payload: Dict[str, Any], created_at: datetime) -> str:
     """Render a printable, escaped forensic report with no client-side script."""
     evidence = json.dumps(payload, ensure_ascii=False, indent=2, default=str)
@@ -169,6 +213,9 @@ def _render_report_html(analysis_id: str, payload: Dict[str, Any], created_at: d
 def _update_job_status(db: Session, analysis_id: str, status: str, stage: str, pct: int, error: Optional[str] = None):
     try:
         db_rec = db.query(AnalysisResult).filter(AnalysisResult.id == analysis_id).first()
+        terminal_statuses = {"completed", "failed", "cancelled"}
+        if db_rec and db_rec.status in terminal_statuses and status != db_rec.status:
+            return
         if not db_rec:
             db_rec = AnalysisResult(
                 id=analysis_id,
@@ -185,61 +232,164 @@ def _update_job_status(db: Session, analysis_id: str, status: str, stage: str, p
             db_rec.progress_percent = pct
             db_rec.error_message = error
             db_rec.updated_at = datetime.now(timezone.utc)
-            if status in ("completed", "failed"):
+            if status in ("completed", "failed", "cancelled"):
                 db_rec.completed_at = datetime.now(timezone.utc)
         db.commit()
     except Exception:
         db.rollback()
 
+
+def _raise_if_cancelled(db: Session, analysis_id: str) -> None:
+    record = db.query(AnalysisResult).filter(AnalysisResult.id == analysis_id).first()
+    if record and record.status == "cancelled":
+        raise AnalysisCancelled()
+
+
+def _persist_indicators(db: Session, analysis_id: str, extracted_iocs: Dict[str, Any]) -> None:
+    """Write normalized IOC candidates for indexed campaign lookups."""
+    existing = db.query(AnalysisIndicator).filter(AnalysisIndicator.analysis_id == analysis_id).all()
+    for indicator in existing:
+        db.delete(indicator)
+
+    seen = set()
+    for item in extracted_iocs.get("iocs", []) if isinstance(extracted_iocs, dict) else []:
+        if not isinstance(item, dict):
+            continue
+        indicator_type = str(item.get("type") or "").lower().strip()
+        value = str(item.get("normalized_value") or item.get("value") or "").strip().lower()
+        if not indicator_type or not value or (indicator_type, value) in seen:
+            continue
+        seen.add((indicator_type, value))
+        db.add(AnalysisIndicator(
+            analysis_id=analysis_id,
+            indicator_type=indicator_type,
+            normalized_value=value,
+        ))
+
+
+def _indexed_campaign_candidates(db: Session, extracted_iocs: Dict[str, Any]) -> List[AnalysisResult]:
+    values = {
+        str(item.get("normalized_value") or item.get("value") or "").strip().lower()
+        for item in extracted_iocs.get("iocs", [])
+        if isinstance(item, dict) and (item.get("normalized_value") or item.get("value"))
+    }
+    if not values:
+        return []
+    candidate_ids = [row[0] for row in (
+        db.query(AnalysisIndicator.analysis_id)
+        .filter(AnalysisIndicator.normalized_value.in_(values))
+        .distinct()
+        .limit(1000)
+        .all()
+    )]
+    if not candidate_ids:
+        return []
+    return db.query(AnalysisResult).filter(AnalysisResult.id.in_(candidate_ids)).all()
+
 async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Session) -> EmailAnalysisSchema:
     import asyncio
+    stage_timings = []
+    total_timer = StageTimer(analysis_id, "total")
     try:
+        _raise_if_cancelled(db, analysis_id)
         _update_job_status(db, analysis_id, "processing", "Parsing RFC 5322 MIME stream & headers...", 15)
 
         # 1) Parsing and deterministic forensic components.
+        parsing_timer = StageTimer(analysis_id, "fast_forensics")
         parsed_email = EmailParser.parse_raw(raw_email)
         header_forensics = HeaderForensicsAnalyzer.analyze(parsed_email)
         authentication = AuthenticationAnalyzer.analyze(header_forensics, parsed_email)
+        authentication["verification_provenance"] = {
+            mechanism: {
+                "source": "dns_policy_lookup" if authentication.get(mechanism, {}).get("verified") else "header_reported",
+                "independent": bool(authentication.get(mechanism, {}).get("verified")),
+            }
+            for mechanism in ("spf", "dkim", "dmarc", "arc")
+        }
         extracted_iocs = IOCExtractor.extract(parsed_email)
+        extracted_iocs["iocs"] = extracted_iocs.get("iocs", [])[:settings.MAX_IOCS]
+        observed_ips = list(dict.fromkeys(
+            str(ioc.get("normalized_value") or ioc.get("value"))
+            for ioc in extracted_iocs["iocs"]
+            if ioc.get("type") in {"ip", "ipv6"}
+        ))[:16]
+
+        ip_enrichment_timer = StageTimer(analysis_id, "ip_reverse_geolocation", len(observed_ips))
+
+        async def _enrich_ip(ip: str) -> Dict[str, Any]:
+            geolocation, reverse_dns = await asyncio.gather(
+                GeoEnricher.enrich_ip(ip),
+                GeoEnricher.reverse_lookup(ip),
+            )
+            return {
+                "ip": ip,
+                "classification": "public" if GeoEnricher.is_public_ip(ip) else "non_public",
+                "geolocation": geolocation,
+                "reverse_dns": reverse_dns,
+                "provenance": {
+                    "geolocation": geolocation.get("geo_source") if geolocation else None,
+                    "reverse_dns": reverse_dns.get("source"),
+                },
+            }
+
+        ip_enrichment = await asyncio.gather(*(_enrich_ip(ip) for ip in observed_ips)) if observed_ips else []
+        stage_timings.append(ip_enrichment_timer.complete())
+        parsing_timer.item_count = len(extracted_iocs.get("iocs", []))
+        stage_timings.append(parsing_timer.complete())
 
         _update_job_status(db, analysis_id, "processing", "Inspecting attachment payloads & content semantics...", 35)
 
+        static_timer = StageTimer(analysis_id, "static_analysis")
         urls = [ioc["value"] for ioc in extracted_iocs["iocs"] if ioc["type"] == "url"]
+        url_timer = StageTimer(analysis_id, "url_analysis", len(urls))
         url_analysis = URLIntelligence.analyze_batch(urls)
+        stage_timings.append(url_timer.complete())
         domains = [ioc["value"] for ioc in extracted_iocs["iocs"] if ioc["type"] == "domain"]
+        domain_timer = StageTimer(analysis_id, "domain_analysis", len(domains))
         domain_analysis = {domain: DomainIntelligence.analyze(domain) for domain in domains}
+        stage_timings.append(domain_timer.complete())
 
+        attachment_timer = StageTimer(analysis_id, "attachment_analysis", len(parsed_email.get("attachments", [])))
         attachment_analysis = AttachmentAnalyzer.analyze(parsed_email.get("attachments", []))
+        stage_timings.append(attachment_timer.complete())
+        content_timer = StageTimer(analysis_id, "content_analysis")
         content_analysis = ContentAnalyzer.analyze(parsed_email)
+        stage_timings.append(content_timer.complete())
+        ml_timer = StageTimer(analysis_id, "ml_inference")
         ml_analysis = get_ml_classifier().predict_email(parsed_email)
+        stage_timings.append(ml_timer.complete(
+            "completed" if ml_analysis.get("status") not in {"unavailable", "error"} else ml_analysis.get("status"),
+            ml_analysis.get("error"),
+        ))
+        static_timer.item_count = len(urls) + len(domains) + len(attachment_analysis.get("attachments", []))
+        stage_timings.append(static_timer.complete())
 
         _update_job_status(db, analysis_id, "processing", "Correlating intelligence feeds (DNS/WHOIS/ThreatIntel)...", 60)
 
         # 2) Safe local intelligence enrichment. DNS is best-effort and never a verdict.
-        async def enrich_domain(dom: str, det: dict):
-            try:
-                det["dns"] = await DNSIntelligenceService.resolve_domain_async(dom)
-            except Exception:
-                det["dns"] = {"status": "error"}
-
-            try:
-                det["whois"] = await WHOISIntelligenceService.lookup_domain(dom)
-            except Exception:
-                det["whois"] = {"status": "error"}
-
-        enrich_tasks = [enrich_domain(domain, details) for domain, details in domain_analysis.items()]
+        enrichment_timer = StageTimer(analysis_id, "dns_whois_enrichment", len(domain_analysis))
+        enrich_tasks = [
+            _enrich_domain_record(analysis_id, domain, details, stage_timings)
+            for domain, details in domain_analysis.items()
+        ]
         if enrich_tasks:
             await asyncio.gather(*enrich_tasks)
+        _raise_if_cancelled(db, analysis_id)
 
         addresses = parsed_email.get("addresses", {}) if isinstance(parsed_email, dict) else {}
         sender_intelligence = SenderIntelligenceAnalyzer.analyze(addresses, header_forensics, authentication)
+        stage_timings.append(enrichment_timer.complete())
 
         # Optional threat intelligence. Failures remain localized in output.
+        ti_timer = StageTimer(analysis_id, "threat_intelligence", len(extracted_iocs.get("iocs", [])))
         threat_intelligence = await ThreatIntelligenceService().enrich_all(extracted_iocs["iocs"])
+        stage_timings.append(ti_timer.complete())
+        _raise_if_cancelled(db, analysis_id)
 
         _update_job_status(db, analysis_id, "processing", "Synthesizing MITRE ATT&CK techniques & evidence graph...", 80)
 
         # 3) Preserve legacy RuleEngine data and use new fused score as final verdict.
+        synthesis_timer = StageTimer(analysis_id, "evidence_synthesis")
         rule_result = RuleEngine.analyze(parsed_email)
         risk_result = RiskEngine.calculate_risk(
             header_forensics,
@@ -286,6 +436,7 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
             "urls": urls,
             "risk": risk_result,
         })
+        stage_timings.append(synthesis_timer.complete())
 
         recommendations = rule_result.get("recommendations", [])
         if risk_result["verdict"] != "benign":
@@ -318,18 +469,33 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
             header_forensics=header_forensics,
             url_analysis=url_analysis,
             domain_analysis=domain_analysis,
+            ip_enrichment=ip_enrichment,
             attachment_analysis=attachment_analysis,
             content_analysis=content_analysis,
             ml_analysis=ml_analysis,
             risk_breakdown=risk_result["score_breakdown"],
+            evidence_ledger=[
+                {**item, "analysis_id": analysis_id}
+                for item in risk_result["evidence_ledger"]
+            ],
             sender_intelligence=sender_intelligence,
             evidence_graph=evidence_graph,
             timeline=timeline,
             mitre_techniques=mitre_techniques,
             email=parsed_email,
+            stage_timings=stage_timings,
+            evidence_integrity={
+                "raw_email_sha256": hashlib.sha256(raw_email).hexdigest(),
+                "analysis_id": analysis_id,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "retention_days": settings.RETENTION_DAYS,
+                "raw_email_export_masked": settings.MASK_RAW_EMAIL_EXPORTS,
+            },
         )
+        analysis.alert = await dispatch_analysis_alert(analysis.model_dump(mode="json"))
 
-        historical_records = db.query(AnalysisResult).order_by(AnalysisResult.created_at.desc()).limit(1000).all()
+        campaign_timer = StageTimer(analysis_id, "campaign_correlation")
+        historical_records = _indexed_campaign_candidates(db, extracted_iocs)
         related_investigations = correlate_campaigns(
             analysis_id,
             extracted_iocs,
@@ -343,7 +509,10 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
             historical_records,
         )
         analysis.related_investigations = related_investigations
+        campaign_timer.item_count = len(historical_records)
+        stage_timings.append(campaign_timer.complete())
 
+        persistence_timer = StageTimer(analysis_id, "persistence")
         db_result = db.query(AnalysisResult).filter(AnalysisResult.id == analysis_id).first()
         if not db_result:
             db_result = AnalysisResult(id=analysis_id)
@@ -353,24 +522,49 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
         db_result.severity = analysis.severity
         db_result.confidence = analysis.confidence
         db_result.summary = analysis.summary
+        analysis.stage_timings = stage_timings
         db_result.result = analysis.model_dump(mode="json")
+        _persist_indicators(db, analysis_id, extracted_iocs)
         db.commit()
 
         _update_job_status(db, analysis_id, "completed", "Analysis finalized and persisted", 100)
+        stage_timings.append(persistence_timer.complete())
+        total_timer.item_count = len(stage_timings)
+        stage_timings.append(total_timer.complete())
+        analysis.stage_timings = stage_timings
+        db_result.result = analysis.model_dump(mode="json")
+        db.commit()
 
         return analysis
+    except AnalysisCancelled:
+        db.rollback()
+        raise
     except Exception as exc:
         db.rollback()
         _update_job_status(db, analysis_id, "failed", "Analysis failed", 0, error=str(exc) if isinstance(exc, ValueError) else "Email analysis could not be completed.")
         raise
 
 
-async def _background_analysis_task(raw_email: bytes, analysis_id: str):
+async def _background_analysis_task(analysis_id: str):
     db = SessionLocal()
     try:
+        job = db.query(AnalysisJob).filter(AnalysisJob.analysis_id == analysis_id).first()
+        if not job:
+            return
+        job.attempts = (job.attempts or 0) + 1
+        job.locked_at = datetime.now(timezone.utc)
+        raw_email = job.payload
+        db.commit()
         await _execute_analysis_pipeline(raw_email, analysis_id, db)
+        db.query(AnalysisJob).filter(AnalysisJob.analysis_id == analysis_id).delete()
+        db.commit()
+    except AnalysisCancelled:
+        db.query(AnalysisJob).filter(AnalysisJob.analysis_id == analysis_id).delete()
+        db.commit()
     except Exception:
-        pass
+        db.rollback()
+        db.query(AnalysisJob).filter(AnalysisJob.analysis_id == analysis_id).delete()
+        db.commit()
     finally:
         db.close()
 
@@ -395,7 +589,9 @@ async def analyze_email(
 
     if async_mode:
         _update_job_status(db, analysis_id, "queued", "Queued for forensic ingestion", 5)
-        background_tasks.add_task(_background_analysis_task, raw_email, analysis_id)
+        db.add(AnalysisJob(analysis_id=analysis_id, payload=raw_email))
+        db.commit()
+        background_tasks.add_task(_background_analysis_task, analysis_id)
         return {
             "analysis_id": analysis_id,
             "status": "queued",
@@ -416,6 +612,13 @@ async def analyze_email(
 def get_analysis_status(analysis_id: str, db: Session = Depends(get_db)):
     db_result = db.query(AnalysisResult).filter(AnalysisResult.id == analysis_id).first()
     if db_result is not None:
+        if db_result.status in {"queued", "processing"} and db_result.started_at:
+            age_minutes = (datetime.now(timezone.utc) - _as_utc(db_result.started_at)).total_seconds() / 60
+            if age_minutes > settings.ANALYSIS_STALE_MINUTES:
+                _update_job_status(db, analysis_id, "failed", "Analysis expired as stale", 0, error="Analysis worker became stale and was recovered.")
+                db_result.status = "failed"
+                db_result.current_stage = "Analysis expired as stale"
+                db_result.error_message = "Analysis worker became stale and was recovered."
         return {
             "analysis_id": analysis_id,
             "status": db_result.status or "completed",
@@ -425,6 +628,17 @@ def get_analysis_status(analysis_id: str, db: Session = Depends(get_db)):
         }
 
     raise HTTPException(status_code=404, detail="Analysis job not found.")
+
+
+@router.post("/analyze/{analysis_id}/cancel")
+def cancel_analysis(analysis_id: str, db: Session = Depends(get_db)):
+    db_result = db.query(AnalysisResult).filter(AnalysisResult.id == analysis_id).first()
+    if db_result is None:
+        raise HTTPException(status_code=404, detail="Analysis job not found.")
+    if db_result.status in {"completed", "failed", "cancelled"}:
+        return {"analysis_id": analysis_id, "status": db_result.status, "cancelled": db_result.status == "cancelled"}
+    _update_job_status(db, analysis_id, "cancelled", "Cancelled by operator", db_result.progress_percent or 0)
+    return {"analysis_id": analysis_id, "status": "cancelled", "cancelled": True}
 
 
 @router.get("/analyze/{analysis_id}", response_model=EmailAnalysisSchema)

@@ -478,8 +478,9 @@ class EvidenceCorrelator:
             seen.add(finding_id)
 
             if status == "ok":
-                is_malicious = data.get("is_malicious", False)
-                if is_malicious:
+                is_malicious = data.get("is_malicious")
+                reputation = str(data.get("reputation") or "unknown").lower()
+                if is_malicious is True or reputation in {"malicious", "threat"}:
                     records.append(EvidenceRecord(
                         base_points=25,
                         title=f"{provider} confirmed malicious",
@@ -491,7 +492,7 @@ class EvidenceCorrelator:
                         evidence_refs=[f"target: {data.get('target')}", f"positives: {data.get('positives')}"],
                         severity="critical",
                     ))
-                else:
+                elif is_malicious is False and reputation in {"clean", "benign", "safe"}:
                     records.append(EvidenceRecord(
                         base_points=-3,
                         title=f"{provider} confirmed clean",
@@ -502,6 +503,20 @@ class EvidenceCorrelator:
                         evidence_class="mitigating",
                         evidence_refs=[f"status: ok"],
                         severity="info",
+                    ))
+                else:
+                    records.append(EvidenceRecord(
+                        base_points=0,
+                        title=f"{provider}: result requires interpretation",
+                        finding_id=finding_id,
+                        source=f"ti_{provider}",
+                        source_family="reputation",
+                        confidence=30,
+                        evidence_class="informational",
+                        evidence_refs=[f"status: {status}", f"reputation: {reputation}"],
+                        severity="info",
+                        scoring_eligible=False,
+                        non_scoring_reason="no_explicit_verdict",
                     ))
             elif status in ("timeout", "rate_limited", "not_found", "not_configured", "error"):
                 records.append(EvidenceRecord(

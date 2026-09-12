@@ -4,10 +4,22 @@ __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 *.egg-info/
 dist/
 build/
 *.egg
+venv/
+.env/
+.venv/
+backend/venv/
+backend/.venv/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+frontend/.vite/
+frontend/dist/
 
 # Environment
 .env

@@ -6,6 +6,8 @@ API (ipapi.co) with strict private IP exclusion, in-memory caching, and non-fata
 
 import ipaddress
 import logging
+import asyncio
+import socket
 from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 import httpx
@@ -170,5 +172,24 @@ class GeoEnricher:
 
         cls._cache[clean_ip] = None
         return None
+
+    @classmethod
+    async def reverse_lookup(cls, ip_str: str, timeout_seconds: float = 2.0) -> Dict[str, Any]:
+        """Resolve a public IP to a PTR name without blocking the event loop."""
+        if not cls.is_public_ip(ip_str):
+            return {"status": "not_applicable", "hostname": None}
+
+        clean_ip = ip_str.strip()
+
+        def _lookup() -> str:
+            return socket.gethostbyaddr(clean_ip)[0]
+
+        try:
+            hostname = await asyncio.wait_for(asyncio.to_thread(_lookup), timeout_seconds)
+            return {"status": "ok", "hostname": hostname, "source": "reverse_dns_ptr"}
+        except socket.herror:
+            return {"status": "not_found", "hostname": None, "source": "reverse_dns_ptr"}
+        except (socket.gaierror, asyncio.TimeoutError, OSError):
+            return {"status": "unavailable", "hostname": None, "source": "reverse_dns_ptr"}
 
 

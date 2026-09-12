@@ -83,20 +83,20 @@ export const getSystemHealth = async (): Promise<SystemServiceHealth[]> => {
 
 export const getThreatIntelProviders = async (): Promise<ThreatIntelProvider[]> => {
   try {
-    const data = await apiFetch('/api/threats?limit=1');
-    const meta = data.meta || {};
-    const providers = meta.providers || [];
+    const data = await apiFetch('/api/threats/providers');
+    const providers = data.data || [];
 
-    return providers.map((p: any) => ({
-      id: `prov-${p.source.toLowerCase()}`,
-      name: p.source,
-      type: 'IOC Feed',
-      status: p.status === 'success' ? 'Connected' : 'Degraded',
+    const configuredProviders = providers.map((p: any) => ({
+      id: `prov-${p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      name: p.name,
+      type: p.supported_indicator_types?.join(', ') || 'IOC lookup',
+      status: p.status === 'connected' ? 'Connected' : p.status === 'offline' || p.status === 'not_configured' ? 'Offline' : 'Degraded',
       lastSync: new Date().toISOString(),
-      recordsIndexed: meta.count || 0,
-      latencyMs: p.status === 'success' ? 45 : 350,
-      healthScore: p.status === 'success' ? 100 : 40,
+      recordsIndexed: 0,
+      latencyMs: p.latency_ms || 0,
+      healthScore: p.reachable ? Math.max(0, 100 - Math.min(60, Math.round((p.latency_ms || 0) / 100))) : 0,
     }));
+    return configuredProviders;
   } catch (error) {
     console.error('Error fetching threat intel providers:', error);
     return [];

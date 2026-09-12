@@ -1,0 +1,81 @@
+{
+  "sample_count": 814,
+  "accuracy": 0.9361179361179361,
+  "precision_macro": 0.9419421487603306,
+  "recall_macro": 0.9309340659340659,
+  "f1_macro": 0.9346987639541127,
+  "labels": [
+    "benign",
+    "phishing"
+  ],
+  "confusion_matrix": [
+    [
+      441,
+      9
+    ],
+    [
+      43,
+      321
+    ]
+  ],
+  "per_class": {
+    "benign": {
+      "precision": 0.9111570247933884,
+      "recall": 0.98,
+      "f1": 0.9443254817987152,
+      "support": 450
+    },
+    "phishing": {
+      "precision": 0.9727272727272728,
+      "recall": 0.8818681318681318,
+      "f1": 0.9250720461095101,
+      "support": 364
+    }
+  },
+  "binary_threat_metrics": {
+    "benign": {
+      "precision": 0.9111570247933884,
+      "recall": 0.98,
+      "f1": 0.9443254817987152,
+      "support": 450
+    },
+    "threat": {
+      "precision": 0.9727272727272728,
+      "recall": 0.8818681318681318,
+      "f1": 0.9250720461095101,
+      "support": 364
+    }
+  },
+  "threat_threshold_metrics": {
+    "0.3": {
+      "threat_precision": 0.8352668213457076,
+      "threat_recall": 0.989010989010989,
+      "threat_f1": 0.9056603773584906,
+      "threat_support": 364
+    },
+    "0.4": {
+      "threat_precision": 0.9222520107238605,
+      "threat_recall": 0.945054945054945,
+      "threat_f1": 0.9335142469470827,
+      "threat_support": 364
+    },
+    "0.5": {
+      "threat_precision": 0.9727272727272728,
+      "threat_recall": 0.8818681318681318,
+      "threat_f1": 0.9250720461095101,
+      "threat_support": 364
+    },
+    "0.6": {
+      "threat_precision": 0.986013986013986,
+      "threat_recall": 0.7747252747252747,
+      "threat_f1": 0.8676923076923077,
+      "threat_support": 364
+    },
+    "0.7": {
+      "threat_precision": 0.9919678714859438,
+      "threat_recall": 0.6785714285714286,
+      "threat_f1": 0.8058727569331158,
+      "threat_support": 364
+    }
+  }
+}

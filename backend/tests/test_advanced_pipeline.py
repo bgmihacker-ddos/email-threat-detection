@@ -121,6 +121,29 @@ def test_risk_scorer_and_fusion():
     assert len(risk["score_breakdown"]) >= 3
 
 
+def test_risk_engine_exposes_provenance_ledger_for_reproducible_scoring():
+    header_forensics = {"forensic_findings": [{"finding_id": "header.spoof", "severity": "high", "title": "Spoofed sender", "risk_relevance": "risk_contributing", "evidence_class": "strong_risk_signal", "confidence": 90, "related_iocs": ["sender@example.com"]}]}
+    authentication = {"findings": [{"finding_id": "auth.spf.fail", "severity": "medium", "title": "SPF failed", "risk_relevance": "risk_contributing", "evidence_class": "strong_risk_signal", "confidence": 85, "related_iocs": ["mail.example.com"]}]}
+    iocs = {"iocs": []}
+    url_intel = []
+    domain_intel = {}
+    threat_intel = []
+    attachments = {"findings": []}
+    content = {"findings": []}
+    ml_res = {"status": "unavailable"}
+    rule_res = {}
+
+    risk = RiskEngine.calculate_risk(
+        header_forensics, authentication, iocs, url_intel, domain_intel,
+        threat_intel, attachments, content, ml_res, rule_res
+    )
+
+    assert "evidence_ledger" in risk
+    assert len(risk["evidence_ledger"]) >= 2
+    assert all(set(["source", "signal", "points", "confidence", "evidence_class", "evidence_refs"]).issubset(item) for item in risk["evidence_ledger"])
+    assert risk["risk_score"] == sum(item["points"] for item in risk["evidence_ledger"] if item["points"] > 0)
+
+
 def test_threat_reasoning_and_attack_chain():
     breakdown = [{"source": "Header", "reason": "Spoofed From", "points": 25}]
     findings = []

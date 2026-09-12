@@ -55,6 +55,10 @@ def test_persisted_analysis_includes_header_forensics():
     assert fetched.status_code == 200
     persisted = fetched.json()
     assert persisted["header_forensics"] == created["header_forensics"]
+    timing_stages = {item["stage"] for item in persisted["stage_timings"]}
+    assert {"fast_forensics", "static_analysis", "url_analysis", "domain_analysis", "attachment_analysis", "content_analysis", "ml_inference", "dns_whois_enrichment", "threat_intelligence", "evidence_synthesis", "campaign_correlation", "persistence", "total"}.issubset(timing_stages)
+    assert any(stage.startswith("dns:") for stage in timing_stages)
+    assert any(stage.startswith("whois:") for stage in timing_stages)
     assert persisted["header_forensics"]["mail_flow"]["hop_count"] == 1
     assert persisted["header_forensics"]["authentication_evidence"]["spf"]["status"] == "pass"
 

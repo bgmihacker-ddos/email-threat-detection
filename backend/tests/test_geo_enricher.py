@@ -123,3 +123,12 @@ async def test_enrich_ip_failure_non_fatal():
     with patch("httpx.AsyncClient.get", side_effect=Exception("Network timeout")):
         res = await GeoEnricher.enrich_ip("8.8.8.8")
         assert res is None
+
+
+@pytest.mark.asyncio
+async def test_reverse_lookup_reports_not_found_without_blocking():
+    with patch("socket.gethostbyaddr", side_effect=__import__("socket").herror()):
+        result = await GeoEnricher.reverse_lookup("8.8.8.8")
+
+    assert result["status"] == "not_found"
+    assert result["source"] == "reverse_dns_ptr"

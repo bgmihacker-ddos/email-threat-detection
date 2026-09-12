@@ -1,20 +1,36 @@
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { analyzeEmail, getAnalysisStatus } from '../services/analysisApi';
 import {
   FileUp, X, MailSearch, FileText, ShieldCheck, ArrowRight,
-  AlertTriangle, Cpu, Globe, Binary, Layers
+  AlertTriangle, CheckCircle2, Clock3, Cpu, Globe, Binary, Layers
 } from 'lucide-react';
+
+const SCAN_STAGES = [
+  'Parse message structure',
+  'Inspect content and attachments',
+  'Resolve domains and infrastructure',
+  'Correlate threat intelligence',
+  'Synthesize evidence and verdict',
+];
 
 export default function AnalyzeEmail() {
   const [emailContent, setEmailContent] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [stageText, setStageText] = useState('Reading RFC 5322 MIME stream & headers...');
   const [progressPct, setProgressPct] = useState(0);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isAnalyzing || !startedAt) return;
+    const timer = window.setInterval(() => setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000)), 250);
+    return () => window.clearInterval(timer);
+  }, [isAnalyzing, startedAt]);
 
   const acceptFile = (selectedFile?: File) => {
     if (!selectedFile) return;
@@ -43,6 +59,8 @@ export default function AnalyzeEmail() {
     setError(null);
     setStageText('Queued for forensic ingestion');
     setProgressPct(5);
+    setStartedAt(Date.now());
+    setElapsedSeconds(0);
 
     try {
       const initResult = await analyzeEmail(emailContent, file || undefined);
@@ -60,12 +78,14 @@ export default function AnalyzeEmail() {
           } else if (statusResult.status === 'failed') {
             setError(statusResult.error || 'Forensic analysis failed.');
             setIsAnalyzing(false);
+            setStartedAt(null);
           } else {
             setTimeout(pollStatus, 500);
           }
         } catch (err: any) {
           setError(err?.message || 'Error fetching analysis status.');
           setIsAnalyzing(false);
+          setStartedAt(null);
         }
       };
 
@@ -73,6 +93,7 @@ export default function AnalyzeEmail() {
     } catch (err: any) {
       setError(err?.message || 'Forensic analysis failed to start. Verify MIME validity and network connection.');
       setIsAnalyzing(false);
+      setStartedAt(null);
     }
   };
 
@@ -271,23 +292,39 @@ Please verify your credentials at http://suspicious-login-portal.com/login`}
           <div className="flex items-center justify-between text-xs">
             <span className="flex items-center gap-2 text-cyan-300 font-bold">
               <Cpu size={15} className="animate-spin text-cyan-400" />
-              FORENSIC PIPELINE IN PROGRESS
+              LIVE SCAN FEED
             </span>
             <span className="text-gray-400 text-[11px]">
-              {progressPct}% COMPLETED
+              {Math.min(100, Math.max(0, progressPct))}% COMPLETE
             </span>
           </div>
 
           <div className="w-full bg-[#081216] h-2 rounded-full overflow-hidden border border-[#1b3037]">
             <div
               className="bg-gradient-to-r from-cyan-500 to-violet-500 h-full transition-all duration-500"
-              style={{ width: `${progressPct}%` }}
+              style={{ width: `${Math.min(100, Math.max(0, progressPct))}%` }}
             />
           </div>
 
-          <p className="text-xs text-cyan-200">
+          <p className="border-l-2 border-cyan-500/60 pl-3 text-xs leading-6 text-cyan-200" aria-live="polite">
             {stageText}
           </p>
+
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-500">
+            <Clock3 size={13} className="text-cyan-400" />
+            <span>Elapsed {String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:{String(elapsedSeconds % 60).padStart(2, '0')}</span>
+            <span className="text-gray-700">·</span>
+            <span>Evidence collection active</span>
+          </div>
+
+          <div className="grid gap-2 border-t border-cyan-500/20 pt-3 sm:grid-cols-5">
+            {SCAN_STAGES.map((stage, index) => {
+              const threshold = [5, 15, 35, 60, 80][index] ?? 80;
+              const complete = progressPct > threshold || (index === 0 && progressPct >= threshold);
+              const active = !complete && progressPct >= threshold - 10;
+              return <div key={stage} className={`flex items-center gap-2 text-[10px] leading-4 ${complete ? 'text-emerald-300' : active ? 'text-cyan-200' : 'text-gray-600'}`}><span className="shrink-0">{complete ? <CheckCircle2 size={13} /> : <span className={`block h-2 w-2 rounded-full ${active ? 'animate-pulse bg-cyan-400' : 'bg-gray-700'}`} />}</span><span>{stage}</span></div>;
+            })}
+          </div>
         </div>
       )}
 

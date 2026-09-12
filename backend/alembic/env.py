@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.database.base import Base
 from app.models.user import User
 from app.models.analysis import AnalysisResult
+from app.models.analysis_job import AnalysisJob, AnalysisIndicator
 from app.models.auth import AuthAccount
 from app.models.audit import AuditLog
 

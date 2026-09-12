@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
 # Basic bounded DNS cache to prevent repeat lookups during batch processing
 _DNS_CACHE: Dict[str, Dict[str, Any]] = {}
 _CACHE_TTL = 300  # 5 minutes
+_DNS_QUERY_TIMEOUT = 1.0
+_DNS_DOMAIN_TIMEOUT = 3.0
 
 
 class DNSIntelligenceService:
@@ -18,8 +20,8 @@ class DNSIntelligenceService:
         """Execute a DNS query safely with timeouts."""
         try:
             resolver = dns.resolver.Resolver()
-            resolver.timeout = 2.0
-            resolver.lifetime = 2.0
+            resolver.timeout = _DNS_QUERY_TIMEOUT
+            resolver.lifetime = _DNS_QUERY_TIMEOUT
             answers = resolver.resolve(domain, record_type)
             return [str(rdata) for rdata in answers]
         except dns.resolver.NoAnswer:
@@ -54,9 +56,26 @@ class DNSIntelligenceService:
         txt_task = DNSIntelligenceService._execute_query_async(domain, "TXT")
         dmarc_task = DNSIntelligenceService._execute_query_async(f"_dmarc.{domain}", "TXT")
 
-        ns_records, a_records, mx_records, txt_records, dmarc_txt = await asyncio.gather(
-            ns_task, a_task, mx_task, txt_task, dmarc_task
-        )
+        try:
+            ns_records, a_records, mx_records, txt_records, dmarc_txt = await asyncio.wait_for(
+                asyncio.gather(ns_task, a_task, mx_task, txt_task, dmarc_task),
+                timeout=_DNS_DOMAIN_TIMEOUT,
+            )
+        except asyncio.TimeoutError:
+            for task in (ns_task, a_task, mx_task, txt_task, dmarc_task):
+                if not task.done():
+                    task.cancel()
+            return {
+                "status": "timeout",
+                "ns_records": [],
+                "a_records": [],
+                "mx_records": [],
+                "txt_records": [],
+                "spf_record": None,
+                "dmarc_record": None,
+                "has_mx": False,
+                "domain_exists": None,
+            }
 
         spf_record = next((r for r in txt_records if "v=spf1" in r), None)
         dmarc_record = next((r for r in dmarc_txt if "v=DMARC1" in r), None)

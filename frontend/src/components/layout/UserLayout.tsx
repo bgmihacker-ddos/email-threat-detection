@@ -28,10 +28,10 @@ export function UserLayout({ children }: { children: ReactNode }) {
 
       <UserSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
 
-      <div className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden bg-[#0c171c]/25 backdrop-blur-[2px]">
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden bg-[#0c171c]/20">
         <TopBar />
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-7 lg:p-9">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           {children}
         </main>
       </div>
@@ -49,8 +49,8 @@ function UserSidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: ()
   };
 
   return (
-    <aside className={`hidden md:flex flex-col border-r border-[#1b3037] bg-[#0c171c]/90 backdrop-blur-md transition-all duration-300 ${collapsed ? 'w-16' : 'w-72'}`}>
-      <div className={`border-b border-[#1b3037] px-5 py-5 ${collapsed ? 'px-3 flex justify-center' : ''}`}>
+    <aside className={`hidden md:flex flex-col border-r border-[#1b3037] bg-[#0b171b]/95 transition-all duration-300 ${collapsed ? 'w-16' : 'w-60'}`}>
+      <div className={`border-b border-[#1b3037] px-4 py-4 ${collapsed ? 'px-3 flex justify-center' : ''}`}>
         <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
           <div className="rounded-lg border border-[#3b5e60] bg-[#142b2d] p-2 text-[#58d6c0] cursor-pointer" onClick={onToggle}>
             <Radar size={collapsed ? 18 : 19} />
@@ -64,7 +64,7 @@ function UserSidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: ()
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto p-2">
+      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         <NavGroup label="Operations" collapsed={collapsed}>
           <NavItem to="/dashboard" icon={LayoutDashboard} name="Security overview" collapsed={collapsed} />
           <NavItem to="/analyze" icon={MailSearch} name="Analyze email" collapsed={collapsed} />

@@ -18,7 +18,9 @@ from app.detection.ml_features import email_to_features, text_to_features
 
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_MODEL_PATH = _REPOSITORY_ROOT / "ml" / "models" / "email_threat_tfidf_logreg.joblib"
+_PUBLIC_MODEL_PATH = _REPOSITORY_ROOT / "ml" / "models" / "email_threat_tfidf_logreg_public.joblib"
+_CONTROLLED_MODEL_PATH = _REPOSITORY_ROOT / "ml" / "models" / "email_threat_tfidf_logreg.joblib"
+DEFAULT_MODEL_PATH = _PUBLIC_MODEL_PATH if _PUBLIC_MODEL_PATH.exists() else _CONTROLLED_MODEL_PATH
 _MODEL_VERSION_FALLBACK = "tfidf-logreg-controlled-v1"
 
 

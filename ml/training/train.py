@@ -20,7 +20,7 @@ import numpy as np
 from scipy.sparse import hstack
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GroupShuffleSplit, train_test_split
 from sklearn.preprocessing import StandardScaler
 
 try:
@@ -35,6 +35,16 @@ DEFAULT_DATASET = ROOT / "ml" / "datasets" / "controlled" / "emails.jsonl"
 DEFAULT_ARTIFACT = ROOT / "ml" / "models" / "email_threat_tfidf_logreg.joblib"
 
 
+def resolve_repo_path(path: Path) -> Path:
+    if path.is_absolute():
+        return path.resolve()
+
+    cwd_candidate = (Path.cwd() / path).resolve()
+    if cwd_candidate.exists():
+        return cwd_candidate
+    return (ROOT / path).resolve()
+
+
 def load_records(path: Path) -> List[Mapping[str, Any]]:
     records = []
     with path.open("r", encoding="utf-8") as handle:
@@ -42,7 +52,7 @@ def load_records(path: Path) -> List[Mapping[str, Any]]:
             if line.strip():
                 records.append(json.loads(line))
     if not records:
-        raise ValueError("The controlled training corpus is empty")
+        raise ValueError("The training corpus is empty")
     return records
 
 
@@ -58,13 +68,35 @@ def _matrix(records: List[Mapping[str, Any]], vectorizer: TfidfVectorizer, scale
     return hstack([text_matrix, structural_matrix], format="csr")
 
 
+def _split_records(records: List[Mapping[str, Any]], labels: np.ndarray):
+    """Split related source messages together to reduce corpus leakage."""
+    groups = [str(record.get("source_file") or f"row-{index}") for index, record in enumerate(records)]
+    if len(set(groups)) == len(groups):
+        indices = np.arange(len(records))
+        train_indices, test_indices = train_test_split(
+            indices, test_size=0.25, random_state=20260907, stratify=labels
+        )
+        return train_indices, test_indices, "stratified_random"
+
+    splitter = GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=20260907)
+    train_indices, test_indices = next(splitter.split(records, labels, groups=groups))
+    train_labels = set(labels[train_indices])
+    test_labels = set(labels[test_indices])
+    if train_labels != set(labels) or test_labels != set(labels):
+        train_indices, test_indices = train_test_split(
+            np.arange(len(records)), test_size=0.25, random_state=20260907, stratify=labels
+        )
+        return train_indices, test_indices, "stratified_random_fallback"
+    return train_indices, test_indices, "grouped_source_file"
+
+
 def train_model(dataset_path: Path = DEFAULT_DATASET, artifact_path: Path = DEFAULT_ARTIFACT) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    dataset_path = resolve_repo_path(dataset_path)
+    artifact_path = resolve_repo_path(artifact_path)
+
     records = load_records(dataset_path)
     labels = np.asarray([str(record["label"]) for record in records])
-    indices = np.arange(len(records))
-    train_indices, test_indices = train_test_split(
-        indices, test_size=0.25, random_state=20260907, stratify=labels
-    )
+    train_indices, test_indices, split_strategy = _split_records(records, labels)
     train_records = [records[index] for index in train_indices]
     test_records = [records[index] for index in test_indices]
 
@@ -74,30 +106,38 @@ def train_model(dataset_path: Path = DEFAULT_DATASET, artifact_path: Path = DEFA
     # Evaluate on split
     train_features = _matrix(train_records, vectorizer, scaler, fit=True)
     test_features = _matrix(test_records, vectorizer, scaler, fit=False)
-    classifier_eval = LogisticRegression(C=0.5, max_iter=1000, random_state=20260907, solver="lbfgs")
+    classifier_eval = LogisticRegression(C=0.5, class_weight="balanced", max_iter=1000, random_state=20260907, solver="lbfgs")
     classifier_eval.fit(train_features, [str(record["label"]) for record in train_records])
     metrics = evaluate_classifier(classifier_eval, test_features, [str(record["label"]) for record in test_records])
 
     # Train production model on full dataset
     full_features = _matrix(records, vectorizer, scaler, fit=True)
-    classifier = LogisticRegression(C=0.5, max_iter=1000, random_state=20260907, solver="lbfgs")
+    classifier = LogisticRegression(C=0.5, class_weight="balanced", max_iter=1000, random_state=20260907, solver="lbfgs")
     classifier.fit(full_features, labels)
 
     import datetime
 
+    try:
+        dataset_name = str(dataset_path.relative_to(ROOT))
+    except ValueError:
+        dataset_name = str(dataset_path)
+    model_version = "tfidf-logreg-public-v3" if "public_email" in dataset_name else "tfidf-logreg-controlled-v2"
+
     artifact = {
         "artifact_version": 2,
-        "model_version": "tfidf-logreg-controlled-v2",
+        "model_version": model_version,
         "text_vectorizer": vectorizer,
         "structural_scaler": scaler,
         "classifier": classifier,
         "structural_names": list(STRUCTURAL_NAMES),
         "feature_families": ["subject_body_tfidf", "email_structure", "content_lexical"],
         "training_metadata": {
-            "dataset": str(dataset_path.relative_to(ROOT)),
+            "dataset": dataset_name,
             "sample_count": len(records),
+            "evaluation_sample_count": len(test_records),
             "classes": list(classifier.classes_),
             "random_state": 20260907,
+            "split_strategy": split_strategy,
             "training_timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "feature_version": 2,
             "metrics": metrics,

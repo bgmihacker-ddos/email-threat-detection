@@ -14,6 +14,8 @@ from email.utils import getaddresses, parseaddr, parsedate_to_datetime
 from html.parser import HTMLParser
 from typing import Any, Dict, List, Optional
 
+from app.core.config import settings
+
 logger = logging.getLogger(__name__)
 
 # Maximum raw email size logged in debug messages (chars) — avoid leaking content.
@@ -228,6 +230,10 @@ class EmailParser:
         """
         if not raw_email:
             raise ValueError("Empty email content provided.")
+        if len(raw_email) > settings.MAX_EMAIL_BYTES:
+            raise ValueError(
+                f"Email exceeds the maximum supported size of {settings.MAX_EMAIL_BYTES} bytes."
+            )
 
         try:
             return EmailParser._parse(raw_email)
@@ -471,7 +477,12 @@ class EmailParser:
         """Summarize MIME parts without exposing decoded content."""
         parts: List[Dict[str, Any]] = []
         max_depth = 0
+        truncated = False
         def visit(part: Any, depth: int) -> None:
+            nonlocal truncated
+            if len(parts) >= settings.MAX_MIME_PARTS:
+                truncated = True
+                return
             nonlocal max_depth
             max_depth = max(max_depth, depth)
             parts.append({
@@ -489,6 +500,7 @@ class EmailParser:
         return {
             "part_count": len(parts),
             "max_depth": max_depth,
+            "truncated": truncated,
             "content_types": [item["content_type"] for item in parts],
             "parts": parts,
         }
@@ -517,6 +529,8 @@ class EmailParser:
             )
             if not is_attachment:
                 continue
+            if len(attachments) >= settings.MAX_ATTACHMENTS:
+                break
 
             extension = ""
             if filename and "." in filename:
@@ -534,10 +548,11 @@ class EmailParser:
                     size = len(payload)
 
                     import hashlib
-                    sha256 = hashlib.sha256(payload).hexdigest()
-                    md5 = hashlib.md5(payload).hexdigest()
-                    magic_bytes_raw = payload[:4]
-                    magic_bytes = magic_bytes_raw.hex()
+                    if size <= settings.MAX_ATTACHMENT_BYTES:
+                        sha256 = hashlib.sha256(payload).hexdigest()
+                        md5 = hashlib.md5(payload).hexdigest()
+                        magic_bytes_raw = payload[:4]
+                        magic_bytes = magic_bytes_raw.hex()
             except Exception:
                 pass
 
@@ -556,6 +571,7 @@ class EmailParser:
                 "magic_bytes": magic_bytes,
                 "content_disposition": disposition,
                 "content_id": part.get("content-id"),
+                "hashing_status": "complete" if sha256 else "skipped_size_limit" if size is not None else "unavailable",
             })
 
         return attachments

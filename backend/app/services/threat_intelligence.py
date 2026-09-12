@@ -7,7 +7,7 @@ import base64
 import ipaddress
 import time
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Set
 from urllib.parse import urlparse
 
@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 ProviderResult = Dict[str, Any]
 _TIMEOUT = httpx.Timeout(5.0, connect=2.0)
+_PUBLIC_LOOKUP_TIMEOUT = httpx.Timeout(8.0, connect=2.0)
 _MAX_INDICATOR_LENGTH = 2048
 
 
@@ -56,6 +57,7 @@ class ThreatIntelProvider:
     name: str
     api_key: Optional[str]
     _circuit_breaker_until: float = 0.0
+    supported_indicator_types: Set[str] = field(default_factory=lambda: {"url", "domain", "ip", "ipv6", "hash"})
 
     async def lookup(self, indicator_type: str, indicator: str, client: Optional[httpx.AsyncClient] = None) -> ProviderResult:
         raise NotImplementedError
@@ -118,6 +120,7 @@ class URLhausProvider(ThreatIntelProvider):
 
     def __init__(self) -> None:
         super().__init__("URLhaus", settings.URLHAUS_API_KEY)
+        self.supported_indicator_types = {"url"}
 
     async def lookup(self, indicator_type: str, indicator: str, client: Optional[httpx.AsyncClient] = None) -> ProviderResult:
         if not self.is_healthy():
@@ -174,6 +177,7 @@ class AbuseIPDBProvider(ThreatIntelProvider):
 
     def __init__(self) -> None:
         super().__init__("AbuseIPDB", settings.ABUSEIPDB_API_KEY)
+        self.supported_indicator_types = {"ip", "ipv6"}
 
     async def lookup(self, indicator_type: str, indicator: str, client: Optional[httpx.AsyncClient] = None) -> ProviderResult:
         if not self.is_healthy():
@@ -195,6 +199,201 @@ class AbuseIPDBProvider(ThreatIntelProvider):
             return _result(self.name, value, indicator_type, "timeout", error="Provider request timed out.")
         except httpx.HTTPError:
             return _result(self.name, value, indicator_type, "error", error="Provider request failed.")
+
+
+class GoogleSafeBrowsingProvider(ThreatIntelProvider):
+    """Google Safe Browsing v4 URL match lookup."""
+
+    def __init__(self) -> None:
+        super().__init__("Google Safe Browsing", settings.GOOGLE_SAFE_BROWSING_API_KEY)
+        self.supported_indicator_types = {"url"}
+
+    async def lookup(self, indicator_type: str, indicator: str, client: Optional[httpx.AsyncClient] = None) -> ProviderResult:
+        if not self.is_healthy():
+            return self.unavailable_result(indicator_type, indicator)
+        value = _normalize_indicator(indicator_type, indicator)
+        if not value:
+            return self.invalid_result(indicator_type, indicator)
+        endpoint = "https://safebrowsing.googleapis.com/v4/threatMatches:find"
+        payload = {
+            "client": {"clientId": "email-threat-detection", "clientVersion": "1.0"},
+            "threatInfo": {
+                "threatTypes": ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
+                "platformTypes": ["ANY_PLATFORM"],
+                "threatEntryTypes": ["URL"],
+                "threatEntries": [{"url": value}],
+            },
+        }
+        try:
+            if client is not None:
+                response = await client.post(endpoint, params={"key": self.api_key}, json=payload)
+            else:
+                async with httpx.AsyncClient(timeout=_TIMEOUT) as local_client:
+                    response = await local_client.post(endpoint, params={"key": self.api_key}, json=payload)
+            status = _http_status(self.name, value, indicator_type, response)
+            if status:
+                if status["status"] in {"unavailable", "rate_limited"}:
+                    self.trip_circuit_breaker()
+                return status
+            matches = response.json().get("matches") or []
+            categories = list(dict.fromkeys(str(item.get("threatType")) for item in matches if item.get("threatType")))
+            if matches:
+                return _result(self.name, value, indicator_type, "ok", "malicious", len(matches), 95, categories, references=[endpoint])
+            return _result(self.name, value, indicator_type, "ok", "unknown", references=[endpoint])
+        except httpx.TimeoutException:
+            return _result(self.name, value, indicator_type, "timeout", error="Safe Browsing lookup timed out.")
+        except (httpx.HTTPError, ValueError, TypeError):
+            return _result(self.name, value, indicator_type, "error", error="Safe Browsing response was unavailable or malformed.")
+
+
+class AlienVaultOTXProvider(ThreatIntelProvider):
+    """AlienVault OTX pulse lookup for URL, domain, IP, and file hash context."""
+
+    def __init__(self) -> None:
+        super().__init__("AlienVault OTX", settings.OTX_API_KEY)
+        self.supported_indicator_types = {"url", "domain", "ip", "ipv6", "hash"}
+
+    async def lookup(self, indicator_type: str, indicator: str, client: Optional[httpx.AsyncClient] = None) -> ProviderResult:
+        if not self.is_healthy():
+            return self.unavailable_result(indicator_type, indicator)
+        value = _normalize_indicator(indicator_type, indicator)
+        if not value:
+            return self.invalid_result(indicator_type, indicator)
+        section = {"ip": "IPv4", "ipv6": "IPv6", "hash": "file", "domain": "domain", "url": "url"}[indicator_type]
+        endpoint = f"https://otx.alienvault.com/api/v1/indicators/{section}/{value}/general"
+        headers = {"X-OTX-API-KEY": self.api_key or ""}
+        try:
+            if client is not None:
+                response = await client.get(endpoint, headers=headers)
+            else:
+                async with httpx.AsyncClient(timeout=_TIMEOUT) as local_client:
+                    response = await local_client.get(endpoint, headers=headers)
+            status = _http_status(self.name, value, indicator_type, response)
+            if status:
+                if status["status"] in {"unavailable", "rate_limited"}:
+                    self.trip_circuit_breaker()
+                return status
+            payload = response.json()
+            pulse_info = payload.get("pulse_info") or {}
+            pulse_count = int(pulse_info.get("count") or 0)
+            references = [str(item.get("name")) for item in (pulse_info.get("pulses") or []) if item.get("name")][:10]
+            return _result(
+                self.name,
+                value,
+                indicator_type,
+                "ok",
+                "suspicious" if pulse_count else "unknown",
+                pulse_count,
+                min(80, pulse_count * 10),
+                ["otx_pulse"] if pulse_count else [],
+                references=references + [endpoint],
+                metadata={"pulse_count": pulse_count},
+            )
+        except httpx.TimeoutException:
+            return _result(self.name, value, indicator_type, "timeout", error="OTX lookup timed out.")
+        except (httpx.HTTPError, ValueError, TypeError):
+            return _result(self.name, value, indicator_type, "error", error="OTX response was unavailable or malformed.")
+
+
+class RDAPProvider(ThreatIntelProvider):
+    """Keyless registration and network allocation lookup via RDAP."""
+
+    def __init__(self) -> None:
+        super().__init__("RDAP", "public")
+        self.supported_indicator_types = {"domain", "ip", "ipv6"}
+
+    async def lookup(self, indicator_type: str, indicator: str, client: Optional[httpx.AsyncClient] = None) -> ProviderResult:
+        value = _normalize_indicator(indicator_type, indicator)
+        if not value:
+            return self.invalid_result(indicator_type, indicator)
+        endpoint = f"https://rdap.org/{'domain' if indicator_type == 'domain' else 'ip'}/{value}"
+        try:
+            if client is not None:
+                response = await client.get(endpoint)
+            else:
+                async with httpx.AsyncClient(timeout=_PUBLIC_LOOKUP_TIMEOUT, follow_redirects=True) as local_client:
+                    response = await local_client.get(endpoint)
+            status = _http_status(self.name, value, indicator_type, response)
+            if status:
+                return status
+            payload = response.json()
+            return _result(self.name, value, indicator_type, "ok", categories=["registration"], references=[endpoint], metadata={
+                "name": payload.get("name"),
+                "ldh_name": payload.get("ldhName"),
+                "status": payload.get("status", []),
+                "events": payload.get("events", []),
+            })
+        except httpx.TimeoutException:
+            return _result(self.name, value, indicator_type, "timeout", error="RDAP lookup timed out.")
+        except (httpx.HTTPError, ValueError, TypeError):
+            return _result(self.name, value, indicator_type, "error", error="RDAP response was unavailable or malformed.")
+
+
+class CertificateTransparencyProvider(ThreatIntelProvider):
+    """Keyless certificate history lookup through crt.sh."""
+
+    def __init__(self) -> None:
+        super().__init__("crt.sh", "public")
+        self.supported_indicator_types = {"domain"}
+
+    async def lookup(self, indicator_type: str, indicator: str, client: Optional[httpx.AsyncClient] = None) -> ProviderResult:
+        value = _normalize_indicator(indicator_type, indicator)
+        if not value:
+            return self.invalid_result(indicator_type, indicator)
+        endpoint = f"https://crt.sh/?q={value}&output=json"
+        try:
+            if client is not None:
+                response = await client.get(endpoint)
+            else:
+                async with httpx.AsyncClient(timeout=_PUBLIC_LOOKUP_TIMEOUT, follow_redirects=True) as local_client:
+                    response = await local_client.get(endpoint)
+            status = _http_status(self.name, value, indicator_type, response)
+            if status:
+                return status
+            records = response.json()
+            if not isinstance(records, list) or not records:
+                return _result(self.name, value, indicator_type, "not_found")
+            return _result(self.name, value, indicator_type, "ok", detections=len(records), categories=["certificate_transparency"], references=[endpoint], metadata={
+                "issuers": list(dict.fromkeys(str(item.get("issuer_name")) for item in records if item.get("issuer_name")))[:10],
+                "latest_names": list(dict.fromkeys(str(item.get("name_value")) for item in records if item.get("name_value")))[:10],
+            })
+        except httpx.TimeoutException:
+            return _result(self.name, value, indicator_type, "timeout", error="Certificate transparency lookup timed out.")
+        except (httpx.HTTPError, ValueError, TypeError):
+            return _result(self.name, value, indicator_type, "error", error="Certificate transparency response was unavailable or malformed.")
+
+
+class CIRCLHashlookupProvider(ThreatIntelProvider):
+    """Keyless known-file lookup through CIRCL Hashlookup."""
+
+    def __init__(self) -> None:
+        super().__init__("CIRCL Hashlookup", "public")
+        self.supported_indicator_types = {"hash"}
+
+    async def lookup(self, indicator_type: str, indicator: str, client: Optional[httpx.AsyncClient] = None) -> ProviderResult:
+        value = _normalize_indicator(indicator_type, indicator)
+        if not value:
+            return self.invalid_result(indicator_type, indicator)
+        endpoint = f"https://hashlookup.circl.lu/lookup/{value}"
+        try:
+            if client is not None:
+                response = await client.get(endpoint)
+            else:
+                async with httpx.AsyncClient(timeout=_TIMEOUT) as local_client:
+                    response = await local_client.get(endpoint)
+            status = _http_status(self.name, value, indicator_type, response)
+            if status:
+                return status
+            payload = response.json()
+            return _result(self.name, value, indicator_type, "ok", categories=["known_file"], references=[endpoint], metadata={
+                "sha256": payload.get("SHA-256") or payload.get("sha256"),
+                "product": payload.get("Product") or payload.get("product"),
+                "file_name": payload.get("FileName") or payload.get("file_name"),
+            })
+        except httpx.TimeoutException:
+            return _result(self.name, value, indicator_type, "timeout", error="Hashlookup timed out.")
+        except (httpx.HTTPError, ValueError, TypeError):
+            return _result(self.name, value, indicator_type, "error", error="Hashlookup response was unavailable or malformed.")
 
 
 async def _get_object(provider_obj: ThreatIntelProvider, indicator: str, kind: str, endpoint: str, headers: Dict[str, str], client: httpx.AsyncClient) -> ProviderResult:
@@ -263,8 +462,8 @@ def _int(value: Any) -> int:
     except (TypeError, ValueError): return 0
 
 
-def _result(provider: str, indicator: str, indicator_type: str, status: str, reputation: str = "unknown", detections: int = 0, confidence: int = 0, categories: Optional[List[str]] = None, first_seen: Optional[str] = None, last_seen: Optional[str] = None, references: Optional[List[str]] = None, error: Optional[str] = None) -> ProviderResult:
-    return {"provider": provider, "indicator": indicator, "indicator_type": indicator_type, "status": status, "reputation": reputation, "detections": detections, "confidence": confidence, "categories": categories or [], "first_seen": first_seen, "last_seen": last_seen, "references": references or [], "error": error}
+def _result(provider: str, indicator: str, indicator_type: str, status: str, reputation: str = "unknown", detections: int = 0, confidence: int = 0, categories: Optional[List[str]] = None, first_seen: Optional[str] = None, last_seen: Optional[str] = None, references: Optional[List[str]] = None, error: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> ProviderResult:
+    return {"provider": provider, "indicator": indicator, "indicator_type": indicator_type, "status": status, "reputation": reputation, "detections": detections, "confidence": confidence, "categories": categories or [], "first_seen": first_seen, "last_seen": last_seen, "references": references or [], "error": error, "metadata": metadata or {}}
 
 
 class ThreatIntelligenceService:
@@ -275,10 +474,29 @@ class ThreatIntelligenceService:
     _CACHE_MAX_ENTRIES = 512
 
     # Global list of provider instances to preserve circuit breaker states across requests
-    _GLOBAL_PROVIDERS = [VirusTotalProvider(), URLhausProvider(), ThreatFoxProvider(), AbuseIPDBProvider()]
+    _ALL_PROVIDERS = [VirusTotalProvider(), URLhausProvider(), ThreatFoxProvider(), AbuseIPDBProvider(), RDAPProvider(), CertificateTransparencyProvider(), CIRCLHashlookupProvider(), GoogleSafeBrowsingProvider(), AlienVaultOTXProvider()]
+    _GLOBAL_PROVIDERS = [
+        provider for provider in _ALL_PROVIDERS
+        if provider.name not in settings.DISABLED_THREAT_PROVIDERS
+    ]
 
     def __init__(self, providers: Optional[Iterable[ThreatIntelProvider]] = None) -> None:
         self.providers = list(providers) if providers is not None else self._GLOBAL_PROVIDERS
+
+    @staticmethod
+    def _ioc_priority(ioc: Dict[str, Any]) -> int:
+        """Prioritize high-value external lookups without changing local extraction."""
+        kind = str(ioc.get("type") or "")
+        source = str(ioc.get("source") or "")
+        context = str(ioc.get("context") or "").lower()
+        priority = {"url": 100, "ip": 90, "ipv6": 90, "hash": 85, "domain": 70}.get(kind, 0)
+        if source == "received_chain":
+            priority += 15
+        if source == "attachment" or context.startswith("attachment"):
+            priority += 10
+        if "suspicious" in context or "credential" in context or "imperson" in context:
+            priority += 10
+        return priority + min(9, int(ioc.get("confidence") or 0) // 10)
 
     async def enrich_ioc(self, indicator_type: str, indicator: str, client: Optional[httpx.AsyncClient] = None) -> List[ProviderResult]:
         key = (indicator_type.lower(), indicator.lower())
@@ -288,9 +506,54 @@ class ThreatIntelligenceService:
 
         if cached: self._cache.pop(key, None)
 
-        # Bounded concurrency across providers
-        results = await asyncio.gather(*(p.lookup(indicator_type, indicator, client) for p in self.providers), return_exceptions=True)
-        normalized = [r if isinstance(r, dict) else _result(p.name, indicator, indicator_type, "error", error=f"Unhandled exception: {str(r)}") for r, p in zip(results, self.providers)]
+        active_providers = [
+            provider for provider in self.providers
+            if indicator_type.lower() in provider.supported_indicator_types
+            and _configured(getattr(provider, "api_key", None))
+            and provider.is_healthy()
+        ]
+        skipped_providers = [provider for provider in self.providers if provider not in active_providers]
+
+        def skipped_result(provider: ThreatIntelProvider) -> ProviderResult:
+            configured = _configured(getattr(provider, "api_key", None))
+            if not configured:
+                return _result(
+                    provider.name,
+                    indicator,
+                    indicator_type,
+                    "not_configured",
+                    error=f"{provider.name} API key is not configured.",
+                )
+            if indicator_type.lower() not in provider.supported_indicator_types:
+                return _result(
+                    provider.name,
+                    indicator,
+                    indicator_type,
+                    "skipped",
+                    error=f"{provider.name} does not support {indicator_type} lookups.",
+                )
+            return _result(
+                provider.name,
+                indicator,
+                indicator_type,
+                "not_configured" if not configured else "skipped",
+                error=(
+                    f"{provider.name} API key is not configured."
+                    if not configured
+                    else f"{provider.name} is temporarily disabled (unauthorized/rate-limited)."
+                ),
+            )
+
+        if not active_providers:
+            result = [skipped_result(provider) for provider in self.providers]
+            self._cache[key] = (now, result)
+            return result
+
+        # Bounded concurrency across healthy, configured providers only.
+        results = await asyncio.gather(*(p.lookup(indicator_type, indicator, client) for p in active_providers), return_exceptions=True)
+        normalized = [r if isinstance(r, dict) else _result(p.name, indicator, indicator_type, "error", error=f"Unhandled exception: {str(r)}") for r, p in zip(results, active_providers)]
+
+        normalized.extend(skipped_result(provider) for provider in skipped_providers)
 
         if len(self._cache) >= self._CACHE_MAX_ENTRIES:
             oldest = min(self._cache, key=lambda item: self._cache[item][0]); self._cache.pop(oldest, None)
@@ -303,7 +566,8 @@ class ThreatIntelligenceService:
         unique = []
         seen = set()
 
-        for ioc in iocs:
+        prioritized_iocs = sorted(enumerate(iocs), key=lambda item: (-ThreatIntelligenceService._ioc_priority(item[1]), item[0]))
+        for _, ioc in prioritized_iocs:
             kind = str(ioc.get("type") or "")
             value = str(ioc.get("normalized_value") or ioc.get("value") or "")
             key = (kind, value.lower())
@@ -316,7 +580,7 @@ class ThreatIntelligenceService:
 
         # Connection pooling via a shared AsyncClient
         limits = httpx.Limits(max_connections=12, max_keepalive_connections=8)
-        async with httpx.AsyncClient(timeout=_TIMEOUT, limits=limits) as client:
+        async with httpx.AsyncClient(timeout=_TIMEOUT, limits=limits, follow_redirects=True) as client:
             batches = await asyncio.gather(*(self.enrich_ioc(kind, val, client) for kind, val in unique))
 
         return [item for batch in batches for item in batch]

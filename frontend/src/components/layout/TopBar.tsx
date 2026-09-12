@@ -105,7 +105,7 @@ export function TopBar() {
   };
 
   return (
-    <header className="relative z-20 flex h-[4.5rem] items-center justify-between border-b border-[#1b3037] bg-[#0c171c]/80 px-4 backdrop-blur-xl md:px-7">
+    <header className="relative z-20 flex h-16 items-center justify-between border-b border-[#1b3037] bg-[#0b171b]/95 px-4 md:px-6">
       {/* Breadcrumb / Page Title */}
       <div className="flex items-center gap-3 text-xs">
         <span className="hidden items-center gap-1.5 text-[#8aa49d] sm:flex">
@@ -129,7 +129,7 @@ export function TopBar() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => searchQuery.trim().length > 2 && setShowResults(true)}
-              className="w-96 rounded-md border border-[#29454b] bg-[#101f24] py-2 pl-10 pr-8 text-xs text-[#d6e1de] transition-all placeholder:text-[#718581] focus:border-[#58d6c0] focus:outline-none focus:ring-1 focus:ring-[#58d6c0]/20"
+              className="w-80 rounded-md border border-[#29454b] bg-[#101b21] py-2 pl-10 pr-8 text-xs text-[#d6e1de] transition-all placeholder:text-[#718581] focus:border-[#58d6c0] focus:outline-none focus:ring-1 focus:ring-[#58d6c0]/20"
             />
             {searchQuery && (
               <button
@@ -200,7 +200,7 @@ export function TopBar() {
         {/* System Status */}
         <div className="flex items-center gap-3">
           {/* Live feed indicator */}
-          <div className="hidden items-center gap-2 rounded-md border border-[#31514e] bg-[#142b2d] px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-emerald-300 md:flex">
+          <div className="hidden items-center gap-2 border-l border-[#31514e] pl-3 text-[10px] font-bold uppercase tracking-wider text-emerald-300 md:flex">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />

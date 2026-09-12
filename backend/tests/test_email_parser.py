@@ -28,6 +28,7 @@ import base64
 import pytest
 
 from app.detection.rule_engine import RuleEngine
+from app.core.config import settings
 from app.services.email_parser import EmailParser
 
 
@@ -50,6 +51,13 @@ def test_parse_simple_plain_text_email():
     assert result["plain_text"] == "Hello, this is a plain text email message."
     assert result["html_body"] == ""
     assert result["attachments"] == []
+
+
+def test_parser_rejects_email_above_configured_size_limit(monkeypatch):
+    monkeypatch.setattr(settings, "MAX_EMAIL_BYTES", 10)
+
+    with pytest.raises(ValueError, match="maximum supported size"):
+        EmailParser.parse_raw(b"01234567890")
 
 
 # 2. HTML-only email

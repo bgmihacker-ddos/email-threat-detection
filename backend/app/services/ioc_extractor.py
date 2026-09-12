@@ -17,6 +17,7 @@ _IPV6_RE = re.compile(
 )
 _EMAIL_RE = re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
 _DOMAIN_RE = re.compile(r"\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\b")
+_AUTH_FIELD_LABELS = {"smtp.mailfrom", "header.from", "header.i", "header.d"}
 _URL_RE = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
 
 
@@ -183,6 +184,8 @@ class IOCExtractor:
             values = value if isinstance(value, list) else [value]
             for v in values:
                 for domain in _DOMAIN_RE.findall(str(v)):
+                    if domain.lower() in _AUTH_FIELD_LABELS:
+                        continue
                     _add("domain", domain, "authentication",
                          f"Domain in {key}", 60)
 

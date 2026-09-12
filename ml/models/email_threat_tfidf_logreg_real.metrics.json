@@ -1,0 +1,49 @@
+{
+  "sample_count": 763,
+  "accuracy": 0.9174311926605505,
+  "precision_macro": 0.9205409202669477,
+  "recall_macro": 0.9141404358353511,
+  "f1_macro": 0.9163180571876224,
+  "labels": [
+    "benign",
+    "phishing"
+  ],
+  "confusion_matrix": [
+    [
+      394,
+      19
+    ],
+    [
+      44,
+      306
+    ]
+  ],
+  "per_class": {
+    "benign": {
+      "precision": 0.8995433789954338,
+      "recall": 0.9539951573849879,
+      "f1": 0.9259694477085781,
+      "support": 413
+    },
+    "phishing": {
+      "precision": 0.9415384615384615,
+      "recall": 0.8742857142857143,
+      "f1": 0.9066666666666666,
+      "support": 350
+    }
+  },
+  "binary_threat_metrics": {
+    "benign": {
+      "precision": 0.8995433789954338,
+      "recall": 0.9539951573849879,
+      "f1": 0.9259694477085781,
+      "support": 413
+    },
+    "threat": {
+      "precision": 0.9415384615384615,
+      "recall": 0.8742857142857143,
+      "f1": 0.9066666666666666,
+      "support": 350
+    }
+  }
+}

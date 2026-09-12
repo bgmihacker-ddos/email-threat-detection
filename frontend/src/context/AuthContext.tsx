@@ -15,11 +15,18 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const developmentBypass = import.meta.env.DEV && import.meta.env.VITE_DEV_BYPASS_AUTH === 'true';
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(developmentBypass);
+  const [loading, setLoading] = useState<boolean>(!developmentBypass);
 
   const checkAuth = useCallback(async () => {
+    if (developmentBypass) {
+      setUser({ id: 'local-analyst', email: 'analyst@localhost', name: 'Local analyst', role: 'user', is_active: true, is_verified: true, created_at: '', updated_at: '' });
+      setIsAuthenticated(true);
+      setLoading(false);
+      return;
+    }
     const token = localStorage.getItem('token');
     if (!token) {
       setLoading(false);
@@ -36,7 +43,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [developmentBypass]);
 
   useEffect(() => {
     checkAuth();

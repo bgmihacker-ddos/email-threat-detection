@@ -168,6 +168,28 @@ def test_6d_ioc_extractor():
     assert urls[0]["source"] in ["body", "urls"]
 
 
+def test_6d_authentication_field_labels_are_not_domains():
+    parsed_email = {
+        "authentication_headers": {
+            "authentication-results": (
+                "mx.example.com; dkim=pass header.i=@sender.example.com; "
+                "spf=pass smtp.mailfrom=sender@example.com; "
+                "dmarc=pass header.from=sender.example.com"
+            )
+        }
+    }
+
+    domains = {
+        item["value"]
+        for item in IOCExtractor.extract(parsed_email)["iocs"]
+        if item["type"] == "domain"
+    }
+
+    assert "smtp.mailfrom" not in domains
+    assert "header.from" not in domains
+    assert "sender.example.com" in domains
+
+
 def test_6d_attachment_hashing():
     data = b"malicious binary payload"
     h = compute_hash(data)
