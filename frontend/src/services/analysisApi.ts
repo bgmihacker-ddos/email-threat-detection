@@ -1,6 +1,11 @@
 import { apiFetch } from './api';
 
-const BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const configuredBaseUrl = (import.meta.env.VITE_API_URL || '').trim();
+const BASE_URL = (
+  configuredBaseUrl && !configuredBaseUrl.includes('email-threat-detection1.vercel.app')
+    ? configuredBaseUrl
+    : 'https://email-threat-detection-1-w14g.onrender.com'
+).replace(/\/$/, '');
 
 const authHeaders = (): HeadersInit => {
   const token = localStorage.getItem('token');
