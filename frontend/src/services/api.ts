@@ -15,7 +15,8 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
   });
 
   if (!response.ok) {
-    throw new Error(`API Error: ${response.statusText}`);
+    const errorBody = await response.json().catch(() => null) as { detail?: string; message?: string } | null;
+    throw new Error(errorBody?.detail || errorBody?.message || `API Error: ${response.statusText}`);
   }
 
   return response.json();
