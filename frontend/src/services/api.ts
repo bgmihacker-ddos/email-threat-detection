@@ -1,8 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_URL;
-
-if (!BASE_URL) {
-  throw new Error('VITE_API_URL is not configured');
-}
+const BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
 export async function apiFetch(endpoint: string, options: RequestInit = {}) {
   const response = await fetch(`${BASE_URL}${endpoint}`, {
