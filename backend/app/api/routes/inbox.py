@@ -84,7 +84,7 @@ async def _gmail_message_ids(access_token: str, limit: int) -> list[str]:
         listing = await client.get(
             "https://gmail.googleapis.com/gmail/v1/users/me/messages",
             headers=headers,
-            params={"labelIds": "UNREAD", "maxResults": limit},
+            params={"labelIds": "INBOX", "maxResults": limit},
         )
     if listing.status_code == 401:
         raise HTTPException(status_code=409, detail="Gmail authorization is no longer valid. Reconnect the mailbox.")

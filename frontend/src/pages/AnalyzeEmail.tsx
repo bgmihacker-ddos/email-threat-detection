@@ -233,7 +233,7 @@ export default function AnalyzeEmail() {
             <div className="rounded border border-[#3b5e60] bg-[#142b2d] p-2.5 text-[#58d6c0]"><Inbox size={19} /></div>
             <div>
               <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-[#58d6c0]">GMAIL INBOX · READ ONLY</p>
-              <h2 className="mt-1 text-base font-semibold text-gray-100">Choose an unread email to scan</h2>
+              <h2 className="mt-1 text-base font-semibold text-gray-100">Choose an email to scan</h2>
               <p className="mt-1 text-xs text-gray-400">Select one message and send its original MIME source to the forensic pipeline.</p>
             </div>
           </div>
@@ -242,7 +242,7 @@ export default function AnalyzeEmail() {
           </button>
         </div>
         {!gmailConnected && !isLoadingGmail && <p className="mt-4 rounded border border-amber-700/40 bg-amber-950/20 p-3 text-xs font-mono text-amber-200">Connect Google with Gmail read access first, then return here to choose a message.</p>}
-        {gmailConnected && !isLoadingGmail && gmailMessages.length === 0 && <p className="mt-4 rounded border border-[#29454b] bg-[#081216] p-3 text-xs font-mono text-gray-500">No unread Gmail messages are available.</p>}
+        {gmailConnected && !isLoadingGmail && gmailMessages.length === 0 && <p className="mt-4 rounded border border-[#29454b] bg-[#081216] p-3 text-xs font-mono text-gray-500">No messages are available in the Gmail inbox.</p>}
         {gmailMessages.length > 0 && <div className="mt-4 space-y-2">
           {gmailMessages.map((message) => <div key={message.id} className="flex flex-col gap-3 rounded border border-[#29454b] bg-[#081216] p-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
