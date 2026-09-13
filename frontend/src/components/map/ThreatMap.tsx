@@ -44,7 +44,7 @@ export function ThreatMap({ threatEvents }: ThreatMapProps) {
     const pointFor = (event: ThreatMapEvent) => projection([event.longitude as number, event.latitude as number]);
 
     return (
-        <div className={`${isFullscreen ? 'fixed inset-4 z-50' : 'relative'} h-full min-h-[500px] overflow-hidden rounded-lg border border-[#1b3037] bg-[#111d2b] shadow-2xl`}>
+        <div className={`${isFullscreen ? 'fixed inset-4 z-50' : 'relative h-[500px]'} min-h-[500px] overflow-hidden rounded-lg border border-[#1b3037] bg-[#111d2b] shadow-2xl`}>
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_48%,rgba(35,86,103,0.25),transparent_48%)]" />
             <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} preserveAspectRatio="xMidYMid meet" className="absolute inset-0 h-full w-full" role="img" aria-label="Live threat world map">
                 <defs>
