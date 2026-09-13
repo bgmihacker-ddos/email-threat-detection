@@ -40,6 +40,56 @@ _HINDI_THREAT_KEYWORDS = [
     "sarkari", "naukri", "lottery jeetein",
 ]
 
+_INDIA_CAUSES = {
+    "trusted_brand_impersonation": {
+        "title": "Trusted Indian brand impersonation",
+        "description": "The message borrows trust from a bank, payment app, government service, telecom provider, or major Indian consumer brand.",
+        "response": "Open the service from its official app or a manually typed website, not from the email.",
+    },
+    "kyc_identity_pressure": {
+        "title": "KYC or identity pressure",
+        "description": "KYC, Aadhaar, PAN, GST, or account-verification language creates fear of suspension and pushes the recipient toward disclosure.",
+        "response": "Never send Aadhaar, PAN, passwords, or OTPs by email. Verify the request with the institution using an official channel.",
+    },
+    "upi_payment_social_engineering": {
+        "title": "UPI or payment social engineering",
+        "description": "UPI, PIN, refund, cashback, or payment language can be used to make a victim approve a transaction or reveal payment credentials.",
+        "response": "Never share a UPI PIN or OTP. A UPI PIN is used to authorize payments, not to receive a refund.",
+    },
+    "urgency_and_fear": {
+        "title": "Urgency and fear conditioning",
+        "description": "Threats of blocking, expiry, disconnection, penalties, or short deadlines reduce time for independent verification.",
+        "response": "Pause and verify the request independently before clicking, replying, paying, or calling a number in the message.",
+    },
+    "credential_or_otp_harvesting": {
+        "title": "Credential or OTP harvesting",
+        "description": "The message asks for a login, password, OTP, PIN, or verification step that could enable account takeover or payment fraud.",
+        "response": "Do not enter credentials from an email link. Go directly to the official service and review account activity there.",
+    },
+    "regional_language_targeting": {
+        "title": "Regional-language social engineering",
+        "description": "Hindi or regional-language cues may increase familiarity and urgency for a targeted audience; language alone is not proof of fraud.",
+        "response": "Treat familiar language as a delivery tactic, then validate the sender, domain, authentication, and requested action.",
+    },
+    "telecom_or_sim_swap": {
+        "title": "Telecom or SIM-swap pretext",
+        "description": "SIM deactivation, mobile verification, or telecom-account language can precede account takeover and OTP interception.",
+        "response": "Contact the mobile operator through its official support channel and never share an OTP or remote-access code.",
+    },
+    "delivery_or_refund_lure": {
+        "title": "Delivery, customs, refund, or lottery lure",
+        "description": "Small fees, held parcels, refunds, cashback, and prizes create a low-friction reason to click or pay immediately.",
+        "response": "Track parcels and refunds only through the official merchant or courier app; do not pay through an email link.",
+    },
+}
+
+_INDIA_RESEARCH_SOURCES = [
+    {"name": "CERT-In", "url": "https://www.cert-in.org.in/", "use": "Indian national cyber-incident response and reporting guidance."},
+    {"name": "NPCI UPI safety", "url": "https://www.npci.org.in/product/upi/safety-features", "use": "UPI safety and fraud-awareness guidance."},
+    {"name": "National Cyber Crime Reporting Portal", "url": "https://www.cybercrime.gov.in/", "use": "Report suspected cybercrime in India."},
+    {"name": "RBI Sachet", "url": "https://sachet.rbi.org.in/", "use": "Report certain financial fraud and unauthorized activity concerns."},
+]
+
 
 class IndiaThreatIntel:
     @staticmethod
@@ -74,6 +124,35 @@ class IndiaThreatIntel:
 
         # Build findings
         findings: List[Dict[str, Any]] = []
+        causes: List[Dict[str, Any]] = []
+
+        def add_cause(cause_id: str, evidence: List[str], confidence: int) -> None:
+            cause = _INDIA_CAUSES[cause_id]
+            causes.append({
+                "cause_id": cause_id,
+                "title": cause["title"],
+                "description": cause["description"],
+                "evidence": evidence[:8],
+                "confidence": confidence,
+                "response": cause["response"],
+            })
+
+        if impersonated:
+            add_cause("trusted_brand_impersonation", [f"{b['brand']} ({b['category']})" for b in impersonated], 88)
+        if any(re.search(r"kyc|aadhaar|aadhar|pan\s*card|gst|identity", value, re.IGNORECASE) for value in scam_hits) or re.search(r"kyc|aadhaar|aadhar|pan\s*card|gst", full_text, re.IGNORECASE):
+            add_cause("kyc_identity_pressure", scam_hits or ["KYC/identity language"], 86)
+        if re.search(r"upi|pin|refund|cashback|payment|transaction", full_text, re.IGNORECASE):
+            add_cause("upi_payment_social_engineering", ["UPI/payment/refund language"], 82)
+        if re.search(r"urgent|immediately|within\s+\d+\s*(hour|minute)|suspend|block|expire|disconnect|penalt", full_text, re.IGNORECASE):
+            add_cause("urgency_and_fear", ["Urgency, blocking, expiry, or disconnection language"], 80)
+        if re.search(r"otp|one[- ]time password|password|passcode|login|sign[- ]?in|verify your", full_text, re.IGNORECASE):
+            add_cause("credential_or_otp_harvesting", ["Credential or verification language"], 84)
+        if hindi_hits:
+            add_cause("regional_language_targeting", hindi_hits, 68)
+        if re.search(r"sim|mobile number|telecom|deactivat", full_text, re.IGNORECASE):
+            add_cause("telecom_or_sim_swap", ["Telecom or SIM language"], 78)
+        if re.search(r"customs|courier|parcel|package|refund|cashback|lottery|prize", full_text, re.IGNORECASE):
+            add_cause("delivery_or_refund_lure", ["Delivery, refund, lottery, or prize language"], 76)
 
         if impersonated:
             findings.append({
@@ -127,6 +206,8 @@ class IndiaThreatIntel:
             "scam_patterns": scam_hits,
             "hindi_keywords": hindi_hits,
             "ist_timezone_anomaly": ist_anomaly,
+            "likely_causes": causes,
+            "research_sources": _INDIA_RESEARCH_SOURCES,
             "findings": findings,
         }
 

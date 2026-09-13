@@ -465,14 +465,14 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
             rule_result,
         )
 
+        india_threat_intel = IndiaThreatIntel.analyze(parsed_email)
         all_findings = (
             header_forensics.get("forensic_findings", [])
             + authentication.get("findings", [])
             + attachment_analysis.get("findings", [])
             + content_analysis.get("findings", [])
-            + IndiaThreatIntel.analyze(parsed_email).get("findings", [])
+            + india_threat_intel.get("findings", [])
         )
-        india_threat_intel = IndiaThreatIntel.analyze(parsed_email)
         extended_reasoning = ThreatReasoningEngine.generate_reasoning(
             risk_result["verdict"],
             risk_result["risk_score"],
@@ -508,6 +508,9 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
                 "Verify suspicious sender requests through an independent channel.",
                 "Do not interact with suspicious links or attachments.",
             ]))
+        india_actions = [cause["response"] for cause in india_threat_intel.get("likely_causes", [])]
+        if india_actions:
+            recommendations = list(dict.fromkeys([*recommendations, *india_actions]))
 
         evidence_integrity = {
             "raw_email_sha256": hashlib.sha256(raw_email).hexdigest(),
