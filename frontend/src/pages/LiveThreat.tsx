@@ -123,7 +123,15 @@ export default function LiveThreat() {
                     <span className="font-mono text-[9px] text-gray-500">{event.confidence}% Conf.</span>
                  </div>
                  <p className="text-xs font-semibold text-gray-200 truncate font-mono">{event.threatType}</p>
-                 <p className="text-[10px] text-gray-500 mt-0.5 font-mono">{event.country} · {event.source}</p>
+                 <p className="mt-0.5 truncate text-[10px] text-gray-500 font-mono">{event.country} · {event.city !== 'Not reported' ? `${event.city} · ` : ''}{event.source || 'Unknown source'}</p>
+                 <p className="mt-2 break-all text-[10px] text-cyan-300/80 font-mono">{event.indicator || 'Indicator not reported'}</p>
+                 <div className="mt-2 grid grid-cols-2 gap-2 border-t border-[#1b3037] pt-2 text-[9px] font-mono text-gray-500">
+                   <span>Malware: <strong className="font-normal text-gray-300">{event.malware || 'None reported'}</strong></span>
+                   <span>Status: <strong className="font-normal uppercase text-gray-300">{event.status || 'Unknown'}</strong></span>
+                   <span>First: <strong className="font-normal text-gray-300">{formatDate(event.first_seen || event.timestamp)}</strong></span>
+                   <span>Last: <strong className="font-normal text-gray-300">{formatDate(event.last_seen || event.timestamp)}</strong></span>
+                 </div>
+                 {!!event.tags?.length && <div className="mt-2 flex flex-wrap gap-1">{event.tags.slice(0, 3).map((tag) => <span key={tag} className="rounded border border-[#29454b] px-1.5 py-0.5 text-[9px] text-gray-400">{tag}</span>)}</div>}
                </button>
              ))}
           </div>

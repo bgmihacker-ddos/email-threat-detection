@@ -10,3 +10,8 @@ interface ImportMetaEnv {
 interface ImportMeta {
 	readonly env: ImportMetaEnv;
 }
+
+declare module 'world-atlas/countries-110m.json' {
+	const worldAtlas: { objects: { countries: unknown } };
+	export default worldAtlas;
+}
