@@ -201,6 +201,49 @@ class AbuseIPDBProvider(ThreatIntelProvider):
             return _result(self.name, value, indicator_type, "error", error="Provider request failed.")
 
 
+class PhishTankProvider(ThreatIntelProvider):
+    """PhishTank verified phishing URL lookup."""
+
+    def __init__(self) -> None:
+        super().__init__("PhishTank", settings.PHISHTANK_API_KEY)
+        self.supported_indicator_types = {"url"}
+
+    async def lookup(self, indicator_type: str, indicator: str, client: Optional[httpx.AsyncClient] = None) -> ProviderResult:
+        if not self.is_healthy():
+            return self.unavailable_result(indicator_type, indicator)
+        value = _normalize_indicator(indicator_type, indicator)
+        if indicator_type != "url" or not value:
+            return self.invalid_result(indicator_type, indicator)
+        payload = {"url": value, "format": "json", "app_key": self.api_key}
+        try:
+            if client is not None:
+                response = await client.post("https://checkurl.phishtank.com/checkurl/", data=payload)
+            else:
+                async with httpx.AsyncClient(timeout=_TIMEOUT) as local_client:
+                    response = await local_client.post("https://checkurl.phishtank.com/checkurl/", data=payload)
+            if response.status_code != 200:
+                return _result(self.name, value, indicator_type, "error", error="PhishTank request failed.")
+            data = response.json()
+            results = data.get("results") if isinstance(data, dict) else {}
+            is_phish = bool(results.get("in_database") and results.get("valid"))
+            reference = results.get("phish_detail_page") if isinstance(results, dict) else None
+            return _result(
+                self.name,
+                value,
+                indicator_type,
+                "ok",
+                "malicious" if is_phish else "unknown",
+                1 if is_phish else 0,
+                95 if is_phish else 0,
+                ["phishing"] if is_phish else [],
+                references=[str(reference)] if reference else [],
+            )
+        except httpx.TimeoutException:
+            return _result(self.name, value, indicator_type, "timeout", error="PhishTank lookup timed out.")
+        except (httpx.HTTPError, ValueError, TypeError):
+            return _result(self.name, value, indicator_type, "error", error="PhishTank response was unavailable or malformed.")
+
+
 class GoogleSafeBrowsingProvider(ThreatIntelProvider):
     """Google Safe Browsing v4 URL match lookup."""
 
@@ -317,11 +360,29 @@ class RDAPProvider(ThreatIntelProvider):
             if status:
                 return status
             payload = response.json()
+            events = payload.get("events") or []
+            registration_date = None
+            domain_age_days = None
+            for item in events:
+                if str(item.get("eventAction") or "").lower() == "registration":
+                    registration_date = item.get("eventDate")
+                    try:
+                        from datetime import datetime, timezone
+                        if registration_date:
+                            parsed = datetime.fromisoformat(str(registration_date).replace("Z", "+00:00"))
+                            domain_age_days = (datetime.now(timezone.utc) - parsed).days
+                    except (TypeError, ValueError):
+                        domain_age_days = None
+                    break
+
             return _result(self.name, value, indicator_type, "ok", categories=["registration"], references=[endpoint], metadata={
                 "name": payload.get("name"),
                 "ldh_name": payload.get("ldhName"),
                 "status": payload.get("status", []),
-                "events": payload.get("events", []),
+                "events": events,
+                "registration_date": registration_date,
+                "domain_age_days": domain_age_days,
+                "is_newly_registered": bool(domain_age_days is not None and domain_age_days < 30),
             })
         except httpx.TimeoutException:
             return _result(self.name, value, indicator_type, "timeout", error="RDAP lookup timed out.")
@@ -462,8 +523,11 @@ def _int(value: Any) -> int:
     except (TypeError, ValueError): return 0
 
 
-def _result(provider: str, indicator: str, indicator_type: str, status: str, reputation: str = "unknown", detections: int = 0, confidence: int = 0, categories: Optional[List[str]] = None, first_seen: Optional[str] = None, last_seen: Optional[str] = None, references: Optional[List[str]] = None, error: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> ProviderResult:
-    return {"provider": provider, "indicator": indicator, "indicator_type": indicator_type, "status": status, "reputation": reputation, "detections": detections, "confidence": confidence, "categories": categories or [], "first_seen": first_seen, "last_seen": last_seen, "references": references or [], "error": error, "metadata": metadata or {}}
+def _result(provider: str, indicator: str, indicator_type: str, status: str, reputation: str = "unknown", detections: int = 0, confidence: int = 0, categories: Optional[List[str]] = None, first_seen: Optional[str] = None, last_seen: Optional[str] = None, references: Optional[List[str]] = None, error: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None, fallback_used: bool = False) -> ProviderResult:
+    metadata = dict(metadata or {})
+    metadata.setdefault("provider_state", status)
+    metadata.setdefault("fallback_used", fallback_used)
+    return {"provider": provider, "indicator": indicator, "indicator_type": indicator_type, "status": status, "reputation": reputation, "detections": detections, "confidence": confidence, "categories": categories or [], "first_seen": first_seen, "last_seen": last_seen, "references": references or [], "error": error, "metadata": metadata, "fallback_used": fallback_used}
 
 
 class ThreatIntelligenceService:
@@ -474,7 +538,7 @@ class ThreatIntelligenceService:
     _CACHE_MAX_ENTRIES = 512
 
     # Global list of provider instances to preserve circuit breaker states across requests
-    _ALL_PROVIDERS = [VirusTotalProvider(), URLhausProvider(), ThreatFoxProvider(), AbuseIPDBProvider(), RDAPProvider(), CertificateTransparencyProvider(), CIRCLHashlookupProvider(), GoogleSafeBrowsingProvider(), AlienVaultOTXProvider()]
+    _ALL_PROVIDERS = [VirusTotalProvider(), URLhausProvider(), ThreatFoxProvider(), AbuseIPDBProvider(), RDAPProvider(), CertificateTransparencyProvider(), CIRCLHashlookupProvider(), GoogleSafeBrowsingProvider(), AlienVaultOTXProvider(), PhishTankProvider()]
     _GLOBAL_PROVIDERS = [
         provider for provider in _ALL_PROVIDERS
         if provider.name not in settings.DISABLED_THREAT_PROVIDERS

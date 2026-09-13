@@ -13,6 +13,8 @@ python-multipart
 python-dotenv
 httpx
 dnspython
+dkimpy
+pyspf
 
 python-jose[cryptography]
 passlib

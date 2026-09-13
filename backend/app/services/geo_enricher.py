@@ -153,6 +153,12 @@ class GeoEnricher:
                             "country_code": str(country_code) if country_code else None,
                             "city": data.get("city"),
                             "geo_source": source_label,
+                            "is_proxy": bool(data.get("proxy", False)),
+                            "is_hosting": bool(data.get("hosting", False)),
+                            "is_mobile": bool(data.get("mobile", False)),
+                            "isp": data.get("isp") or data.get("org") or data.get("as") or None,
+                            "org": data.get("org") or None,
+                            "asn": data.get("as") or None,
                         }
                         cls._cache[clean_ip] = result
                         return result

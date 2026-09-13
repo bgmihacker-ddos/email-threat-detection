@@ -97,10 +97,10 @@ export const searchPersistedIocs = async (value: string, type?: string) => {
   return apiFetch(`/api/analyses/iocs/search?${search}`, { headers: authHeaders() });
 };
 
-export const getReportUrl = (id: string, format: 'json' | 'html', includeRawEmail = false) =>
+export const getReportUrl = (id: string, format: 'json' | 'html' | 'pdf', includeRawEmail = false) =>
   `${BASE_URL}/api/analyze/${encodeURIComponent(id)}/report.${format}${includeRawEmail ? '?include_raw_email=true' : ''}`;
 
-export const downloadReport = async (id: string, format: 'json' | 'html') => {
+export const downloadReport = async (id: string, format: 'json' | 'html' | 'pdf') => {
   const response = await fetch(getReportUrl(id, format), { headers: authHeaders() });
   if (!response.ok) throw new Error('Report export failed');
   const blob = await response.blob();

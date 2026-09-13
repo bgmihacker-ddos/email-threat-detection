@@ -49,7 +49,13 @@ async def test_enrich_ip_success():
         "longitude": -97.822,
         "country_name": "United States",
         "country_code": "US",
-        "city": "Washington"
+        "city": "Washington",
+        "proxy": True,
+        "hosting": True,
+        "mobile": False,
+        "isp": "Google LLC",
+        "org": "Google Cloud",
+        "as": "AS15169 Google LLC"
     }
 
     with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get, \
@@ -62,6 +68,12 @@ async def test_enrich_ip_success():
         assert res["longitude"] == -97.822
         assert res["country"] == "United States"
         assert res["geo_source"] == "https://ipapi.co"
+        assert res["is_proxy"] is True
+        assert res["is_hosting"] is True
+        assert res["is_mobile"] is False
+        assert res["isp"] == "Google LLC"
+        assert res["org"] == "Google Cloud"
+        assert res["asn"] == "AS15169 Google LLC"
 
 
 @pytest.mark.asyncio

@@ -62,6 +62,7 @@ class Settings:
     VIRUSTOTAL_API_KEY = os.getenv("VIRUSTOTAL_API_KEY")
     URLSCAN_API_KEY = os.getenv("URLSCAN_API_KEY")
     GOOGLE_SAFE_BROWSING_API_KEY = os.getenv("GOOGLE_SAFE_BROWSING_API_KEY")
+    PHISHTANK_API_KEY = os.getenv("PHISHTANK_API_KEY")
     DISABLED_THREAT_PROVIDERS = {
         item.strip()
         for item in os.getenv("DISABLED_THREAT_PROVIDERS", "Google Safe Browsing").split(",")
@@ -71,6 +72,7 @@ class Settings:
     IPINFO_TOKEN = os.getenv("IPINFO_TOKEN")
     WHOIS_API_KEY = os.getenv("WHOIS_API_KEY")
     WHOIS_ENABLED = os.getenv("WHOIS_ENABLED", "false").lower() == "true"
+    LIVE_AUTH_VERIFICATION_ENABLED = os.getenv("LIVE_AUTH_VERIFICATION_ENABLED", "false").lower() == "true"
     GEOLOCATION_API_URL = os.getenv("GEOLOCATION_API_URL", "https://ipapi.co")
     GEOLOCATION_API_TIMEOUT_SECONDS = float(os.getenv("GEOLOCATION_API_TIMEOUT_SECONDS", "3"))
     MAX_EMAIL_BYTES = int(os.getenv("MAX_EMAIL_BYTES", str(25 * 1024 * 1024)))

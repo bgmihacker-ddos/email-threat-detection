@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, BackgroundTasks
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db, SessionLocal
@@ -43,6 +43,9 @@ from app.services.mitre_mapper import map_mitre_techniques
 from app.services.stix_exporter import export_stix_bundle
 from app.services.response_artifacts import generate_blocklist, generate_queries
 from app.services.alert_dispatcher import dispatch_analysis_alert
+from app.services.live_auth_verifier import verify_dkim, verify_spf
+from app.services.relay_path_builder import build_relay_path
+from app.services.pdf_report import generate_forensic_pdf
 from app.core.config import settings
 
 router = APIRouter()
@@ -299,6 +302,37 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
         parsed_email = EmailParser.parse_raw(raw_email)
         header_forensics = HeaderForensicsAnalyzer.analyze(parsed_email)
         authentication = AuthenticationAnalyzer.analyze(header_forensics, parsed_email)
+        live_authentication_timer = StageTimer(analysis_id, "live_authentication")
+        origin_ip = header_forensics.get("mail_flow", {}).get("origin_ip")
+        origin_hops = header_forensics.get("mail_flow", {}).get("hops", [])
+        origin_helo = origin_hops[-1].get("from_server") if origin_hops and isinstance(origin_hops[-1], dict) else None
+        sender_address = parsed_email.get("addresses", {}).get("from", {}).get("address") if isinstance(parsed_email.get("addresses"), dict) and isinstance(parsed_email.get("addresses", {}).get("from"), dict) else None
+        live_authentication = {
+            "dkim": await verify_dkim(raw_email),
+        }
+        if settings.LIVE_AUTH_VERIFICATION_ENABLED:
+            try:
+                live_authentication["spf"] = await asyncio.wait_for(
+                    asyncio.to_thread(verify_spf, origin_ip, sender_address, origin_helo),
+                    timeout=3.0,
+                )
+            except asyncio.TimeoutError:
+                live_authentication["spf"] = {
+                    "status": "timeout",
+                    "spf_live_result": "timeout",
+                    "verified_independently": False,
+                    "provider": "pyspf",
+                    "error": "SPF verification exceeded the bounded lookup timeout.",
+                }
+        else:
+            live_authentication["spf"] = {
+                "status": "unavailable",
+                "spf_live_result": "unavailable",
+                "verified_independently": False,
+                "provider": "pyspf",
+                "error": "Live SPF verification is disabled by configuration.",
+            }
+        stage_timings.append(live_authentication_timer.complete())
         authentication["verification_provenance"] = {
             mechanism: {
                 "source": "dns_policy_lookup" if authentication.get(mechanism, {}).get("verified") else "header_reported",
@@ -333,6 +367,7 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
             }
 
         ip_enrichment = await asyncio.gather(*(_enrich_ip(ip) for ip in observed_ips)) if observed_ips else []
+        relay_path = await build_relay_path(header_forensics)
         stage_timings.append(ip_enrichment_timer.complete())
         parsing_timer.item_count = len(extracted_iocs.get("iocs", []))
         stage_timings.append(parsing_timer.complete())
@@ -457,6 +492,7 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
             evidence=rule_result.get("evidence", []),
             detections=rule_result.get("detections", []),
             authentication=authentication,
+            live_authentication=live_authentication,
             forensic_findings=all_findings,
             threat_reasoning=rule_result.get("threat_reasoning", []),
             extended_reasoning=extended_reasoning,
@@ -470,6 +506,7 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
             url_analysis=url_analysis,
             domain_analysis=domain_analysis,
             ip_enrichment=ip_enrichment,
+            relay_path=relay_path,
             attachment_analysis=attachment_analysis,
             content_analysis=content_analysis,
             ml_analysis=ml_analysis,
@@ -803,3 +840,17 @@ def export_analysis_html(
     response = HTMLResponse(_render_report_html(record.id, payload, record.created_at))
     response.headers["Content-Disposition"] = f'inline; filename="analysis-{analysis_id}.html"'
     return response
+
+
+@router.get("/analyze/{analysis_id}/report.pdf")
+def export_analysis_pdf(analysis_id: str, db: Session = Depends(get_db)):
+    """Download a sanitized portable PDF forensic report."""
+    record = db.query(AnalysisResult).filter(AnalysisResult.id == analysis_id).first()
+    if record is None:
+        raise HTTPException(status_code=404, detail="Analysis not found.")
+    payload = _sanitize_result(_completed_result(record))
+    return StreamingResponse(
+        iter([generate_forensic_pdf(payload)]),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="analysis-{analysis_id}.pdf"'},
+    )

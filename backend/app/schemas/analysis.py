@@ -17,6 +17,7 @@ class EmailAnalysisSchema(BaseModel):
     attack_chain: List[str] = [] # backward compat
     email: Dict[str, Any]
     authentication: Dict[str, Any] = {} # expanded to Any for dict logic
+    live_authentication: Dict[str, Any] = {}
     iocs: Dict[str, Any] = {"urls": [], "domains": [], "ips": [], "attachments": []}
     extracted_iocs: Dict[str, Any] = {}
     threat_intelligence: List[Dict[str, Any]] = []
@@ -25,6 +26,7 @@ class EmailAnalysisSchema(BaseModel):
     url_analysis: List[Dict[str, Any]] = []
     domain_analysis: Dict[str, Any] = {}
     ip_enrichment: List[Dict[str, Any]] = []
+    relay_path: List[Dict[str, Any]] = []
     attachment_analysis: Dict[str, Any] = {}
     content_analysis: Dict[str, Any] = {}
     ml_analysis: Dict[str, Any] = {}

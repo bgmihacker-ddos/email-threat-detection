@@ -518,7 +518,16 @@ class EvidenceCorrelator:
                         scoring_eligible=False,
                         non_scoring_reason="no_explicit_verdict",
                     ))
-            elif status in ("timeout", "rate_limited", "not_found", "not_configured", "error"):
+            elif status in (
+                "timeout",
+                "rate_limited",
+                "not_found",
+                "not_configured",
+                "error",
+                "unavailable",
+                "skipped",
+                "circuit_broken",
+            ):
                 records.append(EvidenceRecord(
                     base_points=0,
                     title=f"{provider}: {status}",
@@ -527,7 +536,7 @@ class EvidenceCorrelator:
                     source_family="reputation",
                     confidence=30,
                     evidence_class="informational",
-                    evidence_refs=[f"status: {status}"],
+                    evidence_refs=[f"status: {status}", f"fallback_used: {str(data.get('fallback_used', False)).lower()}"] if isinstance(data, dict) else [f"status: {status}"],
                     severity="info",
                     scoring_eligible=False,
                     non_scoring_reason=status,

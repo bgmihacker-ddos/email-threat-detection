@@ -61,6 +61,8 @@ def test_persisted_analysis_includes_header_forensics():
     assert any(stage.startswith("whois:") for stage in timing_stages)
     assert persisted["header_forensics"]["mail_flow"]["hop_count"] == 1
     assert persisted["header_forensics"]["authentication_evidence"]["spf"]["status"] == "pass"
+    assert "live_authentication" in persisted
+    assert "relay_path" in persisted
 
 
 def test_persisted_analysis_explorer_dashboard_and_redacted_exports():
@@ -101,6 +103,11 @@ def test_persisted_analysis_explorer_dashboard_and_redacted_exports():
     assert html_report.status_code == 200
     assert "Forensic Analysis Report" in html_report.text
     assert "[redacted from export]" in html_report.text
+
+    pdf_report = client.get(f"/api/analyze/{analysis_id}/report.pdf")
+    assert pdf_report.status_code == 200
+    assert pdf_report.headers["content-type"].startswith("application/pdf")
+    assert pdf_report.content.startswith(b"%PDF-")
 
 
 def test_async_analysis_and_status_polling():

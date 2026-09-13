@@ -15,12 +15,16 @@ from app.services.threat_intelligence import (
     CertificateTransparencyProvider,
     AlienVaultOTXProvider,
     GoogleSafeBrowsingProvider,
+    PhishTankProvider,
     RDAPProvider,
     ThreatFoxProvider,
     ThreatIntelligenceService,
     URLhausProvider,
     VirusTotalProvider,
 )
+from app.integrations.shodan_internetdb import ShodanInternetDBService
+from app.integrations.spamhaus_dnsbl import SpamhausDNSBLService
+from app.integrations.tor_exit_nodes import TorExitNodeChecker
 
 
 @pytest.mark.asyncio
@@ -58,13 +62,23 @@ async def test_keyless_rdap_provider_returns_registration_context():
     provider = RDAPProvider()
     with patch("httpx.AsyncClient.get") as mock_get:
         response = MagicMock(status_code=200)
-        response.json.return_value = {"name": "example.com", "status": ["active"]}
+        response.json.return_value = {
+            "name": "example.com",
+            "status": ["active"],
+            "events": [
+                {"eventAction": "registration", "eventDate": "2024-01-15T00:00:00Z"},
+                {"eventAction": "last changed", "eventDate": "2025-02-20T00:00:00Z"},
+            ],
+        }
         mock_get.return_value = response
         result = await provider.lookup("domain", "example.com")
 
     assert result["status"] == "ok"
     assert result["reputation"] == "unknown"
     assert result["metadata"]["name"] == "example.com"
+    assert result["metadata"]["registration_date"] == "2024-01-15T00:00:00Z"
+    assert result["metadata"]["domain_age_days"] > 0
+    assert result["metadata"]["is_newly_registered"] is False
 
 
 @pytest.mark.asyncio
@@ -328,6 +342,27 @@ async def test_enrich_ioc_skips_unconfigured_providers():
     assert mock_b.await_count == 0
 
 
+def test_provider_health_failures_remain_truthful_evidence():
+    from app.detection.evidence_correlation import EvidenceCorrelator
+
+    records = EvidenceCorrelator._normalize_threat_intel(
+        {
+            "VirusTotal": {
+                "status": "circuit_broken",
+                "reputation": "unknown",
+                "fallback_used": True,
+            }
+        },
+        set(),
+        [],
+    )
+
+    assert len(records) == 1
+    assert records[0].scoring_eligible is False
+    assert records[0].non_scoring_reason == "circuit_broken"
+    assert "fallback_used: true" in " ".join(records[0].evidence_refs).lower()
+
+
 @pytest.mark.asyncio
 async def test_enrich_ioc_skips_circuit_broken_providers():
     provider = VirusTotalProvider()
@@ -367,3 +402,74 @@ def test_ioc_priority_prefers_infrastructure_and_threat_artifacts():
     assert ThreatIntelligenceService._ioc_priority(received_ip) > ThreatIntelligenceService._ioc_priority(ordinary_domain)
     assert ThreatIntelligenceService._ioc_priority(suspicious_url) > ThreatIntelligenceService._ioc_priority(ordinary_domain)
     assert ThreatIntelligenceService._ioc_priority(attachment_hash) > ThreatIntelligenceService._ioc_priority(ordinary_domain)
+
+
+@pytest.mark.asyncio
+async def test_shodan_internetdb_service_parses_open_ports_and_vulns():
+    service = ShodanInternetDBService()
+    with patch("httpx.AsyncClient.get") as mock_get:
+        mock_resp = MagicMock(status_code=200)
+        mock_resp.json.return_value = {
+            "ip": "1.2.3.4",
+            "hostnames": ["mail.example.com"],
+            "ports": [25, 443, 587],
+            "tags": ["cloud"],
+            "vulns": ["CVE-2021-44228"],
+            "cpes": ["cpe:/a:apache:http_server:2.4.41"],
+        }
+        mock_get.return_value = mock_resp
+
+        result = await service.lookup("1.2.3.4")
+
+    assert result["status"] == "ok"
+    assert result["has_smtp"] is True
+    assert result["vuln_count"] == 1
+    assert "cloud" in result["tags"]
+
+
+@pytest.mark.asyncio
+async def test_spamhaus_dnsbl_service_detects_blacklist_entry():
+    service = SpamhausDNSBLService()
+    with patch("dns.resolver.resolve") as mock_resolve:
+        mock_resolve.return_value = ["127.0.0.2"]
+
+        result = await service.check_ip("198.51.100.10")
+
+    assert result["is_blacklisted"] is True
+    assert result["blacklist_count"] == 1
+    assert result["listings"][0]["code"] == "127.0.0.2"
+
+
+@pytest.mark.asyncio
+async def test_tor_exit_node_checker_detects_known_exit_ip():
+    TorExitNodeChecker._cache.clear()
+    TorExitNodeChecker._cache.add("203.0.113.77")
+    TorExitNodeChecker._cache_time = 0
+
+    result = await TorExitNodeChecker.check_ip("203.0.113.77")
+
+    assert result["is_tor_exit_node"] is True
+    assert result["source"] == "torproject.org/torbulkexitlist"
+
+
+@pytest.mark.asyncio
+async def test_phishtank_provider_returns_malicious_when_verified():
+    with patch("app.services.threat_intelligence.settings.PHISHTANK_API_KEY", "test_pt_key"):
+        provider = PhishTankProvider()
+        with patch("httpx.AsyncClient.post") as mock_post:
+            mock_resp = MagicMock(status_code=200)
+            mock_resp.json.return_value = {
+                "results": {
+                    "in_database": True,
+                    "valid": True,
+                    "phish_detail_page": "https://phishtank.org/phish_detail.php?phish_id=1234",
+                }
+            }
+            mock_post.return_value = mock_resp
+
+            result = await provider.lookup("url", "https://example.com/phish")
+
+    assert result["status"] == "ok"
+    assert result["reputation"] == "malicious"
+    assert result["confidence"] == 95
+    assert result["categories"] == ["phishing"]
