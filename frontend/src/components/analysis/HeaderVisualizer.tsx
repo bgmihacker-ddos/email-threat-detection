@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowRight, ShieldCheck, ShieldAlert, Clock, Server } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Clock, Server } from "lucide-react";
 
 interface Hop {
   from?: string;

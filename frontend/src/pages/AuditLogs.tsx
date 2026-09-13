@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Shield, Search, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { apiFetch } from "../services/api";
 
 export const AuditLogs: React.FC = () => {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [total, setTotal] = useState(0);
-  const [offset, setOffset] = useState(0);
+  const [offset] = useState(0);
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -14,7 +13,6 @@ export const AuditLogs: React.FC = () => {
       const res = await apiFetch(`/api/audit?limit=50&offset=${offset}`);
       const data = await res.json();
       setLogs(data.items || []);
-      setTotal(data.total || 0);
     } catch (err) {
       console.error(err);
     } finally {

@@ -7,7 +7,11 @@ export function useWebSocketAlerts() {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    const configured = (import.meta.env.VITE_API_URL || 'https://email-threat-detection-1-w14g.onrender.com').replace(/^http/, 'ws').replace(/\/$/, '');
+    const configuredBaseUrl = import.meta.env.VITE_API_URL || '';
+    const baseUrl = import.meta.env.DEV && configuredBaseUrl.includes('email-threat-detection-1-w14g.onrender.com')
+      ? `${window.location.protocol}//${window.location.host}`
+      : configuredBaseUrl || (import.meta.env.DEV ? `${window.location.protocol}//${window.location.host}` : 'https://email-threat-detection-1-w14g.onrender.com');
+    const configured = baseUrl.replace(/^http/, 'ws').replace(/\/$/, '');
     const socket = new WebSocket(`${configured}/ws/alerts`);
     socket.onopen = () => setConnected(true);
     socket.onmessage = (event) => { try { setAlerts((current) => [JSON.parse(event.data), ...current].slice(0, 8)); } catch { /* Ignore malformed server frames. */ } };

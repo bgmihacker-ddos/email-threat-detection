@@ -16,6 +16,10 @@ interface Edge {
 }
 
 interface EvidenceGraphProps {
+  graph?: {
+    nodes?: Array<{ id: string; type: string; value: string; metadata?: any }>;
+    edges?: Array<{ source: string; target: string; relationship: string }>;
+  };
   evidenceGraph?: {
     nodes?: Array<{ id: string; type: string; value: string; metadata?: any }>;
     edges?: Array<{ source: string; target: string; relationship: string }>;
@@ -23,7 +27,7 @@ interface EvidenceGraphProps {
   analysisData?: any;
 }
 
-export const EvidenceGraph: React.FC<EvidenceGraphProps> = ({ evidenceGraph, analysisData }) => {
+export const EvidenceGraph: React.FC<EvidenceGraphProps> = ({ graph, evidenceGraph, analysisData }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedNode, setSelectedNode] = useState<any>(null);
 
@@ -31,8 +35,8 @@ export const EvidenceGraph: React.FC<EvidenceGraphProps> = ({ evidenceGraph, ana
     if (!containerRef.current) return;
 
     // Build nodes & edges from props or fallback to analysisData
-    const rawNodes = evidenceGraph?.nodes || [];
-    const rawEdges = evidenceGraph?.edges || [];
+    const rawNodes = (graph || evidenceGraph)?.nodes || [];
+    const rawEdges = (graph || evidenceGraph)?.edges || [];
 
     if (rawNodes.length === 0 && analysisData) {
       // Build from analysis data
@@ -89,8 +93,8 @@ export const EvidenceGraph: React.FC<EvidenceGraphProps> = ({ evidenceGraph, ana
   const renderNetwork = (nodes: Node[], edges: Edge[]) => {
     if (!containerRef.current) return;
     const data = {
-      nodes: new (window as any).vis.DataSet(nodes),
-      edges: new (window as any).vis.DataSet(edges),
+      nodes,
+      edges,
     };
     const options = {
       nodes: {

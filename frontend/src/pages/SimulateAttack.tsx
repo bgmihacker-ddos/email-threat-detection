@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Play, ShieldAlert, CheckCircle2, RefreshCw } from "lucide-react";
+import { Play, ShieldAlert, RefreshCw } from "lucide-react";
 import { apiFetch } from "../services/api";
 
 export const SimulateAttack: React.FC = () => {
