@@ -945,11 +945,11 @@ Check if the sender's domain has been involved in a data breach.
 - [x] 2.3 — Add optional `dkimpy`/`pyspf` live authentication verifier with truthful fallback states
 
 ### Phase 3 — Medium Priority
-- [ ] 3.1 — Install `vis-network`, create `EvidenceGraph.tsx` component
-- [ ] 3.2 — Add WebSocket endpoint to `main.py` + `useWebSocket.ts` hook
-- [ ] 3.3 — Create Case model, CRUD API, `Cases.tsx` + `CaseDetail.tsx` pages
-- [ ] 3.4 — Add trend API endpoints + Recharts components to Dashboard
-- [ ] 3.5 — Create `MitreHeatmap.tsx` component
+- [x] 3.1 — Create `EvidenceGraph.tsx` visualization using the persisted evidence graph
+- [x] 3.2 — Add WebSocket alert endpoint, broadcast manager, and `useWebSocket.ts` hook
+- [x] 3.3 — Create Case model, CRUD API, `Cases.tsx` + `CaseDetail.tsx` pages
+- [x] 3.4 — Add trend API endpoint and daily/country/authentication/attack-type dashboard charts
+- [x] 3.5 — Create `MitreHeatmap.tsx` component
 
 ### Phase 4 — Advanced
 - [ ] 4.1 — Install `transformers torch onnxruntime`, train DistilBERT, create `bert_classifier.py`

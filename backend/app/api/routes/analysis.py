@@ -3,12 +3,16 @@
 import asyncio
 import hashlib
 import html
-from app.services.stage_timing import StageTimer
+import io
 import json
 import uuid
 from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+from zipfile import ZIP_DEFLATED, ZipFile
+
+from app.services.stage_timing import StageTimer
+from app.services.audit import build_hash_manifest, create_evidence_audit_log
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
@@ -32,7 +36,9 @@ from app.services.content_analyzer import ContentAnalyzer
 from app.services.threat_reasoning import ThreatReasoningEngine
 from app.services.attack_chain import AttackChainReconstruction
 from app.detection.ml_classifier import get_ml_classifier
+from app.detection.bert_classifier import get_bert_classifier
 from app.services.sender_intelligence import SenderIntelligenceAnalyzer
+from app.services.india_threat_intel import IndiaThreatIntel
 from app.services.dns_intelligence import DNSIntelligenceService
 from app.services.whois_intelligence import WHOISIntelligenceService
 from app.services.geo_enricher import GeoEnricher
@@ -81,6 +87,20 @@ def _sanitize_result(result: Any, include_raw_email: bool = False) -> Dict[str, 
             if field in email:
                 email[field] = "[redacted from export]"
     return payload
+
+
+def _build_evidence_bundle(payload: Dict[str, Any], analysis_id: str) -> bytes:
+    """Build a zip bundle containing the JSON artifact and integrity manifest."""
+    manifest = create_evidence_audit_log(analysis_id, payload)
+    manifest_bytes = json.dumps(manifest, ensure_ascii=False, indent=2, default=str).encode("utf-8")
+    report_bytes = json.dumps(payload, ensure_ascii=False, indent=2, default=str).encode("utf-8")
+    evidence_hash = manifest.get("result_sha256") or hashlib.sha256(report_bytes).hexdigest()
+    memory_stream = io.BytesIO()
+    with ZipFile(memory_stream, "w", compression=ZIP_DEFLATED) as bundle:
+        bundle.writestr("analysis.json", report_bytes)
+        bundle.writestr("manifest.json", manifest_bytes)
+        bundle.writestr("sha256.txt", f"{evidence_hash}\n".encode("utf-8"))
+    return memory_stream.getvalue()
 
 
 def _analysis_summary(record: AnalysisResult) -> Dict[str, Any]:
@@ -392,6 +412,12 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
         stage_timings.append(content_timer.complete())
         ml_timer = StageTimer(analysis_id, "ml_inference")
         ml_analysis = get_ml_classifier().predict_email(parsed_email)
+        bert_analysis = get_bert_classifier().predict_email(parsed_email)
+        if bert_analysis.get("status") == "available":
+            ml_analysis["transformer_backup"] = bert_analysis
+            ml_analysis["feature_families"] = list(dict.fromkeys(
+                (ml_analysis.get("feature_families") or []) + (bert_analysis.get("feature_families") or [])
+            ))
         stage_timings.append(ml_timer.complete(
             "completed" if ml_analysis.get("status") not in {"unavailable", "error"} else ml_analysis.get("status"),
             ml_analysis.get("error"),
@@ -444,7 +470,9 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
             + authentication.get("findings", [])
             + attachment_analysis.get("findings", [])
             + content_analysis.get("findings", [])
+            + IndiaThreatIntel.analyze(parsed_email).get("findings", [])
         )
+        india_threat_intel = IndiaThreatIntel.analyze(parsed_email)
         extended_reasoning = ThreatReasoningEngine.generate_reasoning(
             risk_result["verdict"],
             risk_result["risk_score"],
@@ -481,6 +509,15 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
                 "Do not interact with suspicious links or attachments.",
             ]))
 
+        evidence_integrity = {
+            "raw_email_sha256": hashlib.sha256(raw_email).hexdigest(),
+            "analysis_id": analysis_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "retention_days": settings.RETENTION_DAYS,
+            "raw_email_export_masked": settings.MASK_RAW_EMAIL_EXPORTS,
+        }
+        evidence_integrity["hash_manifest"] = build_hash_manifest(analysis_id, {"evidence_integrity": evidence_integrity}, raw_email)
+
         analysis = EmailAnalysisSchema(
             analysis_id=analysis_id,
             verdict=risk_result["verdict"],
@@ -510,6 +547,7 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
             attachment_analysis=attachment_analysis,
             content_analysis=content_analysis,
             ml_analysis=ml_analysis,
+            india_threat_intel=india_threat_intel,
             risk_breakdown=risk_result["score_breakdown"],
             evidence_ledger=[
                 {**item, "analysis_id": analysis_id}
@@ -521,13 +559,7 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
             mitre_techniques=mitre_techniques,
             email=parsed_email,
             stage_timings=stage_timings,
-            evidence_integrity={
-                "raw_email_sha256": hashlib.sha256(raw_email).hexdigest(),
-                "analysis_id": analysis_id,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "retention_days": settings.RETENTION_DAYS,
-                "raw_email_export_masked": settings.MASK_RAW_EMAIL_EXPORTS,
-            },
+            evidence_integrity=evidence_integrity,
         )
         analysis.alert = await dispatch_analysis_alert(analysis.model_dump(mode="json"))
 
@@ -559,6 +591,9 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
         db_result.severity = analysis.severity
         db_result.confidence = analysis.confidence
         db_result.summary = analysis.summary
+        db_result.evidence_hash = analysis.evidence_integrity.get("hash_manifest", {}).get("files", {}).get("analysis.json")
+        db_result.chain_of_custody_id = analysis_id
+        db_result.hash_manifest = analysis.evidence_integrity.get("hash_manifest")
         analysis.stage_timings = stage_timings
         db_result.result = analysis.model_dump(mode="json")
         _persist_indicators(db, analysis_id, extracted_iocs)
@@ -780,6 +815,21 @@ def export_analysis_json(
     return JSONResponse(
         content=payload,
         headers={"Content-Disposition": f'attachment; filename="analysis-{analysis_id}.json"'},
+    )
+
+
+@router.get("/analyze/{analysis_id}/evidence-bundle.zip")
+def export_analysis_bundle(analysis_id: str, db: Session = Depends(get_db)):
+    """Download a tamper-evident evidence bundle with the JSON artifact and SHA-256 manifest."""
+    record = db.query(AnalysisResult).filter(AnalysisResult.id == analysis_id).first()
+    if record is None:
+        raise HTTPException(status_code=404, detail="Analysis not found.")
+    payload = _sanitize_result(_completed_result(record))
+    bundle = _build_evidence_bundle(payload, analysis_id)
+    return StreamingResponse(
+        iter([bundle]),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="analysis-{analysis_id}-bundle.zip"'},
     )
 
 

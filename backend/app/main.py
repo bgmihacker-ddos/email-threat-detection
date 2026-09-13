@@ -1,9 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import analysis, auth, dashboard, health, indicators, live_threats, threats, admin, password, google_auth
+from app.api.routes import analysis, auth, batch_analysis, cases, dashboard, health, indicators, live_threats, threats, admin, password, google_auth, simulate, iocs, audit
 from app.core.config import settings
 from app.database import init_db
+from app.realtime import alert_manager
 
 app = FastAPI(title=settings.APP_NAME, version="0.1.0", debug=settings.DEBUG)
 
@@ -27,7 +28,25 @@ app.include_router(threats.router, prefix="/api")
 app.include_router(indicators.router, prefix="/api")
 app.include_router(live_threats.router, prefix="/api")
 app.include_router(analysis.router, prefix="/api")
+app.include_router(batch_analysis.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
+app.include_router(cases.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(password.router, prefix="/api")
 app.include_router(google_auth.router, prefix="/api")
+app.include_router(simulate.router, prefix="/api")
+app.include_router(iocs.router, prefix="/api")
+app.include_router(audit.router, prefix="/api")
+app.include_router(simulate.router, prefix="/api")
+app.include_router(iocs.router, prefix="/api")
+app.include_router(audit.router, prefix="/api")
+
+
+@app.websocket("/ws/alerts")
+async def websocket_alerts(websocket: WebSocket):
+    await alert_manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        alert_manager.disconnect(websocket)

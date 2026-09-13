@@ -5,6 +5,7 @@ from typing import Any, Dict
 import httpx
 
 from app.core.config import settings
+from app.realtime import alert_manager
 
 
 async def dispatch_analysis_alert(analysis: Dict[str, Any]) -> Dict[str, Any]:
@@ -25,6 +26,7 @@ async def dispatch_analysis_alert(analysis: Dict[str, Any]) -> Dict[str, Any]:
         "summary": analysis.get("summary"),
         "evidence_count": len(analysis.get("evidence_ledger") or []),
     }
+    await alert_manager.broadcast(payload)
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(3.0, connect=1.0)) as client:
             response = await client.post(webhook_url, json=payload)

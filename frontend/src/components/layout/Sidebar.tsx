@@ -39,6 +39,7 @@ export function Sidebar() {
             <p className="mb-2 px-4 text-[9px] font-bold uppercase tracking-[0.2em] text-[#718581]">Workspace</p>
           <NavItem to="/" icon={LayoutDashboard} name="Dashboard" />
           <NavItem to="/analyze" icon={Mail} name="Analyze Email" />
+          <NavItem to="/batch-analysis" icon={FileText} name="Batch Analysis" />
         </div>
 
         <div className="space-y-1">
@@ -57,6 +58,8 @@ export function Sidebar() {
         <div className="space-y-1">
             <p className="mb-2 px-4 text-[9px] font-bold uppercase tracking-[0.2em] text-[#718581]">Workspace controls</p>
           <NavItem to="/settings" icon={Settings} name="Settings" />
+          <NavItem to="/simulate" icon={ShieldAlert} name="Simulate Attack" />
+          <NavItem to="/audit-logs" icon={FileText} name="Audit Logs" />
         </div>
 
         {isAdmin && (

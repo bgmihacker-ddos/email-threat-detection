@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.models.analysis import AnalysisResult
+from app.services.dashboard_trends import build_trends
 
 router = APIRouter()
 
@@ -133,3 +134,15 @@ def get_dashboard_summary(
         "recent_analyses": [_summary(record) for record in records[:recent_limit]],
         "data_source": "persisted_local_analyses",
     }
+
+
+@router.get("/dashboard/trends")
+def get_dashboard_trends(db: Session = Depends(get_db)):
+    records = (
+        db.query(AnalysisResult)
+        .filter(AnalysisResult.status.in_(["completed", "partial"]))
+        .order_by(AnalysisResult.created_at.desc())
+        .limit(1000)
+        .all()
+    )
+    return build_trends(records)

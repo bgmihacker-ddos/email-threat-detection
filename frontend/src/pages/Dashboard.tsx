@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, PieChart, Pie, Cell } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { ArrowRight, MailSearch, Shield, Activity, Database, Clock, ChevronRight, Terminal } from 'lucide-react';
 import { SeverityBadge } from '../components/common/SeverityBadge';
 import { MetricCard } from '../components/common/MetricCard';
 import { SecurityEnvironmentBackground } from '../components/common/SecurityEnvironmentBackground';
-import { DashboardSummary, getDashboardSummary } from '../services/analysisApi';
+import { DashboardSummary, DashboardTrends, getDashboardSummary, getDashboardTrends } from '../services/analysisApi';
+import { useWebSocketAlerts } from '../hooks/useWebSocket';
 
 const EMPTY_SUMMARY: DashboardSummary = {
   metrics: { total_analyses: 0, flagged_analyses: 0, malicious_analyses: 0, average_risk_score: 0 },
@@ -31,12 +32,15 @@ export default function Dashboard() {
   const [summary, setSummary] = useState<DashboardSummary>(EMPTY_SUMMARY);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [trends, setTrends] = useState<DashboardTrends | null>(null);
+  const { alerts, connected } = useWebSocketAlerts();
 
   useEffect(() => {
     getDashboardSummary()
       .then(setSummary)
       .catch(() => setError('Forensic dashboard metrics are currently unavailable.'))
       .finally(() => setLoading(false));
+    getDashboardTrends().then(setTrends).catch(() => setTrends(null));
   }, []);
 
   const totalIOCs = summary.top_indicators.reduce((acc, curr) => acc + curr.count, 0);
@@ -214,6 +218,17 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+      </section>
+
+      <section className="relative z-10 grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <div className="dashboard-panel rounded-lg border border-[#1b3037] bg-[#101b21]/90 p-5"><SectionTitle eyebrow="ORIGIN ANALYSIS" title="Top countries" /><ResponsiveContainer width="100%" height={180}><BarChart data={trends?.countries || []} layout="vertical"><XAxis type="number" allowDecimals={false} hide /><YAxis type="category" dataKey="name" width={82} tick={{ fill: '#94a3b8', fontSize: 10 }} /><Tooltip contentStyle={tooltipStyle} /><Bar dataKey="count" fill="#22d3ee" radius={[0, 3, 3, 0]} /></BarChart></ResponsiveContainer></div>
+        <div className="dashboard-panel rounded-lg border border-[#1b3037] bg-[#101b21]/90 p-5"><SectionTitle eyebrow="TRUST ANALYSIS" title="Authentication results" /><div className="mt-4 space-y-3">{['spf', 'dkim', 'dmarc'].map((name) => <div key={name} className="flex items-center justify-between border-b border-[#1b3037] pb-2 text-xs"><span className="font-mono uppercase text-gray-400">{name}</span><span className="font-mono text-gray-300">{Object.entries(trends?.auth_results?.[name] || {}).map(([status, count]) => `${status}: ${count}`).join(' · ') || 'no observations'}</span></div>)}</div></div>
+        <div className="dashboard-panel rounded-lg border border-[#1b3037] bg-[#101b21]/90 p-5"><SectionTitle eyebrow="ATTACK TAXONOMY" title="Observed attack types" /><div className="mt-4 space-y-2">{(trends?.attack_types || []).slice(0, 6).map((item) => <div key={item.name} className="flex items-center justify-between rounded bg-[#081216] px-3 py-2 text-xs"><span className="truncate text-gray-300">{item.name}</span><span className="font-mono text-cyan-300">{item.count}</span></div>)}{!trends?.attack_types?.length && <EmptyState text="No attack types observed yet." />}</div></div>
+      </section>
+
+      <section className="relative z-10 grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <div className="dashboard-panel xl:col-span-8 rounded-lg border border-[#1b3037] bg-[#101b21]/90 p-5"><SectionTitle eyebrow="TREND TELEMETRY" title="Thirty-day investigation trend" /><div className="mt-4"><ResponsiveContainer width="100%" height={220}><LineChart data={trends?.daily || []}><XAxis dataKey="date" tick={{ fill: '#64748B', fontSize: 10 }} /><YAxis allowDecimals={false} tick={{ fill: '#64748B', fontSize: 10 }} /><Tooltip contentStyle={tooltipStyle} /><Line type="monotone" dataKey="analyses" stroke="#22d3ee" strokeWidth={2} dot={false} /><Line type="monotone" dataKey="flagged" stroke="#f59e0b" strokeWidth={2} dot={false} /></LineChart></ResponsiveContainer></div></div>
+        <div className="dashboard-panel xl:col-span-4 rounded-lg border border-[#1b3037] bg-[#101b21]/90 p-5"><SectionTitle eyebrow="LIVE ALERTS" title={connected ? 'WebSocket connected' : 'WebSocket unavailable'} /><div className="mt-4 space-y-2">{alerts.length ? alerts.map((alert, index) => <div key={`${alert.analysis_id}-${index}`} className="rounded border border-red-900/50 bg-red-950/20 p-3 text-xs"><p className="font-mono text-red-300">{alert.verdict || 'alert'} · {alert.risk_score ?? '—'}/100</p><p className="mt-1 text-gray-300">{alert.summary || alert.analysis_id}</p></div>) : <EmptyState text="No live alerts received in this session." />}</div></div>
       </section>
 
       {/* Recent Investigation Queue Table */}

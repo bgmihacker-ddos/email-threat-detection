@@ -90,5 +90,9 @@ class Settings:
     ALERT_WEBHOOK_URL = os.getenv("ALERT_WEBHOOK_URL")
     FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
+    ALCHEMY_RPC_URL = os.getenv("ALCHEMY_RPC_URL")
+    BLOCKCHAIN_CONTRACT_ADDRESS = os.getenv("BLOCKCHAIN_CONTRACT_ADDRESS")
+    BLOCKCHAIN_WALLET_PRIVATE_KEY = os.getenv("BLOCKCHAIN_WALLET_PRIVATE_KEY")
+
 
 settings = Settings()

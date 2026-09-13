@@ -29,6 +29,7 @@ class EmailAnalysisSchema(BaseModel):
     relay_path: List[Dict[str, Any]] = []
     attachment_analysis: Dict[str, Any] = {}
     content_analysis: Dict[str, Any] = {}
+    india_threat_intel: Dict[str, Any] = {}
     ml_analysis: Dict[str, Any] = {}
     risk_breakdown: List[Dict[str, Any]] = []
     evidence_ledger: List[Dict[str, Any]] = []

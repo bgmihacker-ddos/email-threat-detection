@@ -9,6 +9,7 @@ import Callback from './pages/Callback';
 import Signup from './pages/Signup';
 import LiveThreat from './pages/LiveThreat';
 import AnalyzeEmail from './pages/AnalyzeEmail';
+import BatchAnalysis from './pages/BatchAnalysis';
 import AnalysisResult from './pages/AnalysisResult';
 import Threats from './pages/Threats';
 import ThreatDetail from './pages/ThreatDetail';
@@ -16,6 +17,10 @@ import Indicators from './pages/Indicators';
 import EmailHistory from './pages/EmailHistory';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import Cases from './pages/Cases';
+import CaseDetail from './pages/CaseDetail';
+import { SimulateAttack } from './pages/SimulateAttack';
+import { AuditLogs as UserAuditLogs } from './pages/AuditLogs';
 
 import AdminOverview from './pages/admin/AdminOverview';
 import Users from './pages/admin/Users';
@@ -56,6 +61,7 @@ function AppContent() {
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/analyze" element={<AnalyzeEmail />} />
+                    <Route path="/batch-analysis" element={<BatchAnalysis />} />
                     <Route path="/analysis/:id" element={<AnalysisResult />} />
                     <Route path="/live-threat" element={<LiveThreat />} />
                     <Route path="/threats" element={<Threats />} />
@@ -63,6 +69,10 @@ function AppContent() {
                     <Route path="/indicators" element={<Indicators />} />
                     <Route path="/history" element={<EmailHistory />} />
                     <Route path="/reports" element={<Reports />} />
+                    <Route path="/cases" element={<Cases />} />
+                    <Route path="/cases/:id" element={<CaseDetail />} />
+                    <Route path="/simulate" element={<SimulateAttack />} />
+                    <Route path="/audit-logs" element={<UserAuditLogs />} />
                 </Route>
 
                 <Route path="/settings" element={<RoleBasedSettings />} />

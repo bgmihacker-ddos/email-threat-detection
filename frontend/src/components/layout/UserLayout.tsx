@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, MailSearch, ShieldAlert, History, Settings,
+  LayoutDashboard, MailSearch, ShieldAlert, History, Settings, FolderKanban,
   Globe2, BarChart3, LogOut, Activity, Radar
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -79,6 +79,7 @@ function UserSidebar({ collapsed, onToggle }: { collapsed: boolean, onToggle: ()
         <NavGroup label="Investigations" collapsed={collapsed}>
           <NavItem to="/history" icon={History} name="History" collapsed={collapsed} />
           <NavItem to="/reports" icon={BarChart3} name="Reports" collapsed={collapsed} />
+          <NavItem to="/cases" icon={FolderKanban} name="Cases" collapsed={collapsed} />
         </NavGroup>
 
         <NavGroup label="Platform" collapsed={collapsed}>

@@ -20,6 +20,9 @@ class AnalysisResult(Base):
     severity = Column(String(32), nullable=True, index=True)
     confidence = Column(Integer, nullable=True)
     summary = Column(String(1000), nullable=True)
+    evidence_hash = Column(String(128), nullable=True, index=True)
+    chain_of_custody_id = Column(String(128), nullable=True, index=True)
+    hash_manifest = Column(JSON, nullable=True)
     result = Column(JSON, nullable=True)
 
     started_at = Column(
