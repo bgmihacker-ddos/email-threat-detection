@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { analyzeEmail, getAnalysisStatus } from '../services/analysisApi';
+import { analyzeEmail, getAnalysisStatus, getGmailInboxStatus, listGmailMessages, scanGmailMessage, type GmailMessage } from '../services/analysisApi';
 import {
   FileUp, X, MailSearch, FileText, ShieldCheck, ArrowRight,
-  AlertTriangle, CheckCircle2, Clock3, Cpu, Globe, Binary, Layers, Radar, Zap
+  AlertTriangle, CheckCircle2, Clock3, Cpu, Globe, Binary, Layers, Radar, Zap, Inbox, RefreshCw, ScanSearch
 } from 'lucide-react';
 
 const SCAN_STAGES = [
@@ -56,8 +56,35 @@ export default function AnalyzeEmail() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [gmailConnected, setGmailConnected] = useState(false);
+  const [gmailMessages, setGmailMessages] = useState<GmailMessage[]>([]);
+  const [isLoadingGmail, setIsLoadingGmail] = useState(false);
+  const [scanningGmailId, setScanningGmailId] = useState<string | null>(null);
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const loadGmailMessages = async () => {
+    setIsLoadingGmail(true);
+    setError(null);
+    try {
+      const status = await getGmailInboxStatus();
+      setGmailConnected(status.connected);
+      if (status.connected) {
+        const result = await listGmailMessages();
+        setGmailMessages(result.messages);
+      } else {
+        setGmailMessages([]);
+      }
+    } catch (reason: any) {
+      setError(reason?.message || 'Could not load Gmail messages.');
+    } finally {
+      setIsLoadingGmail(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadGmailMessages();
+  }, []);
 
   useEffect(() => {
     if (!isAnalyzing || !startedAt) return;
@@ -141,6 +168,19 @@ export default function AnalyzeEmail() {
 
   const handleAnalyze = () => startAnalysis(emailContent, file || undefined);
 
+  const handleGmailScan = async (message: GmailMessage) => {
+    setScanningGmailId(message.id);
+    setError(null);
+    try {
+      const result = await scanGmailMessage(message.id);
+      navigate(`/analysis/${result.analysis_id}`);
+    } catch (reason: any) {
+      setError(reason?.message || 'Could not queue the Gmail message for analysis.');
+    } finally {
+      setScanningGmailId(null);
+    }
+  };
+
   const loadScenario = (scenario: DemoScenario) => {
     setInputMode('mime');
     setActiveScenario(scenario.name);
@@ -185,6 +225,36 @@ export default function AnalyzeEmail() {
         <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.18em] text-amber-300">
           <Zap size={13} /> Demo attack scenarios · one click to load and scan
         </div>
+      </section>
+
+      <section className="rounded-xl border border-[#29454b] bg-[#101b21]/90 p-5 shadow-[0_18px_45px_rgba(2,12,15,0.2)]">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="rounded border border-[#3b5e60] bg-[#142b2d] p-2.5 text-[#58d6c0]"><Inbox size={19} /></div>
+            <div>
+              <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-[#58d6c0]">GMAIL INBOX · READ ONLY</p>
+              <h2 className="mt-1 text-base font-semibold text-gray-100">Choose an unread email to scan</h2>
+              <p className="mt-1 text-xs text-gray-400">Select one message and send its original MIME source to the forensic pipeline.</p>
+            </div>
+          </div>
+          <button type="button" onClick={() => void loadGmailMessages()} disabled={isLoadingGmail} className="inline-flex items-center justify-center gap-2 rounded border border-[#3b5e60] px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-[#8ce2d0] hover:bg-[#183235] disabled:opacity-50">
+            <RefreshCw size={13} className={isLoadingGmail ? 'animate-spin' : ''} /> Refresh inbox
+          </button>
+        </div>
+        {!gmailConnected && !isLoadingGmail && <p className="mt-4 rounded border border-amber-700/40 bg-amber-950/20 p-3 text-xs font-mono text-amber-200">Connect Google with Gmail read access first, then return here to choose a message.</p>}
+        {gmailConnected && !isLoadingGmail && gmailMessages.length === 0 && <p className="mt-4 rounded border border-[#29454b] bg-[#081216] p-3 text-xs font-mono text-gray-500">No unread Gmail messages are available.</p>}
+        {gmailMessages.length > 0 && <div className="mt-4 space-y-2">
+          {gmailMessages.map((message) => <div key={message.id} className="flex flex-col gap-3 rounded border border-[#29454b] bg-[#081216] p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="truncate text-xs font-semibold text-gray-100">{message.subject}</p>
+              <p className="mt-1 truncate font-mono text-[10px] text-[#8ce2d0]">{message.sender}</p>
+              <p className="mt-1 truncate text-[11px] text-gray-500">{message.snippet || 'No preview available.'}</p>
+            </div>
+            <button type="button" onClick={() => void handleGmailScan(message)} disabled={scanningGmailId !== null || isAnalyzing} className="inline-flex shrink-0 items-center justify-center gap-2 rounded bg-[#58d6c0] px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-wider text-[#09201e] hover:bg-[#82e5d2] disabled:cursor-wait disabled:opacity-50">
+              <ScanSearch size={13} /> {scanningGmailId === message.id ? 'Queueing...' : 'Scan email'}
+            </button>
+          </div>)}
+        </div>}
       </section>
 
       {/* Primary Intake Grid */}

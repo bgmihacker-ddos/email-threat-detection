@@ -105,6 +105,21 @@ export const getGmailInboxStatus = async (): Promise<{ connected: boolean; provi
 export const syncGmailInbox = async (limit = 10): Promise<{ batch_id: string; provider: string; total: number; queued: Array<{ analysis_id: string; status: string }> }> =>
   apiFetch(`/api/inbox/gmail/sync?limit=${limit}`, { method: 'POST', headers: authHeaders() });
 
+export interface GmailMessage {
+  id: string;
+  thread_id?: string;
+  subject: string;
+  sender: string;
+  date?: string;
+  snippet: string;
+}
+
+export const listGmailMessages = async (limit = 10): Promise<{ messages: GmailMessage[]; total: number }> =>
+  apiFetch(`/api/inbox/gmail/messages?limit=${limit}`, { headers: authHeaders() });
+
+export const scanGmailMessage = async (messageId: string): Promise<{ analysis_id: string; status: string; message_id: string }> =>
+  apiFetch(`/api/inbox/gmail/messages/${encodeURIComponent(messageId)}/scan`, { method: 'POST', headers: authHeaders() });
+
 export const getAnalysisById = async (id: string): Promise<any> =>
   apiFetch(`/api/analyze/${encodeURIComponent(id)}`, { headers: authHeaders() });
 

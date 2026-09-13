@@ -78,10 +78,90 @@ async def _gmail_raw_messages(access_token: str, limit: int) -> list[bytes]:
         return raw_messages
 
 
+async def _gmail_message_ids(access_token: str, limit: int) -> list[str]:
+    headers = {"Authorization": f"Bearer {access_token}"}
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        listing = await client.get(
+            "https://gmail.googleapis.com/gmail/v1/users/me/messages",
+            headers=headers,
+            params={"labelIds": "UNREAD", "maxResults": limit},
+        )
+    if listing.status_code == 401:
+        raise HTTPException(status_code=409, detail="Gmail authorization is no longer valid. Reconnect the mailbox.")
+    if listing.status_code != 200:
+        raise HTTPException(status_code=502, detail="Gmail message listing failed.")
+    return [item["id"] for item in listing.json().get("messages", []) if item.get("id")]
+
+
+async def _gmail_message(access_token: str, message_id: str, format_name: str = "raw") -> dict[str, Any]:
+    headers = {"Authorization": f"Bearer {access_token}"}
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        response = await client.get(
+            f"https://gmail.googleapis.com/gmail/v1/users/me/messages/{message_id}",
+            headers=headers,
+            params={"format": format_name, "metadataHeaders": ["Subject", "From", "Date"]},
+        )
+    if response.status_code == 401:
+        raise HTTPException(status_code=409, detail="Gmail authorization is no longer valid. Reconnect the mailbox.")
+    if response.status_code == 404:
+        raise HTTPException(status_code=404, detail="Gmail message was not found.")
+    if response.status_code != 200:
+        raise HTTPException(status_code=502, detail="Gmail message retrieval failed.")
+    return response.json()
+
+
+def _message_headers(message: dict[str, Any]) -> dict[str, str]:
+    return {
+        str(header.get("name", "")).lower(): str(header.get("value", ""))
+        for header in message.get("payload", {}).get("headers", [])
+    }
+
+
 @router.get("/gmail/status")
 def gmail_status(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     account = db.query(AuthAccount).filter(AuthAccount.user_id == current_user.id, AuthAccount.provider == "google").first()
     return {"connected": bool(account and account.access_token_encrypted), "provider": "gmail", "scope": account.token_scope if account else None, "expires_at": account.token_expires_at.isoformat() if account and account.token_expires_at else None}
+
+
+@router.get("/gmail/messages")
+async def gmail_messages(limit: int = Query(10, ge=1, le=25), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    account = db.query(AuthAccount).filter(AuthAccount.user_id == current_user.id, AuthAccount.provider == "google").first()
+    if not account or not account.access_token_encrypted:
+        raise HTTPException(status_code=409, detail="Connect a Gmail account before browsing messages.")
+    access_token = await _get_access_token(account, db)
+    message_ids = await _gmail_message_ids(access_token, limit)
+    messages: list[dict[str, Any]] = []
+    for message_id in message_ids:
+        message = await _gmail_message(access_token, message_id, "metadata")
+        headers = _message_headers(message)
+        messages.append({
+            "id": message_id,
+            "thread_id": message.get("threadId"),
+            "subject": headers.get("subject") or "(no subject)",
+            "sender": headers.get("from") or "(unknown sender)",
+            "date": headers.get("date"),
+            "snippet": message.get("snippet") or "",
+        })
+    return {"messages": messages, "total": len(messages)}
+
+
+@router.post("/gmail/messages/{message_id}/scan")
+async def scan_gmail_message(message_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    account = db.query(AuthAccount).filter(AuthAccount.user_id == current_user.id, AuthAccount.provider == "google").first()
+    if not account or not account.access_token_encrypted:
+        raise HTTPException(status_code=409, detail="Connect a Gmail account before scanning messages.")
+    access_token = await _get_access_token(account, db)
+    message = await _gmail_message(access_token, message_id)
+    raw_value = message.get("raw")
+    if not raw_value:
+        raise HTTPException(status_code=422, detail="Gmail did not return the message source.")
+    raw_email = base64.urlsafe_b64decode(raw_value + "=" * (-len(raw_value) % 4))
+    analysis_id = str(uuid.uuid4())
+    db.add(AnalysisResult(id=analysis_id, status="queued", current_stage="Queued from Gmail message", progress_percent=5))
+    db.add(AnalysisJob(analysis_id=analysis_id, payload=raw_email))
+    db.commit()
+    asyncio.create_task(_background_analysis_task(analysis_id))
+    return {"analysis_id": analysis_id, "status": "queued", "message_id": message_id}
 
 
 @router.post("/gmail/sync")
