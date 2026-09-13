@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { analyzeEmail, getAnalysisStatus, getGmailInboxStatus, listGmailMessages, scanGmailMessage, type GmailMessage } from '../services/analysisApi';
+import { BASE_URL } from '../services/api';
 import {
   FileUp, X, MailSearch, FileText, ShieldCheck, ArrowRight,
   AlertTriangle, CheckCircle2, Clock3, Cpu, Globe, Binary, Layers, Radar, Zap, Inbox, RefreshCw, ScanSearch
@@ -181,6 +182,10 @@ export default function AnalyzeEmail() {
     }
   };
 
+  const connectGoogle = () => {
+    window.location.assign(`${BASE_URL}/api/auth/google/login`);
+  };
+
   const loadScenario = (scenario: DemoScenario) => {
     setInputMode('mime');
     setActiveScenario(scenario.name);
@@ -237,11 +242,13 @@ export default function AnalyzeEmail() {
               <p className="mt-1 text-xs text-gray-400">Select one message and send its original MIME source to the forensic pipeline.</p>
             </div>
           </div>
-          <button type="button" onClick={() => void loadGmailMessages()} disabled={isLoadingGmail} className="inline-flex items-center justify-center gap-2 rounded border border-[#3b5e60] px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-[#8ce2d0] hover:bg-[#183235] disabled:opacity-50">
+          {gmailConnected ? <button type="button" onClick={() => void loadGmailMessages()} disabled={isLoadingGmail} className="inline-flex items-center justify-center gap-2 rounded border border-[#3b5e60] px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-[#8ce2d0] hover:bg-[#183235] disabled:opacity-50">
             <RefreshCw size={13} className={isLoadingGmail ? 'animate-spin' : ''} /> Refresh inbox
-          </button>
+          </button> : <button type="button" onClick={connectGoogle} className="inline-flex items-center justify-center gap-2 rounded bg-[#58d6c0] px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-wider text-[#09201e] hover:bg-[#82e5d2]">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-bold text-[#4285f4]">G</span> Connect Google &amp; Gmail
+          </button>}
         </div>
-        {!gmailConnected && !isLoadingGmail && <p className="mt-4 rounded border border-amber-700/40 bg-amber-950/20 p-3 text-xs font-mono text-amber-200">Connect Google with Gmail read access first, then return here to choose a message.</p>}
+        {!gmailConnected && !isLoadingGmail && <p className="mt-4 rounded border border-amber-700/40 bg-amber-950/20 p-3 text-xs font-mono text-amber-200">Connect Google with Gmail read access to choose a message from your inbox.</p>}
         {gmailConnected && !isLoadingGmail && gmailMessages.length === 0 && <p className="mt-4 rounded border border-[#29454b] bg-[#081216] p-3 text-xs font-mono text-gray-500">No messages are available in the Gmail inbox.</p>}
         {gmailMessages.length > 0 && <div className="mt-4 space-y-2">
           {gmailMessages.map((message) => <div key={message.id} className="flex flex-col gap-3 rounded border border-[#29454b] bg-[#081216] p-3 sm:flex-row sm:items-center sm:justify-between">
