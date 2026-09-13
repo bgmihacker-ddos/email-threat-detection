@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Callback from './pages/Callback';
 import Signup from './pages/Signup';
+import { PrivacyPolicy, TermsOfService } from './pages/Legal';
 import LiveThreat from './pages/LiveThreat';
 import AnalyzeEmail from './pages/AnalyzeEmail';
 import BatchAnalysis from './pages/BatchAnalysis';
@@ -55,6 +56,8 @@ function AppContent() {
             <Route path="/login" element={<Login />} />
             <Route path="/auth/callback" element={<Callback />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/policy" element={<PrivacyPolicy />} />
+            <Route path="/service" element={<TermsOfService />} />
 
             <Route element={<ProtectedRoute />}>
                 <Route element={<UserLayout children={<Outlet />} />}>
