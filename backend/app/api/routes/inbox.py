@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
@@ -167,7 +167,7 @@ async def gmail_messages(limit: int = Query(10, ge=1, le=25), current_user: User
 
 
 @router.post("/gmail/messages/{message_id}/scan")
-async def scan_gmail_message(message_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def scan_gmail_message(message_id: str, background_tasks: BackgroundTasks, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     account = db.query(AuthAccount).filter(AuthAccount.user_id == current_user.id, AuthAccount.provider == "google").first()
     if not account or not account.access_token_encrypted:
         raise HTTPException(status_code=409, detail="Connect a Gmail account before scanning messages.")
@@ -182,7 +182,7 @@ async def scan_gmail_message(message_id: str, current_user: User = Depends(get_c
     db.add(AnalysisResult(id=analysis_id, status="queued", current_stage="Queued from Gmail message", progress_percent=5))
     db.add(AnalysisJob(analysis_id=analysis_id, payload=raw_email))
     db.commit()
-    asyncio.create_task(_background_analysis_task(analysis_id))
+    background_tasks.add_task(_background_analysis_task, analysis_id)
     return {"analysis_id": analysis_id, "status": "queued", "message_id": message_id}
 
 
