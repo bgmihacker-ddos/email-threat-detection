@@ -148,9 +148,12 @@ async def gmail_messages(limit: int = Query(10, ge=1, le=25), current_user: User
     _require_gmail_scope(account)
     access_token = await _get_access_token(account, db)
     message_ids = await _gmail_message_ids(access_token, limit)
+    message_payloads = await asyncio.gather(*[
+        _gmail_message(access_token, message_id, "metadata")
+        for message_id in message_ids
+    ])
     messages: list[dict[str, Any]] = []
-    for message_id in message_ids:
-        message = await _gmail_message(access_token, message_id, "metadata")
+    for message_id, message in zip(message_ids, message_payloads):
         headers = _message_headers(message)
         messages.append({
             "id": message_id,

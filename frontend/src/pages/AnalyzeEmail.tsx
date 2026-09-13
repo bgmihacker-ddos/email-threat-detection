@@ -72,7 +72,10 @@ export default function AnalyzeEmail() {
       const canReadGmail = status.connected && status.gmail_readonly;
       setGmailConnected(canReadGmail);
       if (canReadGmail) {
-        const result = await listGmailMessages();
+        const result = await Promise.race([
+          listGmailMessages(),
+          new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('Gmail inbox request timed out. Please try Refresh inbox again.')), 30000)),
+        ]);
         setGmailMessages(result.messages);
       } else {
         setGmailMessages([]);
