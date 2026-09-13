@@ -173,11 +173,37 @@ export default function AnalyzeEmail() {
   const handleGmailScan = async (message: GmailMessage) => {
     setScanningGmailId(message.id);
     setError(null);
+    setIsAnalyzing(true);
+    setStageText('Queued from Gmail inbox');
+    setProgressPct(5);
+    setStartedAt(Date.now());
+    setElapsedSeconds(0);
     try {
       const result = await scanGmailMessage(message.id);
-      navigate(`/analysis/${result.analysis_id}`);
+      const pollStatus = async () => {
+        try {
+          const status = await getAnalysisStatus(result.analysis_id);
+          setStageText(status.stage || 'Processing Gmail message...');
+          setProgressPct(status.progress_pct || 0);
+          if (status.status === 'completed') {
+            navigate(`/analysis/${result.analysis_id}`);
+            return;
+          }
+          if (status.status === 'failed') {
+            throw new Error(status.error || 'Gmail message analysis failed.');
+          }
+          window.setTimeout(() => void pollStatus(), 700);
+        } catch (reason: any) {
+          setError(reason?.message || 'Gmail message analysis failed.');
+          setIsAnalyzing(false);
+          setStartedAt(null);
+        }
+      };
+      window.setTimeout(() => void pollStatus(), 500);
     } catch (reason: any) {
       setError(reason?.message || 'Could not queue the Gmail message for analysis.');
+      setIsAnalyzing(false);
+      setStartedAt(null);
     } finally {
       setScanningGmailId(null);
     }

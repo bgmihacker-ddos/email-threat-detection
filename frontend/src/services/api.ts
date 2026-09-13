@@ -17,8 +17,14 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
   });
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => null) as { detail?: string; message?: string } | null;
-    throw new Error(errorBody?.detail || errorBody?.message || `API Error: ${response.statusText}`);
+    const errorBody = await response.json().catch(() => null) as { detail?: unknown; message?: string } | null;
+    const detail = errorBody?.detail;
+    const message = typeof detail === 'string'
+      ? detail
+      : detail && typeof detail === 'object' && 'error' in detail
+        ? String((detail as { error?: unknown }).error)
+        : errorBody?.message;
+    throw new Error(message || `API Error: ${response.statusText}`);
   }
 
   return response.json();
