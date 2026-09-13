@@ -33,7 +33,12 @@ oauth.register(
 
 @router.get("/login")
 async def google_login(request: Request):
-    return await oauth.google.authorize_redirect(request, conf['redirect_uri'])
+    return await oauth.google.authorize_redirect(
+        request,
+        conf['redirect_uri'],
+        prompt='consent',
+        access_type='offline',
+    )
 
 @router.get("/callback")
 async def google_callback(request: Request, db: Session = Depends(get_db)):

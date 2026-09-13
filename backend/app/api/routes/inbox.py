@@ -24,6 +24,29 @@ from app.models.auth import AuthAccount
 from app.models.user import User
 
 router = APIRouter(prefix="/inbox", tags=["Inbox"])
+GMAIL_READ_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
+
+
+def _require_gmail_scope(account: AuthAccount) -> None:
+    if GMAIL_READ_SCOPE not in (account.token_scope or ""):
+        raise HTTPException(
+            status_code=409,
+            detail="Gmail read permission is missing. Click Connect Google & Gmail and approve the Gmail read-only permission.",
+        )
+
+
+def _raise_gmail_api_error(response: httpx.Response, action: str) -> None:
+    if response.status_code == 401:
+        raise HTTPException(status_code=409, detail="Gmail authorization is no longer valid. Reconnect the mailbox.")
+    try:
+        payload = response.json()
+        reason = payload.get("error", {}).get("message") or payload.get("error_description")
+    except ValueError:
+        reason = None
+    detail = f"Gmail {action} failed"
+    if reason:
+        detail += f": {reason}"
+    raise HTTPException(status_code=502, detail=detail)
 
 
 async def _get_access_token(account: AuthAccount, db: Session) -> str:
@@ -62,10 +85,8 @@ async def _gmail_raw_messages(access_token: str, limit: int) -> list[bytes]:
     headers = {"Authorization": f"Bearer {access_token}"}
     async with httpx.AsyncClient(timeout=15.0) as client:
         listing = await client.get("https://gmail.googleapis.com/gmail/v1/users/me/messages", headers=headers, params={"labelIds": "UNREAD", "maxResults": limit})
-        if listing.status_code == 401:
-            raise HTTPException(status_code=409, detail="Gmail authorization is no longer valid. Reconnect the mailbox.")
         if listing.status_code != 200:
-            raise HTTPException(status_code=502, detail="Gmail message listing failed.")
+            _raise_gmail_api_error(listing, "message listing")
         message_ids = [item.get("id") for item in (listing.json().get("messages") or []) if item.get("id")]
         raw_messages: list[bytes] = []
         for message_id in message_ids:
@@ -86,10 +107,8 @@ async def _gmail_message_ids(access_token: str, limit: int) -> list[str]:
             headers=headers,
             params={"labelIds": "INBOX", "maxResults": limit},
         )
-    if listing.status_code == 401:
-        raise HTTPException(status_code=409, detail="Gmail authorization is no longer valid. Reconnect the mailbox.")
     if listing.status_code != 200:
-        raise HTTPException(status_code=502, detail="Gmail message listing failed.")
+        _raise_gmail_api_error(listing, "message listing")
     return [item["id"] for item in listing.json().get("messages", []) if item.get("id")]
 
 
@@ -101,12 +120,10 @@ async def _gmail_message(access_token: str, message_id: str, format_name: str = 
             headers=headers,
             params={"format": format_name, "metadataHeaders": ["Subject", "From", "Date"]},
         )
-    if response.status_code == 401:
-        raise HTTPException(status_code=409, detail="Gmail authorization is no longer valid. Reconnect the mailbox.")
     if response.status_code == 404:
         raise HTTPException(status_code=404, detail="Gmail message was not found.")
     if response.status_code != 200:
-        raise HTTPException(status_code=502, detail="Gmail message retrieval failed.")
+        _raise_gmail_api_error(response, "message retrieval")
     return response.json()
 
 
@@ -120,7 +137,7 @@ def _message_headers(message: dict[str, Any]) -> dict[str, str]:
 @router.get("/gmail/status")
 def gmail_status(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     account = db.query(AuthAccount).filter(AuthAccount.user_id == current_user.id, AuthAccount.provider == "google").first()
-    return {"connected": bool(account and account.access_token_encrypted), "provider": "gmail", "scope": account.token_scope if account else None, "expires_at": account.token_expires_at.isoformat() if account and account.token_expires_at else None}
+    return {"connected": bool(account and account.access_token_encrypted), "gmail_readonly": bool(account and GMAIL_READ_SCOPE in (account.token_scope or "")), "provider": "gmail", "scope": account.token_scope if account else None, "expires_at": account.token_expires_at.isoformat() if account and account.token_expires_at else None}
 
 
 @router.get("/gmail/messages")
@@ -128,6 +145,7 @@ async def gmail_messages(limit: int = Query(10, ge=1, le=25), current_user: User
     account = db.query(AuthAccount).filter(AuthAccount.user_id == current_user.id, AuthAccount.provider == "google").first()
     if not account or not account.access_token_encrypted:
         raise HTTPException(status_code=409, detail="Connect a Gmail account before browsing messages.")
+    _require_gmail_scope(account)
     access_token = await _get_access_token(account, db)
     message_ids = await _gmail_message_ids(access_token, limit)
     messages: list[dict[str, Any]] = []
@@ -150,6 +168,7 @@ async def scan_gmail_message(message_id: str, current_user: User = Depends(get_c
     account = db.query(AuthAccount).filter(AuthAccount.user_id == current_user.id, AuthAccount.provider == "google").first()
     if not account or not account.access_token_encrypted:
         raise HTTPException(status_code=409, detail="Connect a Gmail account before scanning messages.")
+    _require_gmail_scope(account)
     access_token = await _get_access_token(account, db)
     message = await _gmail_message(access_token, message_id)
     raw_value = message.get("raw")

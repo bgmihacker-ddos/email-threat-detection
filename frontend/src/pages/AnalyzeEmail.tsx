@@ -69,8 +69,9 @@ export default function AnalyzeEmail() {
     setError(null);
     try {
       const status = await getGmailInboxStatus();
-      setGmailConnected(status.connected);
-      if (status.connected) {
+      const canReadGmail = status.connected && status.gmail_readonly;
+      setGmailConnected(canReadGmail);
+      if (canReadGmail) {
         const result = await listGmailMessages();
         setGmailMessages(result.messages);
       } else {
