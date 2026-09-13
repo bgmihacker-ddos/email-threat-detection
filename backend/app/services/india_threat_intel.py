@@ -102,8 +102,15 @@ class IndiaThreatIntel:
 
         # Brand impersonation
         impersonated: List[Dict[str, str]] = []
+        government_action = re.search(
+            r"\b(verify|update|expire|expired|pending|refund|notice|tax|registration|account|login|click|link|document|submit)\b",
+            full_text,
+            re.IGNORECASE,
+        )
         for brand, category in _FLAT.items():
             brand_pattern = rf"(?<!\w){re.escape(brand.strip())}(?!\w)"
+            if brand in {"gst", "rti"} and not government_action:
+                continue
             if re.search(brand_pattern, full_text, re.IGNORECASE):
                 impersonated.append({"brand": brand, "category": category})
 
@@ -157,7 +164,9 @@ class IndiaThreatIntel:
 
         if impersonated:
             add_cause("trusted_brand_impersonation", [f"{b['brand']} ({b['category']})" for b in impersonated], 88)
-        if any(re.search(r"kyc|aadhaar|aadhar|pan\s*card|gst|identity", value, re.IGNORECASE) for value in scam_hits) or re.search(r"kyc|aadhaar|aadhar|pan\s*card|gst", full_text, re.IGNORECASE):
+        identity_signal = re.search(r"kyc|aadhaar|aadhar|pan\s*card|identity", full_text, re.IGNORECASE)
+        gst_signal = re.search(r"\bgst\b", full_text, re.IGNORECASE) and government_action
+        if any(re.search(r"kyc|aadhaar|aadhar|pan\s*card|gst|identity", value, re.IGNORECASE) for value in scam_hits) or identity_signal or gst_signal:
             add_cause("kyc_identity_pressure", scam_hits or ["KYC/identity language"], 86)
         if re.search(r"upi|pin|refund|cashback|payment|transaction", full_text, re.IGNORECASE):
             add_cause("upi_payment_social_engineering", ["UPI/payment/refund language"], 82)
