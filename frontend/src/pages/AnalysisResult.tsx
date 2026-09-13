@@ -161,5 +161,13 @@ function authTone(value?: string) { return value === 'pass' ? 'text-emerald-400'
 function clampScore(value: number) { return Number.isFinite(value) ? Math.min(100, Math.max(0, Math.round(value))) : 0; }
 function trustRisk(auth: RecordValue) { const statuses = ['spf', 'dkim', 'dmarc'].map((name) => String(auth[name]?.status || '').toLowerCase()).filter(Boolean); if (!statuses.length) return 0; return clampScore((statuses.filter((status) => ['fail', 'reject', 'none', 'missing'].includes(status)).length / statuses.length) * 100); }
 function authDetail(auth: RecordValue) { return ['spf', 'dkim', 'dmarc'].map((name) => `${name.toUpperCase()}: ${auth[name]?.status || 'unavailable'}`).join(' | '); }
-function isIndiaContext(analysis: RecordValue, email: RecordValue, sender: string, subject: string) { const source = `${JSON.stringify(analysis)} ${JSON.stringify(email)} ${sender} ${subject}`.toLowerCase(); return /\b(sbi|hdfc|upi|aadhaar|aadhar|pan card|cert-in|india|indian bank)\b/.test(source); }
+function isIndiaContext(analysis: RecordValue, email: RecordValue, sender: string, subject: string) {
+  const intel = analysis.india_threat_intel || {};
+  if (Array.isArray(intel.likely_causes) && intel.likely_causes.length > 0) return true;
+  if (Array.isArray(analysis.forensic_findings) && analysis.forensic_findings.some((finding: RecordValue) => finding.category === 'india_specific')) return true;
+
+  const headers = email.headers && typeof email.headers === 'object' ? Object.values(email.headers).join(' ') : '';
+  const messageEvidence = [subject, sender, email.plain_text, email.html_body, headers].filter(Boolean).join(' ').toLowerCase();
+  return /\b(sbi|hdfc|upi|aadhaar|aadhar|pan\s+card|cert[- ]?in|india|indian\s+bank)\b/.test(messageEvidence);
+}
 function buildCertDraft({ analysis, subject, sender, risk, verdict }: { analysis: RecordValue; subject: string; sender: string; risk: number; verdict: string }) { return [`CERT-In incident draft`, `Subject: ${subject}`, `Sender: ${sender}`, `Classification: ${verdict.toUpperCase()}`, `Risk score: ${risk}/100`, `Summary: ${analysis.summary || 'No summary returned.'}`, `Analysis ID: ${analysis.analysis_id || 'unavailable'}`].join('\n'); }

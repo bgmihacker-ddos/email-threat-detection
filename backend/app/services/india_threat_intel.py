@@ -103,7 +103,8 @@ class IndiaThreatIntel:
         # Brand impersonation
         impersonated: List[Dict[str, str]] = []
         for brand, category in _FLAT.items():
-            if brand in full_text:
+            brand_pattern = rf"(?<!\w){re.escape(brand.strip())}(?!\w)"
+            if re.search(brand_pattern, full_text, re.IGNORECASE):
                 impersonated.append({"brand": brand, "category": category})
 
         # Scam pattern matches
@@ -115,6 +116,23 @@ class IndiaThreatIntel:
 
         # Hindi/regional keywords
         hindi_hits = [k for k in _HINDI_THREAT_KEYWORDS if k in full_text]
+
+        india_anchor = bool(impersonated or hindi_hits or re.search(
+            r"\b(india|indian|inr|upi|aadhaar|aadhar|pan\s*card|kyc|gst|digilocker)\b|₹",
+            full_text,
+            re.IGNORECASE,
+        ))
+
+        if not india_anchor:
+            return {
+                "impersonated_brands": [],
+                "scam_patterns": [],
+                "hindi_keywords": [],
+                "ist_timezone_anomaly": False,
+                "likely_causes": [],
+                "research_sources": [],
+                "findings": [],
+            }
 
         # IST timezone anomaly: if claimed sender is Indian but Date header offset isn't +0530
         ist_anomaly = False
@@ -207,7 +225,7 @@ class IndiaThreatIntel:
             "hindi_keywords": hindi_hits,
             "ist_timezone_anomaly": ist_anomaly,
             "likely_causes": causes,
-            "research_sources": _INDIA_RESEARCH_SOURCES,
+            "research_sources": _INDIA_RESEARCH_SOURCES if causes else [],
             "findings": findings,
         }
 
