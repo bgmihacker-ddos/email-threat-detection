@@ -1,5 +1,5 @@
 const configuredBaseUrl = (import.meta.env.VITE_API_URL || '').trim();
-const BASE_URL = (
+export const BASE_URL = (
   import.meta.env.DEV && configuredBaseUrl.includes('email-threat-detection-1-w14g.onrender.com')
     ? ''
     : configuredBaseUrl && !configuredBaseUrl.includes('email-threat-detection1.vercel.app')

@@ -14,6 +14,7 @@ from app.models.oauth_handoff import OAuthHandoffCode
 from app.api.dependencies import get_current_user
 from app.core.google_oauth import get_google_oauth_settings
 from app.core.security import create_access_token, hash_password, verify_password
+from app.core.inbox_tokens import encrypt_token
 from app.services.audit import log_action
 from app.core.config import settings
 from app.schemas.auth import TokenResponse
@@ -27,7 +28,7 @@ oauth.register(
     client_id=conf['client_id'],
     client_secret=conf['client_secret'],
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={'scope': 'openid email profile'}
+    client_kwargs={'scope': 'openid email profile https://www.googleapis.com/auth/gmail.readonly'}
 )
 
 @router.get("/login")
@@ -82,7 +83,15 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
         )
         db.add(new_auth_account)
         db.commit()
+        auth_account = new_auth_account
         log_action(db, user.id, "google_login_new_user")
+
+    auth_account.access_token_encrypted = encrypt_token(token.get('access_token'))
+    if token.get('refresh_token'):
+        auth_account.refresh_token_encrypted = encrypt_token(token.get('refresh_token'))
+    auth_account.token_expires_at = datetime.now(timezone.utc) + timedelta(seconds=int(token.get('expires_in') or 3600))
+    auth_account.token_scope = token.get('scope')
+    db.commit()
 
     # Generate handoff code
     raw_code = secrets.token_urlsafe(32)
@@ -162,6 +171,12 @@ async def google_link_callback(request: Request, db: Session = Depends(get_db), 
         provider_account_id=google_id
     )
     db.add(new_auth_account)
+    db.commit()
+    new_auth_account.access_token_encrypted = encrypt_token(token.get('access_token'))
+    if token.get('refresh_token'):
+        new_auth_account.refresh_token_encrypted = encrypt_token(token.get('refresh_token'))
+    new_auth_account.token_expires_at = datetime.now(timezone.utc) + timedelta(seconds=int(token.get('expires_in') or 3600))
+    new_auth_account.token_scope = token.get('scope')
     db.commit()
     log_action(db, current_user.id, "google_account_linked")
     return {"detail": "Google account linked successfully."}

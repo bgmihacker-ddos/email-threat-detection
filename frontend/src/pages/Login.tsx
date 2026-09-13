@@ -3,6 +3,7 @@ import { Activity, ArrowUpRight, Check, Fingerprint, Globe2, KeyRound, LockKeyho
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { SecurityEnvironmentBackground } from '../components/common/SecurityEnvironmentBackground';
+import { BASE_URL } from '../services/api';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -30,15 +31,7 @@ export default function Login() {
   };
 
   const handleGoogleLogin = () => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (!clientId) {
-      setError('Google Single Sign-On is not configured on this instance.');
-      return;
-    }
-    const redirectUri = `${window.location.origin}/auth/callback`;
-    const scope = 'openid email profile';
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}`;
-    window.location.href = authUrl;
+    window.location.assign(`${BASE_URL}/api/auth/google/login`);
   };
 
   return (

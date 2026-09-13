@@ -390,6 +390,45 @@ class RDAPProvider(ThreatIntelProvider):
             return _result(self.name, value, indicator_type, "error", error="RDAP response was unavailable or malformed.")
 
 
+class HaveIBeenPwnedProvider(ThreatIntelProvider):
+    """Optional Have I Been Pwned domain breach lookup."""
+
+    def __init__(self) -> None:
+        super().__init__("HaveIBeenPwned", settings.HIBP_API_KEY)
+        self.supported_indicator_types = {"domain"}
+
+    async def lookup(self, indicator_type: str, indicator: str, client: Optional[httpx.AsyncClient] = None) -> ProviderResult:
+        if not self.is_healthy():
+            return self.unavailable_result(indicator_type, indicator)
+        value = _normalize_indicator(indicator_type, indicator)
+        if indicator_type != "domain" or not value:
+            return self.invalid_result(indicator_type, indicator)
+        endpoint = f"https://haveibeenpwned.com/api/v3/breachedomain/{value}"
+        headers = {"hibp-api-key": str(self.api_key), "user-agent": "email-threat-detection"}
+        try:
+            if client is not None:
+                response = await client.get(endpoint, headers=headers)
+            else:
+                async with httpx.AsyncClient(timeout=_PUBLIC_LOOKUP_TIMEOUT) as local_client:
+                    response = await local_client.get(endpoint, headers=headers)
+            if response.status_code == 404:
+                return _result(self.name, value, indicator_type, "not_found", references=[endpoint])
+            if response.status_code in {401, 403, 429}:
+                self.trip_circuit_breaker()
+                return _result(self.name, value, indicator_type, "rate_limited" if response.status_code == 429 else "unauthorized", references=[endpoint], error="HIBP access was rejected or rate limited.")
+            if response.status_code != 200:
+                return _result(self.name, value, indicator_type, "error", references=[endpoint], error="HIBP response was unavailable.")
+            breaches = response.json()
+            if not isinstance(breaches, list):
+                return _result(self.name, value, indicator_type, "error", references=[endpoint], error="HIBP response was malformed.")
+            names = [str(item.get("Name")) for item in breaches if item.get("Name")]
+            return _result(self.name, value, indicator_type, "ok", "suspicious" if names else "unknown", len(names), min(100, len(names) * 20), ["domain_breach"] if names else [], references=[endpoint], metadata={"breach_names": names[:20], "breach_count": len(names)})
+        except httpx.TimeoutException:
+            return _result(self.name, value, indicator_type, "timeout", references=[endpoint], error="HIBP lookup timed out.")
+        except (httpx.HTTPError, ValueError, TypeError):
+            return _result(self.name, value, indicator_type, "error", references=[endpoint], error="HIBP response was unavailable or malformed.")
+
+
 class CertificateTransparencyProvider(ThreatIntelProvider):
     """Keyless certificate history lookup through crt.sh."""
 
@@ -538,7 +577,7 @@ class ThreatIntelligenceService:
     _CACHE_MAX_ENTRIES = 512
 
     # Global list of provider instances to preserve circuit breaker states across requests
-    _ALL_PROVIDERS = [VirusTotalProvider(), URLhausProvider(), ThreatFoxProvider(), AbuseIPDBProvider(), RDAPProvider(), CertificateTransparencyProvider(), CIRCLHashlookupProvider(), GoogleSafeBrowsingProvider(), AlienVaultOTXProvider(), PhishTankProvider()]
+    _ALL_PROVIDERS = [VirusTotalProvider(), URLhausProvider(), ThreatFoxProvider(), AbuseIPDBProvider(), RDAPProvider(), HaveIBeenPwnedProvider(), CertificateTransparencyProvider(), CIRCLHashlookupProvider(), GoogleSafeBrowsingProvider(), AlienVaultOTXProvider(), PhishTankProvider()]
     _GLOBAL_PROVIDERS = [
         provider for provider in _ALL_PROVIDERS
         if provider.name not in settings.DISABLED_THREAT_PROVIDERS

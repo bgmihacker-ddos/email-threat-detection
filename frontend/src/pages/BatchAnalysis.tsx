@@ -32,9 +32,9 @@ export default function BatchAnalysis() {
 
   const onFilesSelected = (incoming: FileList | null) => {
     if (!incoming) return;
-    const valid = Array.from(incoming).filter((file) => file.name.toLowerCase().endsWith('.eml') || file.name.toLowerCase().endsWith('.msg'));
+    const valid = Array.from(incoming).filter((file) => ['.eml', '.msg', '.zip', '.mbox'].some((extension) => file.name.toLowerCase().endsWith(extension)));
     if (!valid.length) {
-      setError('Only .eml or .msg email archives are supported for batch intake.');
+      setError('Only .eml, .msg, .zip, or .mbox email archives are supported for batch intake.');
       return;
     }
     setError(null);
@@ -85,7 +85,7 @@ export default function BatchAnalysis() {
 
   const handleSubmit = async () => {
     if (!files.length) {
-      setError('Select at least one .eml or .msg file to start a batch forensic queue.');
+      setError('Select at least one .eml, .msg, .zip, or .mbox file to start a batch forensic queue.');
       return;
     }
 
@@ -141,12 +141,12 @@ export default function BatchAnalysis() {
               <FileUp size={26} />
             </div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-200 font-mono">Drop email files here</p>
-            <p className="mt-1 text-[11px] text-gray-500 font-mono">or click to select multiple .eml / .msg samples</p>
+            <p className="mt-1 text-[11px] text-gray-500 font-mono">or click to select .eml, .msg, .zip, or .mbox samples</p>
             <input
               ref={inputRef}
               type="file"
               multiple
-              accept=".eml,.msg"
+              accept=".eml,.msg,.zip,.mbox"
               className="hidden"
               onChange={(event) => onFilesSelected(event.target.files)}
             />

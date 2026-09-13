@@ -78,9 +78,11 @@ def test_persisted_analysis_explorer_dashboard_and_redacted_exports():
         },
     )
     assert created.status_code == 200
-    analysis_id = created.json()["analysis_id"]
+    data = created.json()
+    analysis_id = data["analysis_id"]
+    verdict = data["verdict"]
 
-    listing = client.get("/api/analyses?verdict=malicious")
+    listing = client.get(f"/api/analyses?verdict={verdict}")
     assert listing.status_code == 200
     assert any(item["analysis_id"] == analysis_id for item in listing.json()["data"])
     assert "raw_email" not in listing.text

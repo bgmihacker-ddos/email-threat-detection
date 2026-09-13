@@ -20,18 +20,27 @@ if str(REPO_ROOT) not in sys.path:
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from app.api.dependencies import require_admin, require_analyst  # noqa: E402
-from app.database.base import Base  # noqa: E402
-from app.database.session import get_db  # noqa: E402
-from app.main import app  # noqa: E402
-from app.models.user import User  # noqa: E402,F401
-
 engine = create_engine(
     "sqlite://",
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+import app.database.session as app_session
+import app.database.connection as app_connection
+app_session.SessionLocal = TestingSessionLocal
+app_connection.engine = engine
+
+import app.api.routes.analysis as app_analysis_route
+app_analysis_route.SessionLocal = TestingSessionLocal
+
+from app.api.dependencies import require_admin, require_analyst  # noqa: E402
+from app.database.base import Base  # noqa: E402
+from app.database.session import get_db  # noqa: E402
+from app.main import app  # noqa: E402
+from app import models  # noqa: E402,F401
+from app.models.user import User  # noqa: E402,F401
 
 
 def override_get_db():

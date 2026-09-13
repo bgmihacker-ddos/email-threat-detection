@@ -15,6 +15,7 @@ from app.services.threat_intelligence import (
     CertificateTransparencyProvider,
     AlienVaultOTXProvider,
     GoogleSafeBrowsingProvider,
+    HaveIBeenPwnedProvider,
     PhishTankProvider,
     RDAPProvider,
     ThreatFoxProvider,
@@ -40,6 +41,29 @@ async def test_google_safe_browsing_match_is_malicious():
     assert result["status"] == "ok"
     assert result["reputation"] == "malicious"
     assert result["categories"] == ["SOCIAL_ENGINEERING"]
+
+
+@pytest.mark.asyncio
+async def test_hibp_domain_breach_context_is_structured():
+    with patch("app.services.threat_intelligence.settings.HIBP_API_KEY", "test_hibp_key"):
+        provider = HaveIBeenPwnedProvider()
+        with patch("httpx.AsyncClient.get") as mock_get:
+            response = MagicMock(status_code=200)
+            response.json.return_value = [{"Name": "Example Breach"}, {"Name": "Another Breach"}]
+            mock_get.return_value = response
+            result = await provider.lookup("domain", "example.com")
+
+    assert result["status"] == "ok"
+    assert result["reputation"] == "suspicious"
+    assert result["metadata"]["breach_names"] == ["Example Breach", "Another Breach"]
+
+
+@pytest.mark.asyncio
+async def test_hibp_without_key_is_truthfully_not_configured():
+    with patch("app.services.threat_intelligence.settings.HIBP_API_KEY", None):
+        result = await HaveIBeenPwnedProvider().lookup("domain", "example.com")
+
+    assert result["status"] == "not_configured"
 
 
 @pytest.mark.asyncio

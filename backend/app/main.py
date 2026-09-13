@@ -1,12 +1,16 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
-from app.api.routes import analysis, auth, batch_analysis, cases, dashboard, health, indicators, live_threats, threats, admin, password, google_auth, simulate, iocs, audit
+from app.api.routes import analysis, auth, batch_analysis, cases, dashboard, health, indicators, live_threats, threats, admin, password, google_auth, simulate, iocs, audit, inbox
 from app.core.config import settings
 from app.database import init_db
 from app.realtime import alert_manager
 
 app = FastAPI(title=settings.APP_NAME, version="0.1.0", debug=settings.DEBUG)
+
+if settings.JWT_SECRET:
+    app.add_middleware(SessionMiddleware, secret_key=settings.JWT_SECRET, same_site="lax", https_only=False)
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,6 +41,7 @@ app.include_router(google_auth.router, prefix="/api")
 app.include_router(simulate.router, prefix="/api")
 app.include_router(iocs.router, prefix="/api")
 app.include_router(audit.router, prefix="/api")
+app.include_router(inbox.router, prefix="/api")
 app.include_router(simulate.router, prefix="/api")
 app.include_router(iocs.router, prefix="/api")
 app.include_router(audit.router, prefix="/api")

@@ -3,19 +3,52 @@ import { useNavigate } from 'react-router-dom';
 import { analyzeEmail, getAnalysisStatus } from '../services/analysisApi';
 import {
   FileUp, X, MailSearch, FileText, ShieldCheck, ArrowRight,
-  AlertTriangle, CheckCircle2, Clock3, Cpu, Globe, Binary, Layers
+  AlertTriangle, CheckCircle2, Clock3, Cpu, Globe, Binary, Layers, Radar, Zap
 } from 'lucide-react';
 
 const SCAN_STAGES = [
-  'Parse message structure',
-  'Inspect content and attachments',
-  'Resolve domains and infrastructure',
-  'Correlate threat intelligence',
-  'Synthesize evidence and verdict',
+  'MIME Parser & Token Dissector',
+  'Cryptographic Re-Verification (SPF/DKIM/DMARC)',
+  'Global Hop GeoTracing & TOR Exit Node Check',
+  'Threat Fusion & Multi-Model Scoring',
+  'Blockchain Ledger Anchoring',
+];
+
+type InputMode = 'file' | 'mime' | 'triage';
+type DemoScenario = { name: string; icon: string; description: string; content: string };
+
+const DEMO_SCENARIOS: DemoScenario[] = [
+  {
+    name: 'Indian Bank KYC Phish',
+    icon: '🇮🇳',
+    description: 'SBI / HDFC lookalike domain',
+    content: `From: "SBI KYC Desk" <support@sbi-co-in-update.net>\nTo: customer@example.com\nSubject: Action Required: Update PAN and Aadhaar KYC\nDate: Tue, 13 Sep 2026 09:15:00 +0000\nReceived: from kyc-gateway.sbi-co-in-update.net (185.220.101.5) by mx.example.com\nAuthentication-Results: mx.example.com; spf=fail; dkim=fail; dmarc=fail\nContent-Type: text/plain; charset="UTF-8"\n\nYour PAN and Aadhaar KYC will be suspended today. Confirm your details at https://sbi-kyc-verify.net/update within 24 hours.`,
+  },
+  {
+    name: 'CEO Urgent Wire Transfer (BEC)',
+    icon: '💼',
+    description: 'Payroll fraud without links',
+    content: `From: "Chief Executive Officer" <ceo@enterprise-corp.co>\nTo: payroll@example.com\nSubject: Urgent Confidential Payroll Transfer\nDate: Tue, 13 Sep 2026 10:20:00 +0000\nReceived: from mail.enterprise-corp.co (203.0.113.44) by mx.example.com\nAuthentication-Results: mx.example.com; spf=softfail; dkim=none; dmarc=none\nContent-Type: text/plain; charset="UTF-8"\n\nI am in a confidential meeting. Process the attached payroll wire of $48,500 immediately and do not call me to confirm.`,
+  },
+  {
+    name: 'Invoice with Macro Attachment',
+    icon: '📎',
+    description: 'Weaponized invoice intake',
+    content: `From: "Accounts Payable" <billing@vendor-invoice-mail.com>\nTo: finance@example.com\nSubject: Invoice 88421 - Payment Required\nDate: Tue, 13 Sep 2026 11:05:00 +0000\nReceived: from invoice-host.vendor-invoice-mail.com (198.51.100.77) by mx.example.com\nMIME-Version: 1.0\nContent-Type: multipart/mixed; boundary="invoice-boundary"\n\n--invoice-boundary\nContent-Type: text/plain\n\nPlease review the attached invoice and enable content to view the protected document.\n--invoice-boundary\nContent-Type: application/vnd.ms-excel; name="Invoice_88421.xlsm"\nContent-Disposition: attachment; filename="Invoice_88421.xlsm"\n\nVBA macro-enabled invoice attachment.\n--invoice-boundary--`,
+  },
+  {
+    name: 'Clean Internal IT Memo',
+    icon: '🟢',
+    description: 'Legitimate SPF / DKIM mail',
+    content: `From: "Internal IT" <it@example.com>\nTo: all-staff@example.com\nSubject: Scheduled VPN Maintenance\nDate: Tue, 13 Sep 2026 12:00:00 +0000\nReceived: from mail.example.com (10.0.0.12) by mx.example.com\nAuthentication-Results: mx.example.com; spf=pass; dkim=pass; dmarc=pass\nContent-Type: text/plain; charset="UTF-8"\n\nThe corporate VPN will undergo scheduled maintenance from 22:00 to 23:00 UTC tonight. No action is required.`,
+  },
 ];
 
 export default function AnalyzeEmail() {
   const [emailContent, setEmailContent] = useState('');
+  const [filePreview, setFilePreview] = useState('');
+  const [inputMode, setInputMode] = useState<InputMode>('file');
+  const [activeScenario, setActiveScenario] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [stageText, setStageText] = useState('Reading RFC 5322 MIME stream & headers...');
   const [progressPct, setProgressPct] = useState(0);
@@ -32,6 +65,14 @@ export default function AnalyzeEmail() {
     return () => window.clearInterval(timer);
   }, [isAnalyzing, startedAt]);
 
+  useEffect(() => {
+    if (!file) {
+      setFilePreview('');
+      return;
+    }
+    file.text().then(setFilePreview).catch(() => setFilePreview(''));
+  }, [file]);
+
   const acceptFile = (selectedFile?: File) => {
     if (!selectedFile) return;
     if (!selectedFile.name.toLowerCase().endsWith('.eml')) {
@@ -40,6 +81,7 @@ export default function AnalyzeEmail() {
       return;
     }
     setError(null);
+    setActiveScenario(null);
     setFile(selectedFile);
   };
 
@@ -49,8 +91,8 @@ export default function AnalyzeEmail() {
     acceptFile(event.dataTransfer.files?.[0]);
   };
 
-  const handleAnalyze = async () => {
-    if (!emailContent.trim() && !file) {
+  const startAnalysis = async (content: string, selectedFile?: File) => {
+    if (!content.trim() && !selectedFile) {
       setError('Please provide email source via file upload (.eml) or paste raw MIME contents.');
       return;
     }
@@ -63,7 +105,7 @@ export default function AnalyzeEmail() {
     setElapsedSeconds(0);
 
     try {
-      const initResult = await analyzeEmail(emailContent, file || undefined);
+      const initResult = await analyzeEmail(content, selectedFile);
       const { analysis_id } = initResult;
 
       const pollStatus = async () => {
@@ -97,6 +139,23 @@ export default function AnalyzeEmail() {
     }
   };
 
+  const handleAnalyze = () => startAnalysis(emailContent, file || undefined);
+
+  const loadScenario = (scenario: DemoScenario) => {
+    setInputMode('mime');
+    setActiveScenario(scenario.name);
+    setFile(null);
+    setEmailContent(scenario.content);
+    setError(null);
+    void startAnalysis(scenario.content);
+  };
+
+  const previewText = filePreview || emailContent;
+  const previewSubject = previewText.match(/^Subject:\s*(.+)$/im)?.[1]?.trim() || 'Subject not detected';
+  const previewSender = previewText.match(/^From:\s*(.+)$/im)?.[1]?.trim() || 'Sender not detected';
+  const previewHops = (previewText.match(/^Received:/gim) || []).length;
+  const previewSize = file ? file.size : new Blob([previewText]).size;
+
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       {/* Header */}
@@ -110,6 +169,23 @@ export default function AnalyzeEmail() {
           Submit suspicious messages for deterministic header forensics, authentication verification, macro inspection, and entity relationship graphing.
         </p>
       </header>
+
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#1b3037] bg-[#101b21]/90 p-2 font-mono text-[10px] uppercase tracking-wider">
+          {([
+            ['file', 'File Upload (.eml)'],
+            ['mime', 'Direct MIME Paste'],
+            ['triage', 'Quick URL / Header Triage'],
+          ] as [InputMode, string][]).map(([mode, label]) => (
+            <button key={mode} type="button" onClick={() => setInputMode(mode)} className={`rounded px-3 py-2 transition ${inputMode === mode ? 'bg-cyan-400 text-[#071114]' : 'text-gray-500 hover:bg-[#183235] hover:text-cyan-200'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.18em] text-amber-300">
+          <Zap size={13} /> Demo attack scenarios · one click to load and scan
+        </div>
+      </section>
 
       {/* Primary Intake Grid */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
@@ -129,6 +205,15 @@ export default function AnalyzeEmail() {
                   Preserves raw Received headers, boundary delimiters, and binary attachment payloads.
                 </p>
               </div>
+            </div>
+
+            <div className="mt-5 grid gap-2 sm:grid-cols-2">
+              {DEMO_SCENARIOS.map((scenario) => (
+                <button key={scenario.name} type="button" onClick={() => loadScenario(scenario)} disabled={isAnalyzing} className={`group rounded border px-3 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${activeScenario === scenario.name ? 'border-cyan-400/70 bg-cyan-950/30' : 'border-[#29454b] bg-[#081216] hover:border-cyan-500/50'}`}>
+                  <span className="flex items-center gap-2 text-xs font-semibold text-gray-200"><span>{scenario.icon}</span>{scenario.name}</span>
+                  <span className="mt-1 block text-[10px] font-mono text-gray-500 group-hover:text-cyan-200">{scenario.description}</span>
+                </button>
+              ))}
             </div>
 
             <div
@@ -257,9 +342,9 @@ export default function AnalyzeEmail() {
             <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-violet-400 bg-violet-950/40 px-2 py-0.5 rounded border border-violet-800/30">
               DIRECT INPUT
             </span>
-            <h2 className="mt-1 text-base font-semibold text-gray-100">Paste Raw MIME / Header Text</h2>
+            <h2 className="mt-1 text-base font-semibold text-gray-100">{inputMode === 'triage' ? 'Quick URL / Header Triage' : 'Paste Raw MIME / Header Text'}</h2>
             <p className="mt-0.5 text-xs text-gray-400 font-mono">
-              Alternative ingestion path for clipboard transfers or raw terminal logs.
+              {inputMode === 'triage' ? 'Paste a suspicious URL or compact header block for immediate routing and IOC preview.' : 'Alternative ingestion path for clipboard transfers or raw terminal logs.'}
             </p>
           </div>
         </div>
@@ -281,10 +366,23 @@ Please verify your credentials at http://suspicious-login-portal.com/login`}
           value={emailContent}
           onChange={(e) => {
             setEmailContent(e.target.value);
+            setActiveScenario(null);
             if (error) setError(null);
           }}
         />
       </section>
+
+      {previewText.trim() && !isAnalyzing && (
+        <section className="rounded-lg border border-cyan-500/30 bg-[#0b1b20] p-4 font-mono shadow-[0_0_30px_rgba(34,211,238,0.08)]">
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-cyan-300"><Radar size={14} className="animate-pulse" /> Client-side pre-flight summary</div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-4">
+            <PreflightItem label="Sender" value={previewSender} />
+            <PreflightItem label="Subject" value={previewSubject} />
+            <PreflightItem label="Payload" value={`${previewSize.toLocaleString()} bytes`} />
+            <PreflightItem label="Hop estimate" value={`${previewHops} Received headers`} />
+          </div>
+        </section>
+      )}
 
       {/* Active Pipeline Progress Display */}
       {isAnalyzing && (
@@ -299,11 +397,10 @@ Please verify your credentials at http://suspicious-login-portal.com/login`}
             </span>
           </div>
 
-          <div className="w-full bg-[#081216] h-2 rounded-full overflow-hidden border border-[#1b3037]">
-            <div
-              className="bg-gradient-to-r from-cyan-500 to-violet-500 h-full transition-all duration-500"
-              style={{ width: `${Math.min(100, Math.max(0, progressPct))}%` }}
-            />
+          <div className="relative h-24 overflow-hidden rounded border border-cyan-500/20 bg-[#061014]">
+            <div className="absolute inset-y-0 left-0 w-1/2 animate-[scan_2.4s_linear_infinite] border-r border-cyan-300/70 bg-gradient-to-r from-transparent via-cyan-400/10 to-cyan-300/20" />
+            <div className="absolute inset-0 flex items-center justify-center"><div className="h-14 w-14 rounded-full border border-cyan-400/40 shadow-[0_0_24px_rgba(34,211,238,0.25)]"><div className="ml-7 h-7 origin-bottom border-l border-cyan-300/80 rotate-45" /></div></div>
+            <div className="absolute bottom-2 left-3 right-3 h-1 overflow-hidden rounded bg-[#183235]"><div className="h-full bg-cyan-300 transition-all duration-500" style={{ width: `${Math.min(100, Math.max(0, progressPct))}%` }} /></div>
           </div>
 
           <p className="border-l-2 border-cyan-500/60 pl-3 text-xs leading-6 text-cyan-200" aria-live="polite">
@@ -319,7 +416,7 @@ Please verify your credentials at http://suspicious-login-portal.com/login`}
 
           <div className="grid gap-2 border-t border-cyan-500/20 pt-3 sm:grid-cols-5">
             {SCAN_STAGES.map((stage, index) => {
-              const threshold = [5, 15, 35, 60, 80][index] ?? 80;
+              const threshold = [5, 20, 40, 65, 85][index] ?? 85;
               const complete = progressPct > threshold || (index === 0 && progressPct >= threshold);
               const active = !complete && progressPct >= threshold - 10;
               return <div key={stage} className={`flex items-center gap-2 text-[10px] leading-4 ${complete ? 'text-emerald-300' : active ? 'text-cyan-200' : 'text-gray-600'}`}><span className="shrink-0">{complete ? <CheckCircle2 size={13} /> : <span className={`block h-2 w-2 rounded-full ${active ? 'animate-pulse bg-cyan-400' : 'bg-gray-700'}`} />}</span><span>{stage}</span></div>;
@@ -366,4 +463,8 @@ Please verify your credentials at http://suspicious-login-portal.com/login`}
       </div>
     </div>
   );
+}
+
+function PreflightItem({ label, value }: { label: string; value: string }) {
+  return <div className="min-w-0 border-l border-cyan-500/30 pl-3"><p className="text-[9px] uppercase tracking-widest text-gray-500">{label}</p><p className="mt-1 truncate text-xs text-gray-200" title={value}>{value}</p></div>;
 }

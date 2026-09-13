@@ -10,6 +10,7 @@ class AnalysisResult(Base):
     __tablename__ = "analysis_results"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    batch_id = Column(String(36), nullable=True, index=True)
     status = Column(String(32), nullable=False, default="processing", index=True)
     current_stage = Column(String(255), nullable=True)
     progress_percent = Column(Integer, nullable=False, default=0)

@@ -10,6 +10,7 @@ from app.services.whois_intelligence import WHOISIntelligenceService
 @pytest.mark.asyncio
 async def test_unauthorized_whois_is_cached_as_provider_state(monkeypatch):
     WHOISIntelligenceService.clear_cache()
+    monkeypatch.setattr(settings, "WHOIS_ENABLED", True)
     monkeypatch.setattr(settings, "WHOIS_API_KEY", "configured")
     response = httpx.Response(401, request=httpx.Request("GET", "https://whois.test"))
     client = AsyncMock()
@@ -35,6 +36,7 @@ async def test_unauthorized_whois_is_cached_as_provider_state(monkeypatch):
 @pytest.mark.asyncio
 async def test_timeout_whois_is_cached_as_timeout_state(monkeypatch):
     WHOISIntelligenceService.clear_cache()
+    monkeypatch.setattr(settings, "WHOIS_ENABLED", True)
     monkeypatch.setattr(settings, "WHOIS_API_KEY", "configured")
     client = AsyncMock()
     client.get.side_effect = httpx.TimeoutException("slow provider")

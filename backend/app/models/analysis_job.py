@@ -9,6 +9,7 @@ class AnalysisJob(Base):
     __tablename__ = "analysis_jobs"
 
     analysis_id = Column(String(36), primary_key=True)
+    batch_id = Column(String(36), nullable=True, index=True)
     payload = Column(LargeBinary, nullable=False)
     status = Column(String(32), nullable=False, default="queued", index=True)
     attempts = Column(Integer, nullable=False, default=0)

@@ -99,6 +99,12 @@ export const batchAnalyzeEmails = async (files: File[]): Promise<{ batch_id: str
 export const getBatchAnalysisStatus = async (batchId: string): Promise<any> =>
   apiFetch(`/api/batch/${encodeURIComponent(batchId)}/status`, { headers: authHeaders() });
 
+export const getGmailInboxStatus = async (): Promise<{ connected: boolean; provider: string; scope?: string; expires_at?: string }> =>
+  apiFetch('/api/inbox/gmail/status', { headers: authHeaders() });
+
+export const syncGmailInbox = async (limit = 10): Promise<{ batch_id: string; provider: string; total: number; queued: Array<{ analysis_id: string; status: string }> }> =>
+  apiFetch(`/api/inbox/gmail/sync?limit=${limit}`, { method: 'POST', headers: authHeaders() });
+
 export const getAnalysisById = async (id: string): Promise<any> =>
   apiFetch(`/api/analyze/${encodeURIComponent(id)}`, { headers: authHeaders() });
 

@@ -1,10 +1,11 @@
 import os
+from pathlib import Path
 from typing import List
 from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 
 def _parse_cors_origins(value: str) -> List[str]:
@@ -63,6 +64,7 @@ class Settings:
     URLSCAN_API_KEY = os.getenv("URLSCAN_API_KEY")
     GOOGLE_SAFE_BROWSING_API_KEY = os.getenv("GOOGLE_SAFE_BROWSING_API_KEY")
     PHISHTANK_API_KEY = os.getenv("PHISHTANK_API_KEY")
+    HIBP_API_KEY = os.getenv("HIBP_API_KEY")
     DISABLED_THREAT_PROVIDERS = {
         item.strip()
         for item in os.getenv("DISABLED_THREAT_PROVIDERS", "Google Safe Browsing").split(",")
