@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Callback from './pages/Callback';
 import Signup from './pages/Signup';
 import { PrivacyPolicy, TermsOfService } from './pages/Legal';
+import HomePage from './pages/HomePage';
 import LiveThreat from './pages/LiveThreat';
 import AnalyzeEmail from './pages/AnalyzeEmail';
 import BatchAnalysis from './pages/BatchAnalysis';
@@ -53,6 +54,7 @@ function AppContent() {
   return (
     <Router>
         <Routes>
+            <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/auth/callback" element={<Callback />} />
             <Route path="/signup" element={<Signup />} />
@@ -61,7 +63,6 @@ function AppContent() {
 
             <Route element={<ProtectedRoute />}>
                 <Route element={<UserLayout children={<Outlet />} />}>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/analyze" element={<AnalyzeEmail />} />
                     <Route path="/batch-analysis" element={<BatchAnalysis />} />

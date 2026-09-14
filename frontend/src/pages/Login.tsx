@@ -53,6 +53,10 @@ export default function Login() {
             <p className="mt-6 max-w-lg text-base leading-8 text-[#9aadaa]">A focused workspace for tracing email identity, transport, authentication, and threat intelligence back to the original message.</p>
             <div className="mt-10 grid max-w-xl gap-3 sm:grid-cols-3"><Capability icon={<Network size={16} />} label="Mail flow" detail="Received-chain reconstruction" /><Capability icon={<Fingerprint size={16} />} label="Identity" detail="SPF · DKIM · DMARC" /><Capability icon={<Globe2 size={16} />} label="Intel" detail="Provider-aware enrichment" /></div>
             <div className="mt-12 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-[#29454b] pt-5 font-mono text-[10px] uppercase tracking-[0.14em] text-[#718581]"><span className="inline-flex items-center gap-2"><Check size={13} className="text-[#58d6c0]" /> RFC 5322 parsing</span><span className="inline-flex items-center gap-2"><Check size={13} className="text-[#58d6c0]" /> STIX 2.1 export</span><span className="inline-flex items-center gap-2"><Check size={13} className="text-[#58d6c0]" /> ATT&amp;CK context</span></div>
+            <div className="mt-8 flex flex-wrap items-center gap-4 font-mono text-[10px] uppercase tracking-[0.16em] text-[#718581]">
+              <Link to="/policy" className="inline-flex items-center gap-2 text-[#58d6c0] hover:text-[#9cefe1]">Privacy policy</Link>
+              <Link to="/service" className="inline-flex items-center gap-2 text-[#58d6c0] hover:text-[#9cefe1]">Terms of service</Link>
+            </div>
           </section>
 
           <section className="relative rounded-2xl border border-[#3b5e60] bg-[#0c171c]/90 p-6 shadow-[0_28px_90px_rgba(2,12,15,0.42)] backdrop-blur-xl sm:p-8">
