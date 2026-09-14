@@ -555,6 +555,7 @@ class EvidenceCorrelator:
         content_analysis: Dict[str, Any] = None,
         ml_prediction: Dict[str, Any] = None,
         rule_detections: List[Dict[str, Any]] = None,
+        detector_findings: List[Dict[str, Any]] = None,
     ) -> CorrelationResult:
         header_forensics = header_forensics or {}
         authentication = authentication or {}
@@ -566,6 +567,7 @@ class EvidenceCorrelator:
         content_analysis = content_analysis or {}
         ml_prediction = ml_prediction or {}
         rule_detections = rule_detections or []
+        detector_findings = detector_findings or []
 
         seen: set = set()
         suppressed: List[EvidenceRecord] = []
@@ -580,6 +582,7 @@ class EvidenceCorrelator:
         scoring.extend(EvidenceCorrelator._normalize_domain(domain_intelligence, seen, suppressed))
         scoring.extend(EvidenceCorrelator._normalize_ml(ml_prediction, authentication, seen, suppressed))
         scoring.extend(EvidenceCorrelator._normalize_threat_intel(threat_intelligence, seen, suppressed))
+        scoring.extend(EvidenceCorrelator._legacy_findings(detector_findings, "detector", seen, suppressed))
 
         # A stripped message is not inherently malicious, but urgency combined
         # with several missing delivery-trace headers is materially stronger than

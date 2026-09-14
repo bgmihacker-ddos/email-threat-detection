@@ -37,6 +37,8 @@ from app.services.threat_reasoning import ThreatReasoningEngine
 from app.services.attack_chain import AttackChainReconstruction
 from app.detection.ml_classifier import get_ml_classifier
 from app.detection.bert_classifier import get_bert_classifier
+from app.detection.anomaly_detector import AnomalyDetector
+from app.detection.impersonation import ImpersonationAnalyzer
 from app.services.sender_intelligence import SenderIntelligenceAnalyzer
 from app.services.india_threat_intel import IndiaThreatIntel
 from app.services.dns_intelligence import DNSIntelligenceService
@@ -52,6 +54,8 @@ from app.services.alert_dispatcher import dispatch_analysis_alert
 from app.services.live_auth_verifier import verify_dkim, verify_spf
 from app.services.relay_path_builder import build_relay_path
 from app.services.pdf_report import generate_forensic_pdf
+from app.services.certin_reporter import generate_certin_report
+from app.services.blockchain_ledger import anchor_analysis, compute_evidence_hash, verify_analysis
 from app.core.config import settings
 
 router = APIRouter()
@@ -425,6 +429,34 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
         static_timer.item_count = len(urls) + len(domains) + len(attachment_analysis.get("attachments", []))
         stage_timings.append(static_timer.complete())
 
+        anomaly_analysis = AnomalyDetector.analyze(parsed_email, header_forensics)
+        sender_address = parsed_email.get("from", "") if isinstance(parsed_email, dict) else ""
+        if isinstance(sender_address, dict):
+            sender_address = sender_address.get("address", "")
+        sender_domain = str(sender_address).rsplit("@", 1)[-1].strip().lower() if "@" in str(sender_address) else ""
+        impersonation_analysis = ImpersonationAnalyzer.analyze(sender_domain, domains)
+        detector_findings = []
+        for index, finding in enumerate(anomaly_analysis.get("anomalies", [])):
+            detector_findings.append({
+                **finding,
+                "finding_id": f"anomaly.{finding.get('anomaly_type', 'signal')}.{index}",
+                "title": finding.get("description", "Email anomaly detected"),
+                "source": "anomaly_detector",
+                "evidence_class": "contextual_anomaly",
+                "risk_relevance": "contextual",
+                "evidence": [finding.get("evidence", "")],
+            })
+        for index, finding in enumerate(impersonation_analysis.get("lookalike_findings", [])):
+            detector_findings.append({
+                **finding,
+                "finding_id": f"impersonation.{finding.get('type', 'signal')}.{index}",
+                "title": finding.get("description", "Brand impersonation detected"),
+                "source": "impersonation_analyzer",
+                "evidence_class": "strong_risk_signal",
+                "risk_relevance": "risk_contributing",
+                "evidence": [finding.get("observed_domain", ""), finding.get("protected_domain", "")],
+            })
+
         _update_job_status(db, analysis_id, "processing", "Correlating intelligence feeds (DNS/WHOIS/ThreatIntel)...", 60)
 
         # 2) Safe local intelligence enrichment. DNS is best-effort and never a verdict.
@@ -463,6 +495,8 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
             content_analysis,
             ml_analysis,
             rule_result,
+            parsed_email,
+            detector_findings,
         )
 
         india_threat_intel = IndiaThreatIntel.analyze(parsed_email)
@@ -472,6 +506,7 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
             + attachment_analysis.get("findings", [])
             + content_analysis.get("findings", [])
             + india_threat_intel.get("findings", [])
+            + detector_findings
         )
         extended_reasoning = ThreatReasoningEngine.generate_reasoning(
             risk_result["verdict"],
@@ -550,6 +585,8 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
             attachment_analysis=attachment_analysis,
             content_analysis=content_analysis,
             ml_analysis=ml_analysis,
+            anomaly_analysis=anomaly_analysis,
+            impersonation_analysis=impersonation_analysis,
             india_threat_intel=india_threat_intel,
             risk_breakdown=risk_result["score_breakdown"],
             evidence_ledger=[
@@ -601,6 +638,14 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
         db_result.result = analysis.model_dump(mode="json")
         _persist_indicators(db, analysis_id, extracted_iocs)
         db.commit()
+
+        if settings.ALCHEMY_RPC_URL and settings.BLOCKCHAIN_CONTRACT_ADDRESS and settings.BLOCKCHAIN_WALLET_PRIVATE_KEY:
+            blockchain_anchor = await asyncio.to_thread(anchor_analysis, analysis_id, db_result.evidence_hash)
+            if blockchain_anchor:
+                result_payload = analysis.model_dump(mode="json")
+                result_payload["blockchain_anchor"] = blockchain_anchor
+                db_result.result = result_payload
+                db.commit()
 
         _update_job_status(db, analysis_id, "completed", "Analysis finalized and persisted", 100)
         stage_timings.append(persistence_timer.complete())
@@ -819,6 +864,59 @@ def export_analysis_json(
         content=payload,
         headers={"Content-Disposition": f'attachment; filename="analysis-{analysis_id}.json"'},
     )
+
+
+@router.get("/analysis/{analysis_id}/certin")
+def export_certin_report(analysis_id: str, db: Session = Depends(get_db)):
+    """Download a sanitized CERT-In incident report for a completed analysis."""
+    record = db.query(AnalysisResult).filter(AnalysisResult.id == analysis_id).first()
+    if record is None:
+        raise HTTPException(status_code=404, detail="Analysis not found.")
+    payload = _sanitize_result(_completed_result(record))
+    report = generate_certin_report({**payload, "analysis_id": payload.get("analysis_id", record.id)})
+    return JSONResponse(
+        content=report,
+        headers={"Content-Disposition": f'attachment; filename="analysis-{analysis_id}-certin-report.json"'},
+        media_type="application/json",
+    )
+
+
+@router.get("/analysis/{analysis_id}/blockchain/verify")
+def verify_blockchain_evidence(analysis_id: str, db: Session = Depends(get_db)):
+    """Compare persisted evidence with the hash recorded on the configured chain."""
+    record = db.query(AnalysisResult).filter(AnalysisResult.id == analysis_id).first()
+    if record is None:
+        raise HTTPException(status_code=404, detail="Analysis not found.")
+
+    payload = _completed_result(record)
+    anchor = payload.get("blockchain_anchor") or payload.get("ledger_anchor") or {}
+    tx_hash = anchor.get("tx_hash") or anchor.get("transaction_hash") or anchor.get("tx")
+    local_hash = record.evidence_hash or compute_evidence_hash(payload)
+    on_chain_hash = verify_analysis(analysis_id)
+
+    if on_chain_hash:
+        matches = local_hash.lower() == on_chain_hash.lower().removeprefix("0x")
+        status = "match" if matches else "mismatch"
+    elif tx_hash:
+        matches = False
+        status = "unavailable"
+    else:
+        matches = False
+        status = "not_anchored"
+
+    network = anchor.get("network") or anchor.get("chain") or "sepolia"
+    etherscan_url = f"https://sepolia.etherscan.io/tx/{tx_hash}" if tx_hash and network.lower() == "sepolia" else None
+    return {
+        "analysis_id": analysis_id,
+        "status": status,
+        "matches": matches,
+        "local_hash": local_hash,
+        "on_chain_hash": on_chain_hash,
+        "tx_hash": tx_hash,
+        "network": network,
+        "block_number": anchor.get("block_number"),
+        "etherscan_url": etherscan_url,
+    }
 
 
 @router.get("/analyze/{analysis_id}/evidence-bundle.zip")

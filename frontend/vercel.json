@@ -1,1 +1,16 @@
+<<<<<<< HEAD
 {}
+=======
+{
+  "rewrites": [
+    {
+      "source": "/policy",
+      "destination": "/policy/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+>>>>>>> 5c7c584 (Complete SIH detection and compliance upgrades)

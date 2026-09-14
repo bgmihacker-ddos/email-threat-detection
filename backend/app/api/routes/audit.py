@@ -10,7 +10,7 @@ router = APIRouter(prefix="/audit-logs", tags=["audit"])
 @router.get("")
 async def list_audit_logs(limit: int = Query(50, le=200), offset: int = Query(0), db: Session = Depends(get_db)):
     """List system and security audit logs."""
-    logs = db.query(AuditLog).order_by(AuditLog.timestamp.desc()).offset(offset).limit(limit).all()
+    logs = db.query(AuditLog).order_by(AuditLog.created_at.desc()).offset(offset).limit(limit).all()
     total = db.query(AuditLog).count()
     return {
         "total": total,
@@ -19,7 +19,8 @@ async def list_audit_logs(limit: int = Query(50, le=200), offset: int = Query(0)
         "data": [
             {
                 "id": log.id,
-                "timestamp": log.timestamp.isoformat() if log.timestamp else None,
+                "timestamp": log.created_at.isoformat() if log.created_at else None,
+                "created_at": log.created_at.isoformat() if log.created_at else None,
                 "actor_user_id": log.actor_user_id,
                 "action": log.action,
                 "target_user_id": log.target_user_id,

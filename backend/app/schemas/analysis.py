@@ -42,3 +42,5 @@ class EmailAnalysisSchema(BaseModel):
     mitre_techniques: List[Dict[str, Any]] = []
     related_investigations: List[Dict[str, Any]] = []
     stage_timings: List[Dict[str, Any]] = []
+    anomaly_analysis: Dict[str, Any] = {}
+    impersonation_analysis: Dict[str, Any] = {}

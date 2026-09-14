@@ -10,12 +10,14 @@ router = APIRouter(prefix="/iocs", tags=["iocs"])
 @router.get("/pivot")
 async def pivot_ioc(value: str = Query(..., description="IOC value (domain, IP, URL, email, hash)"), db: Session = Depends(get_db)):
     """Global search across all analyses to pivot on an IOC and find related threat campaigns."""
-    query = f"%{value.strip()}%"
-    records = db.query(AnalysisResultModel).filter(AnalysisResultModel.result.ilike(query)).limit(50).all()
+    needle = value.strip().lower()
+    records = db.query(AnalysisResultModel).order_by(AnalysisResultModel.created_at.desc()).limit(1000).all()
 
     matches = []
     for rec in records:
         data = rec.result if isinstance(rec.result, dict) else {}
+        if needle not in str(data).lower():
+            continue
         matches.append({
             "analysis_id": rec.id,
             "subject": data.get("email", {}).get("subject") or data.get("subject", "Untitled"),

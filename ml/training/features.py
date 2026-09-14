@@ -27,6 +27,10 @@ STRUCTURAL_NAMES = (
     "has_cred",
     "has_financial",
     "reply_to_mismatch",
+    "has_upi_spoof",
+    "has_gov_brand",
+    "has_hindi_urgency",
+    "from_free_provider",
 )
 
 

@@ -18,7 +18,7 @@ export const SimulateAttack: React.FC = () => {
     setLoading(true);
     setResult(null);
     try {
-      const res = await apiFetch("/api/simulate", {
+      const data = await apiFetch("/api/simulate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -31,7 +31,6 @@ export const SimulateAttack: React.FC = () => {
           dkim_pass: dkimPass,
         }),
       });
-      const data = await res.json();
       setResult(data);
     } catch (err) {
       console.error(err);
@@ -57,6 +56,18 @@ export const SimulateAttack: React.FC = () => {
       setSenderName("SBI Yono Support");
       setSenderEmail("support@sbi-yono-update.in");
       setBodyText("Dear Customer, Your KYC is pending. Update Aadhaar details within 24 hours.");
+    } else if (key === "quishing") {
+      setSubject("Scan to Confirm Your Delivery");
+      setSenderName("Courier Delivery Desk");
+      setSenderEmail("delivery@parcel-confirm.example");
+      setBodyText("Your parcel is waiting. Scan the QR code in the attached notice to confirm delivery and avoid a return fee.");
+    } else if (key === "benign") {
+      setSubject("Your monthly account statement is ready");
+      setSenderName("Example Bank Statements");
+      setSenderEmail("statements@example-bank.test");
+      setBodyText("Your monthly statement is ready in online banking. You can sign in through the usual bookmarked website.");
+      setSpfPass(true);
+      setDkimPass(true);
     }
   };
 
@@ -68,7 +79,7 @@ export const SimulateAttack: React.FC = () => {
           <p className="text-sm text-slate-400 mt-1">Craft synthetic threat payloads and test the detection pipeline in real-time.</p>
         </div>
         <div className="flex gap-2">
-          {["phishing", "bec", "india_kyc"].map((k) => (
+          {["phishing", "bec", "india_kyc", "quishing", "benign"].map((k) => (
             <button
               key={k}
               type="button"

@@ -10,9 +10,8 @@ export const AuditLogs: React.FC = () => {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const res = await apiFetch(`/api/audit?limit=50&offset=${offset}`);
-      const data = await res.json();
-      setLogs(data.items || []);
+      const data = await apiFetch(`/api/audit-logs?limit=50&offset=${offset}`);
+      setLogs(data.data || []);
     } catch (err) {
       console.error(err);
     } finally {

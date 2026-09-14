@@ -89,10 +89,24 @@ class MLClassifier:
             probabilities_array = classifier.predict_proba(vector)[0]
             classes = [str(value) for value in classifier.classes_]
             probabilities = {label: round(float(value), 6) for label, value in zip(classes, probabilities_array)}
-            index = int(np.argmax(probabilities_array))
-            label = classes[index]
-            confidence = float(probabilities_array[index])
-            contributions = self._contributions(vector, classifier, vectorizer, structural_names, index)
+
+            # Threshold-calibrated decision (recall-optimised for phishing)
+            THREAT_THRESHOLD = 0.40
+            threat_label = "phishing"  # the positive class
+            threat_prob = probabilities.get(threat_label, 0.0)
+            if threat_prob >= THREAT_THRESHOLD:
+                label = threat_label
+                confidence = threat_prob
+            else:
+                # pick the highest-probability non-threat class
+                label = max(
+                    (c for c in classes if c != threat_label),
+                    key=lambda c: probabilities.get(c, 0.0),
+                    default=classes[int(np.argmax(probabilities_array))],
+                )
+                confidence = probabilities.get(label, float(probabilities_array[int(np.argmax(probabilities_array))]))
+            predicted_index = classes.index(label) if label in classes else int(np.argmax(probabilities_array))
+            contributions = self._contributions(vector, classifier, vectorizer, structural_names, predicted_index)
             return {
                 "status": "available",
                 "label": label,
@@ -103,6 +117,8 @@ class MLClassifier:
                 "features_used": ["tf-idf", *structural_names],
                 "feature_families": list(self.model.get("feature_families", ["subject_body_tfidf", "email_structure"])),
                 "top_contributing_features": contributions,
+                "decision_threshold": THREAT_THRESHOLD,
+                "threat_probability": threat_prob,
             }
         except Exception:
             return _unavailable(str(self.model.get("model_version", _MODEL_VERSION_FALLBACK)))
@@ -147,7 +163,7 @@ class MLClassifier:
                 "contribution": round(score, 6)
             })
 
-        return results[:8]
+        return results[:12]
 
 
 

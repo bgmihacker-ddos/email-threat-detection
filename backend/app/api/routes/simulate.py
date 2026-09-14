@@ -40,6 +40,7 @@ Authentication-Results: spf={payload.spf_result} dkim={payload.dkim_result} dmar
             "severity": result.severity,
             "summary": result.summary,
             "recommendations": result.recommendations,
+            "analysis": result.model_dump(mode="json"),
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))

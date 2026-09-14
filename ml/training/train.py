@@ -90,7 +90,7 @@ def _split_records(records: List[Mapping[str, Any]], labels: np.ndarray):
     return train_indices, test_indices, "grouped_source_file"
 
 
-def train_model(dataset_path: Path = DEFAULT_DATASET, artifact_path: Path = DEFAULT_ARTIFACT) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+def train_model(dataset_path: Path = DEFAULT_DATASET, artifact_path: Path = DEFAULT_ARTIFACT, threshold: float = 0.40) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     dataset_path = resolve_repo_path(dataset_path)
     artifact_path = resolve_repo_path(artifact_path)
 
@@ -106,13 +106,13 @@ def train_model(dataset_path: Path = DEFAULT_DATASET, artifact_path: Path = DEFA
     # Evaluate on split
     train_features = _matrix(train_records, vectorizer, scaler, fit=True)
     test_features = _matrix(test_records, vectorizer, scaler, fit=False)
-    classifier_eval = LogisticRegression(C=0.5, class_weight="balanced", max_iter=1000, random_state=20260907, solver="lbfgs")
+    classifier_eval = LogisticRegression(C=1.0, class_weight="balanced", max_iter=1000, random_state=20260907, solver="lbfgs")
     classifier_eval.fit(train_features, [str(record["label"]) for record in train_records])
     metrics = evaluate_classifier(classifier_eval, test_features, [str(record["label"]) for record in test_records])
 
     # Train production model on full dataset
     full_features = _matrix(records, vectorizer, scaler, fit=True)
-    classifier = LogisticRegression(C=0.5, class_weight="balanced", max_iter=1000, random_state=20260907, solver="lbfgs")
+    classifier = LogisticRegression(C=1.0, class_weight="balanced", max_iter=1000, random_state=20260907, solver="lbfgs")
     classifier.fit(full_features, labels)
 
     import datetime
@@ -126,6 +126,7 @@ def train_model(dataset_path: Path = DEFAULT_DATASET, artifact_path: Path = DEFA
     artifact = {
         "artifact_version": 2,
         "model_version": model_version,
+        "decision_threshold": threshold,
         "text_vectorizer": vectorizer,
         "structural_scaler": scaler,
         "classifier": classifier,
@@ -154,8 +155,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Train the controlled local email threat classifier")
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
     parser.add_argument("--artifact", type=Path, default=DEFAULT_ARTIFACT)
+    parser.add_argument("--threshold", type=float, default=0.40,
+                        help="Decision threshold to record in artifact metadata (default: 0.40)")
     args = parser.parse_args()
-    _, metrics = train_model(args.dataset, args.artifact)
+    _, metrics = train_model(args.dataset, args.artifact, args.threshold)
     print(json.dumps(metrics, indent=2))
 
 

@@ -17,7 +17,7 @@ export const getThreats = async (): Promise<Threat[]> => {
       country_code: item.country_code,
       firstSeen: item.first_seen || 'Not reported',
       lastSeen: item.last_seen || 'Not reported',
-      status: item.status || 'unknown',
+      status: normalizeThreatStatus(item.status),
       description: item.malware || 'No description available',
       sender: item.reporter || 'Unknown reporter',
       source: item.source,
@@ -54,7 +54,7 @@ export const getThreatById = async (id: string): Promise<Threat | undefined> => 
       longitude: item.longitude,
       firstSeen: item.first_seen || 'Not reported',
       lastSeen: item.last_seen || 'Not reported',
-      status: item.status || 'unknown',
+      status: normalizeThreatStatus(item.status),
       description: item.malware || 'No description available',
       sender: item.reporter || 'Unknown reporter',
       source: item.source,
@@ -128,6 +128,15 @@ function normalizeSeverity(severity?: string): 'Safe' | 'Low' | 'Medium' | 'High
   if (normalized === 'medium') return 'Medium';
   if (normalized === 'low') return 'Low';
   return 'Safe';
+}
+
+function normalizeThreatStatus(status?: string): string {
+  const normalized = String(status || '').toLowerCase();
+  if (normalized === 'unknown' || normalized === 'active' || normalized === 'open') return 'Open';
+  if (normalized === 'analyzed' || normalized === 'resolved') return 'Resolved';
+  if (normalized === 'quarantined') return 'Quarantined';
+  if (normalized === 'in_progress' || normalized === 'in progress') return 'In Progress';
+  return status || 'Open';
 }
 
 export const getLiveThreats = async (): Promise<ThreatMapEvent[]> => {

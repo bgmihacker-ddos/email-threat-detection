@@ -19,6 +19,27 @@ _URGENCY_RE = re.compile(r"\b(urgent|immediate|action required|now|immediately)\
 _CRED_RE = re.compile(r"\b(login|password|verify|account|security)\b", re.IGNORECASE)
 _FINANCIAL_RE = re.compile(r"\b(wire|transfer|payment|invoice|bank)\b", re.IGNORECASE)
 
+# India-specific threat patterns
+_UPI_HANDLE_RE = re.compile(
+    r"@(okaxis|okhdfcbank|ybl|paytm|upi|okicici|oksbi|ikwik|apl|rbl|barodampay)",
+    re.IGNORECASE,
+)
+_GOV_BRAND_RE = re.compile(
+    r"\b(ministry\s+of|government\s+of\s+india|govt\.?\s*of\s*india|uidai|aadhaar|aadhar"
+    r"|pan\s+card|income\s+tax\s+department|epfo|provident\s+fund|gst\s+notice"
+    r"|rbi\s+governor|reserve\s+bank|sarkari|digilocker)\b",
+    re.IGNORECASE,
+)
+_HINDI_URGENCY_RE = re.compile(
+    r"\b(turant|jaldi|abhi|khata\s*band|otp\s*bhej|kripya|aapka\s*khata"
+    r"|rupaye|paisa\s*transfer|naukri|lottery\s*jeet)\b",
+    re.IGNORECASE,
+)
+_FREE_PROVIDER_RE = re.compile(
+    r"@(gmail|yahoo|hotmail|outlook|rediffmail|ymail|protonmail)\.com",
+    re.IGNORECASE,
+)
+
 
 def _as_text(value: Any) -> str:
     return value if isinstance(value, str) else "" if value is None else str(value)
@@ -78,6 +99,11 @@ def email_to_features(email: Mapping[str, Any] | None) -> Dict[str, Any]:
             "has_cred": int(bool(_CRED_RE.search(body))),
             "has_financial": int(bool(_FINANCIAL_RE.search(body))),
             "reply_to_mismatch": mismatch,
+            "has_upi_spoof": int(bool(_UPI_HANDLE_RE.search(body + " " + subject))),
+            "has_gov_brand": int(bool(_GOV_BRAND_RE.search(body + " " + subject))),
+            "has_hindi_urgency": int(bool(_HINDI_URGENCY_RE.search(body + " " + subject))),
+            "from_free_provider": int(bool(_FREE_PROVIDER_RE.search(
+                str(addresses.get("from", {}).get("address", "") if addresses else "")))),
         },
     }
 

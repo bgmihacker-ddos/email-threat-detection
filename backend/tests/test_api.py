@@ -2,6 +2,8 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.models.analysis import AnalysisResult
+from app.services.blockchain_ledger import compute_evidence_hash
+import app.api.routes.analysis as analysis_routes
 
 client = TestClient(app)
 
@@ -63,6 +65,58 @@ def test_persisted_analysis_includes_header_forensics():
     assert persisted["header_forensics"]["authentication_evidence"]["spf"]["status"] == "pass"
     assert "live_authentication" in persisted
     assert "relay_path" in persisted
+
+
+def test_certin_export_and_blockchain_verification(monkeypatch, db_session):
+    payload = {
+        "analysis_id": "certin-analysis",
+        "verdict": "malicious",
+        "risk_score": 85,
+        "severity": "high",
+        "summary": "Credential phishing detected.",
+        "email": {
+            "subject": "Urgent access request",
+            "from": "attacker@example.test",
+            "raw_email": "secret raw message",
+        },
+        "findings": [{"title": "Credential harvesting", "severity": "high", "confidence": 95}],
+        "ioc_extraction": {"urls": ["https://example.test/login"]},
+    }
+    record = AnalysisResult(
+        id="certin-analysis",
+        status="completed",
+        progress_percent=100,
+        result=payload,
+    )
+    db_session.add(record)
+    db_session.commit()
+
+    certin = client.get("/api/analysis/certin-analysis/certin")
+    assert certin.status_code == 200
+    assert certin.headers["content-disposition"] == 'attachment; filename="analysis-certin-analysis-certin-report.json"'
+    assert certin.json()["report_type"] == "CERT-In Incident Report"
+    assert "secret raw message" not in certin.text
+
+    monkeypatch.setattr(analysis_routes, "verify_analysis", lambda analysis_id: compute_evidence_hash(payload))
+    verification = client.get("/api/analysis/certin-analysis/blockchain/verify")
+    assert verification.status_code == 200
+    assert verification.json()["status"] == "match"
+    assert verification.json()["matches"] is True
+
+
+def test_blockchain_verification_reports_unanchored_analysis(db_session):
+    db_session.add(AnalysisResult(
+        id="unanchored-analysis",
+        status="completed",
+        progress_percent=100,
+        result={"analysis_id": "unanchored-analysis", "verdict": "benign"},
+    ))
+    db_session.commit()
+
+    verification = client.get("/api/analysis/unanchored-analysis/blockchain/verify")
+    assert verification.status_code == 200
+    assert verification.json()["status"] == "not_anchored"
+    assert verification.json()["matches"] is False
 
 
 def test_persisted_analysis_explorer_dashboard_and_redacted_exports():

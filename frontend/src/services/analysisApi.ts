@@ -169,3 +169,32 @@ export const downloadReport = async (id: string, format: 'json' | 'html' | 'pdf'
   anchor.remove();
   URL.revokeObjectURL(url);
 };
+
+export interface BlockchainVerification {
+  analysis_id: string;
+  status: 'match' | 'mismatch' | 'not_anchored' | 'unavailable';
+  matches: boolean;
+  local_hash: string;
+  on_chain_hash: string | null;
+  tx_hash: string | null;
+  network: string;
+  block_number?: number | null;
+  etherscan_url: string | null;
+}
+
+export const exportCertinReport = async (id: string) => {
+  const response = await fetch(`${BASE_URL}/api/analysis/${encodeURIComponent(id)}/certin`, { headers: authHeaders() });
+  if (!response.ok) throw new Error('CERT-In report export failed');
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `analysis-${id}-certin-report.json`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+};
+
+export const verifyBlockchainEvidence = async (id: string): Promise<BlockchainVerification> =>
+  apiFetch(`/api/analysis/${encodeURIComponent(id)}/blockchain/verify`, { headers: authHeaders() });

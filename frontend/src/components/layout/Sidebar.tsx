@@ -37,7 +37,7 @@ export function Sidebar() {
       <nav className="flex-1 space-y-7 overflow-y-auto p-4">
         <div className="space-y-1">
             <p className="mb-2 px-4 text-[9px] font-bold uppercase tracking-[0.2em] text-[#718581]">Workspace</p>
-          <NavItem to="/" icon={LayoutDashboard} name="Dashboard" />
+          <NavItem to="/dashboard" icon={LayoutDashboard} name="Dashboard" />
           <NavItem to="/analyze" icon={Mail} name="Analyze Email" />
           <NavItem to="/batch-analysis" icon={FileText} name="Batch Analysis" />
         </div>

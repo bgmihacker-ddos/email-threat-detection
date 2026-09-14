@@ -3,7 +3,10 @@
 Deduplicated, correlated evidence aggregation via EvidenceCorrelator.
 """
 
+import os
 from typing import Any, Dict, List
+
+from app.detection.bert_classifier import get_bert_classifier
 from app.detection.evidence_correlation import EvidenceCorrelator
 
 
@@ -20,8 +23,36 @@ class RiskEngine:
         content: Dict[str, Any],
         ml_res: Dict[str, Any],
         rule_res: Dict[str, Any],
+        email: Dict[str, Any] | None = None,
+        detector_findings: List[Dict[str, Any]] | None = None,
     ) -> Dict[str, Any]:
         """Aggregate evidence via EvidenceCorrelator for consistent scoring."""
+
+        # --- Optional BERT ensemble ---
+        _BERT_ENABLED = os.getenv("BERT_ENSEMBLE_ENABLED", "false").lower() == "true"
+        if _BERT_ENABLED and email is not None and ml_res.get("status") == "available":
+            try:
+                bert_res = get_bert_classifier().predict_email(email)
+                if bert_res.get("status") == "available":
+                    ml_prob = ml_res.get("probabilities", {}).get("phishing", 0.0)
+                    bert_prob = bert_res.get("probability", 0.0)
+                    # Soft-vote: 55% TF-IDF weight, 45% BERT weight
+                    ensemble_prob = round(0.55 * ml_prob + 0.45 * bert_prob, 6)
+                    THREAT_THRESHOLD = 0.40
+                    ensemble_label = "phishing" if ensemble_prob >= THREAT_THRESHOLD else "benign"
+                    ml_res = {
+                        **ml_res,
+                        "probability": ensemble_prob,
+                        "label": ensemble_label,
+                        "confidence": ensemble_prob if ensemble_label == "phishing" else (1.0 - ensemble_prob),
+                        "probabilities": {**ml_res.get("probabilities", {}), "phishing": ensemble_prob},
+                        "model_version": "ensemble-tfidf55-bert45-v1",
+                        "bert_probability": bert_prob,
+                        "ensemble_weights": {"tfidf": 0.55, "bert": 0.45},
+                    }
+            except Exception:
+                pass  # BERT failure must never block the pipeline
+        # --- End ensemble ---
 
         # 1. Correlate all findings
         correlation = EvidenceCorrelator.correlate(
@@ -35,6 +66,7 @@ class RiskEngine:
             content_analysis=content,
             ml_prediction=ml_res,
             rule_detections=rule_res.get("rules", []) if isinstance(rule_res, dict) else [],
+            detector_findings=detector_findings or [],
         )
 
         score_breakdown: List[Dict[str, Any]] = []

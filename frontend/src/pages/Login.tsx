@@ -14,7 +14,7 @@ export default function Login() {
   const { login, user } = useAuth();
 
   useEffect(() => {
-    if (user) navigate(user.role === 'admin' ? '/admin' : '/');
+    if (user) navigate(user.role === 'admin' ? '/admin' : '/dashboard');
   }, [user, navigate]);
 
   const handleLogin = async (event: React.FormEvent) => {
