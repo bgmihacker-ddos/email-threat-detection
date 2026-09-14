@@ -1,21 +1,62 @@
 import asyncio
 import httpx
+from datetime import datetime, timezone
 from fastapi import APIRouter
 from app.integrations.threatfox import ThreatFoxService
 from app.integrations.urlhaus import URLhausService
+from app.integrations.feodo_tracker import FeodoTrackerService
+from app.integrations.public_ip_feeds import PublicIpFeedService
 from app.services.geo_enricher import GeoEnricher
 from app.core.config import settings
 
 router = APIRouter()
 
+
+def _event_time(event):
+    value = event.get("first_seen") or event.get("last_seen") or ""
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
+    except (TypeError, ValueError, OverflowError):
+        return 0
+
+
+def _curate_events(events):
+    """Keep the live view current and inspectable without inventing fallback data."""
+    grouped = {}
+    seen_by_source = {}
+    for event in sorted(events, key=_event_time, reverse=True):
+        indicator = str(event.get("indicator") or "").strip().lower()
+        source = str(event.get("source") or "unknown").strip().lower()
+        if not indicator or indicator in seen_by_source.setdefault(source, set()):
+            continue
+        seen_by_source[source].add(indicator)
+        grouped.setdefault(source, []).append(event)
+
+    curated = []
+    source_names = list(grouped)
+    offset = 0
+    while source_names and len(curated) < settings.LIVE_THREAT_MAX_EVENTS:
+        source = source_names[offset % len(source_names)]
+        if grouped[source]:
+            curated.append(grouped[source].pop(0))
+        else:
+            source_names.remove(source)
+            continue
+        offset += 1
+    return curated
+
 @router.get("/live-threats", response_model=dict)
 async def get_live_threats():
     tf = ThreatFoxService()
     uh = URLhausService()
+    feodo = FeodoTrackerService()
+    public_feeds = PublicIpFeedService()
 
-    tf_response, uh_response = await asyncio.gather(
+    tf_response, uh_response, feodo_response, public_response = await asyncio.gather(
         tf.get_recent_ioc(),
         uh.get_recent_urls(),
+        feodo.get_recent_ioc(),
+        public_feeds.get_recent_ioc(),
         return_exceptions=True,
     )
 
@@ -23,6 +64,10 @@ async def get_live_threats():
         tf_response = {"data": [], "status": "error", "error_message": str(tf_response)}
     if isinstance(uh_response, Exception):
         uh_response = {"data": [], "status": "error", "error_message": str(uh_response)}
+    if isinstance(feodo_response, Exception):
+        feodo_response = {"data": [], "status": "error", "error_message": str(feodo_response)}
+    if isinstance(public_response, Exception):
+        public_response = {"data": [], "status": "error", "error_message": str(public_response)}
 
     all_data = []
 
@@ -76,6 +121,58 @@ async def get_live_threats():
             "first_seen": item.first_seen,
             "last_seen": item.last_seen,
         })
+
+    for item in feodo_response.get("data", []):
+        all_data.append({
+            "id": f"FEODO-{item.id}",
+            "indicator": item.indicator,
+            "indicator_type": item.indicator_type,
+            "country": item.country,
+            "country_code": item.country_code,
+            "city": None,
+            "latitude": item.latitude,
+            "longitude": item.longitude,
+            "severity": item.severity,
+            "confidence": item.confidence,
+            "source": item.source,
+            "timestamp": item.first_seen or item.last_seen or "",
+            "geo_source": None,
+            "malware": item.malware,
+            "tags": item.tags,
+            "reference_url": item.reference_url,
+            "reporter": item.reporter,
+            "threat_type": item.threat_type,
+            "status": item.status,
+            "first_seen": item.first_seen,
+            "last_seen": item.last_seen,
+        })
+
+    for item in public_response.get("data", []):
+        all_data.append({
+            "id": f"{item.source.upper().replace(' ', '-')}-{item.id}",
+            "indicator": item.indicator,
+            "indicator_type": item.indicator_type,
+            "country": item.country,
+            "country_code": item.country_code,
+            "city": None,
+            "latitude": item.latitude,
+            "longitude": item.longitude,
+            "severity": item.severity,
+            "confidence": item.confidence,
+            "source": item.source,
+            "timestamp": item.first_seen or item.last_seen or "",
+            "geo_source": None,
+            "malware": item.malware,
+            "tags": item.tags,
+            "reference_url": item.reference_url,
+            "reporter": item.reporter,
+            "threat_type": item.threat_type,
+            "status": item.status,
+            "first_seen": item.first_seen,
+            "last_seen": item.last_seen,
+        })
+
+    all_data = _curate_events(all_data)
 
     # 2. Extract public IPs for enrichment
     ip_events = []
@@ -141,9 +238,14 @@ async def get_live_threats():
         "data": all_data,
         "meta": {
             "count": len(all_data),
+            "feed_type": "live_provider_data",
+            "collected_at": datetime.now(timezone.utc).isoformat(),
+            "max_events": settings.LIVE_THREAT_MAX_EVENTS,
             "providers": [
                 {"source": "ThreatFox", "status": tf_response.get("status", "unknown"), "error": tf_response.get("error_message")},
-                {"source": "URLhaus", "status": uh_response.get("status", "unknown"), "error": uh_response.get("error_message")}
+                {"source": "URLhaus", "status": uh_response.get("status", "unknown"), "error": uh_response.get("error_message")},
+                {"source": "Feodo Tracker", "status": feodo_response.get("status", "unknown"), "error": feodo_response.get("error_message")},
+                {"source": "CINS Army / Blocklist.de SSH", "status": public_response.get("status", "unknown"), "error": public_response.get("error_message")}
             ]
         }
     }

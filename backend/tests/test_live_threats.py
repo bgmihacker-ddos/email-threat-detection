@@ -39,7 +39,9 @@ def test_live_threats_route_keeps_non_geolocated_events():
     }
 
     with patch.object(live_threats.ThreatFoxService, "get_recent_ioc", new=AsyncMock(return_value=threatfox)), \
-         patch.object(live_threats.URLhausService, "get_recent_urls", new=AsyncMock(return_value=urlhaus)):
+            patch.object(live_threats.URLhausService, "get_recent_urls", new=AsyncMock(return_value=urlhaus)), \
+             patch.object(live_threats.FeodoTrackerService, "get_recent_ioc", new=AsyncMock(return_value={"data": [], "status": "ok", "error_message": None})), \
+             patch.object(live_threats.PublicIpFeedService, "get_recent_ioc", new=AsyncMock(return_value={"data": [], "status": "ok", "error_message": None})):
         response = client.get("/api/live-threats")
 
     assert response.status_code == 200
@@ -153,7 +155,9 @@ def test_live_threats_enriches_public_ips():
     }
 
     with patch.object(live_threats.ThreatFoxService, "get_recent_ioc", new=AsyncMock(return_value=threatfox)), \
-         patch.object(live_threats.URLhausService, "get_recent_urls", new=AsyncMock(return_value=urlhaus)), \
+            patch.object(live_threats.URLhausService, "get_recent_urls", new=AsyncMock(return_value=urlhaus)), \
+            patch.object(live_threats.FeodoTrackerService, "get_recent_ioc", new=AsyncMock(return_value={"data": [], "status": "ok", "error_message": None})), \
+             patch.object(live_threats.PublicIpFeedService, "get_recent_ioc", new=AsyncMock(return_value={"data": [], "status": "ok", "error_message": None})), \
          patch.object(live_threats.GeoEnricher, "enrich_ip", new=AsyncMock(return_value=geo_data)) as mock_enrich:
         # Pre-seed or let it enrich
         GeoEnricher._cache["8.8.8.8"] = geo_data

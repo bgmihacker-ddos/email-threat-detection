@@ -77,6 +77,7 @@ class Settings:
     LIVE_AUTH_VERIFICATION_ENABLED = os.getenv("LIVE_AUTH_VERIFICATION_ENABLED", "false").lower() == "true"
     GEOLOCATION_API_URL = os.getenv("GEOLOCATION_API_URL", "https://ipapi.co")
     GEOLOCATION_API_TIMEOUT_SECONDS = float(os.getenv("GEOLOCATION_API_TIMEOUT_SECONDS", "3"))
+    LIVE_THREAT_MAX_EVENTS = int(os.getenv("LIVE_THREAT_MAX_EVENTS", "1500"))
     MAX_EMAIL_BYTES = int(os.getenv("MAX_EMAIL_BYTES", str(25 * 1024 * 1024)))
     MAX_ATTACHMENTS = int(os.getenv("MAX_ATTACHMENTS", "50"))
     MAX_ATTACHMENT_BYTES = int(os.getenv("MAX_ATTACHMENT_BYTES", str(10 * 1024 * 1024)))

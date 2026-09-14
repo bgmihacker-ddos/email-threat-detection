@@ -66,7 +66,7 @@ export default function LiveThreat() {
 
       <div className="relative z-10 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         {/* Map Section */}
-        <section className="flex flex-col rounded-xl border border-[#1b3037] bg-[#101b21]/90 p-6 shadow-[0_18px_45px_rgba(2,12,15,0.2)] min-h-[650px]">
+        <section className="flex min-h-[650px] flex-col overflow-hidden rounded-xl border border-[#214d57] bg-[#020b10]/80 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
            <div className="mb-4 flex items-center justify-between">
              <div className='flex items-center gap-2'>
                 <Terminal size={15} className='text-cyan-400'/>
@@ -81,7 +81,7 @@ export default function LiveThreat() {
                <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-cyan-400" /> Low</span>
              </div>
            </div>
-           <div className="flex-1 overflow-hidden rounded-lg border border-[#1b3037] bg-[#081216]">
+           <div className="flex-1 overflow-hidden bg-[#020b10]">
              {loading ? (
                 <div className="flex h-full items-center justify-center font-mono text-xs text-cyan-400 animate-pulse">
                   CALIBRATING GEOSPATIAL TELEMETRY...
