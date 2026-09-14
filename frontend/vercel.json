@@ -1,6 +1,4 @@
-<<<<<<< HEAD
-{}
-=======
+
 {
   "rewrites": [
     {
@@ -13,4 +11,4 @@
     }
   ]
 }
->>>>>>> 5c7c584 (Complete SIH detection and compliance upgrades)
+
