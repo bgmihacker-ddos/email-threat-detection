@@ -122,6 +122,38 @@ def test_ti_non_scoring_states():
         assert r.non_scoring_reason is not None
 
 
+def test_header_domain_threat_intel_is_context_only():
+    res = EvidenceCorrelator.correlate(threat_intelligence={
+        "threatfox": {
+            "status": "ok",
+            "reputation": "malicious",
+            "confidence": 75,
+            "indicator": "example.com",
+            "metadata": {"ti_scoring_eligible": False, "ioc_source": "header"},
+        }
+    })
+
+    assert res.scoring_records == []
+    assert res.evidence_records[0].non_scoring_reason == "header_domain_context"
+
+
+def test_low_confidence_provider_report_is_not_confirmed():
+    res = EvidenceCorrelator.correlate(threat_intelligence={
+        "threatfox": {
+            "status": "ok",
+            "reputation": "malicious",
+            "confidence": 75,
+            "indicator": "https://evil.test/login",
+        }
+    })
+
+    record = res.scoring_records[0]
+    assert record.base_points == 10
+    assert record.title == "threatfox reported malicious"
+    assert record.evidence_class == "strong_risk_signal"
+    assert record.confidence == 75
+
+
 def test_ml_signal_bounded_and_penalty():
     ml_data = {
         "prediction": "phishing",

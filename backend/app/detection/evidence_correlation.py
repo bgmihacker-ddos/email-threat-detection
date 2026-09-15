@@ -477,20 +477,49 @@ class EvidenceCorrelator:
                 continue
             seen.add(finding_id)
 
+            metadata = data.get("metadata") if isinstance(data.get("metadata"), dict) else {}
+            if metadata.get("ti_scoring_eligible") is False:
+                records.append(EvidenceRecord(
+                    base_points=0,
+                    title=f"{provider}: header domain enrichment",
+                    finding_id=finding_id,
+                    source=f"ti_{provider}",
+                    source_family="reputation",
+                    confidence=min(50, int(data.get("confidence") or 0)),
+                    evidence_class="informational",
+                    evidence_refs=[
+                        f"indicator: {data.get('indicator') or data.get('target')}",
+                        f"source: {metadata.get('ioc_source')}",
+                    ],
+                    severity="info",
+                    scoring_eligible=False,
+                    non_scoring_reason="header_domain_context",
+                ))
+                continue
+
             if status == "ok":
                 is_malicious = data.get("is_malicious")
                 reputation = str(data.get("reputation") or "unknown").lower()
                 if is_malicious is True or reputation in {"malicious", "threat"}:
+                    provider_confidence = min(100, max(0, int(data.get("confidence") or 0)))
+                    explicit_verdict = is_malicious is True
+                    confirmed = explicit_verdict or provider_confidence >= 90
+                    if explicit_verdict and provider_confidence == 0:
+                        provider_confidence = 90
                     records.append(EvidenceRecord(
-                        base_points=25,
-                        title=f"{provider} confirmed malicious",
+                        base_points=25 if confirmed else 10,
+                        title=f"{provider} confirmed malicious" if confirmed else f"{provider} reported malicious",
                         finding_id=finding_id,
                         source=f"ti_{provider}",
                         source_family="reputation",
-                        confidence=95,
-                        evidence_class="confirmed_malicious",
-                        evidence_refs=[f"target: {data.get('target')}", f"positives: {data.get('positives')}"],
-                        severity="critical",
+                        confidence=provider_confidence,
+                        evidence_class="confirmed_malicious" if confirmed else "strong_risk_signal",
+                        evidence_refs=[
+                            f"indicator: {data.get('indicator') or data.get('target')}",
+                            f"provider_confidence: {provider_confidence}%",
+                            f"detections: {data.get('detections', data.get('positives', 0))}",
+                        ],
+                        severity="critical" if confirmed else "medium",
                     ))
                 elif is_malicious is False and reputation in {"clean", "benign", "safe"}:
                     records.append(EvidenceRecord(
@@ -607,19 +636,21 @@ class EvidenceCorrelator:
         if len(missing_trace) >= 2 and urgency_present and not auth_pass and correlation_id not in seen:
             seen.add(correlation_id)
             scoring.append(EvidenceRecord(
-                base_points=25,
+                # Missing headers are common in pasted, forwarded, and
+                # partially captured messages. Keep this contextual only;
+                # urgency must be corroborated by observable infrastructure.
+                base_points=4,
                 title="Urgent message with incomplete delivery headers",
                 finding_id=correlation_id,
                 source="evidence_correlation",
                 source_family="correlation",
-                confidence=82,
-                evidence_class="strong_risk_signal",
+                confidence=60,
+                evidence_class="contextual_anomaly",
                 evidence_refs=[
                     "signal: urgent/coercive language",
                     f"missing_headers: {', '.join(record.finding_id for record in missing_trace)}",
                 ],
-                severity="high",
-                mitre_techniques=["T1566"],
+                severity="low",
             ))
 
         # Handle clustering for host clusters (e.g. url & domain matching cluster_key)

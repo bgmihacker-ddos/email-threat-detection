@@ -29,10 +29,13 @@ class AttackChainReconstruction:
         chain.append({
             "stage": "initial_delivery",
             "title": "1. Ingestion & Mail Transport",
-            "status": "observed",
-            "confidence": 100,
-            "evidence": [f"Processed {hops} hop(s). Origin IP: {origin_ip}{prov_text}"],
-            "why_inferred": "MTA Received hop headers reconstructed chronologically."
+            "status": "observed" if hops else "not_observed",
+            "confidence": 100 if hops else 0,
+            "evidence": [
+                f"Processed {hops} hop(s). Origin IP: {origin_ip}{prov_text}"
+                if hops else "No Received headers were supplied; transport path was not observed."
+            ],
+            "why_inferred": "MTA Received hop headers reconstructed chronologically." if hops else "No transport evidence was available."
         })
 
         # Stage 2: Identity Deception / Spoofing

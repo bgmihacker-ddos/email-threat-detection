@@ -59,6 +59,41 @@ def test_1_benign_email_inference(trained_model_path):
     assert "benign" in res["probabilities"]
 
 
+def test_neutral_low_signal_email_is_not_promoted_to_phishing(trained_model_path):
+    clf = MLClassifier(model_path=trained_model_path)
+    res = clf.predict_email({
+        "subject": "Hello",
+        "plain_text": "Hello, hope you are well.",
+        "html_body": "",
+        "urls": [],
+        "attachments": [],
+        "addresses": {"from": {"address": "colleague@example.com"}, "reply_to": []},
+    })
+
+    assert res["status"] == "available"
+    assert res["label"] == "benign"
+    assert res["low_signal_guard"] is True
+    assert res["observable_threat_signal"] is False
+
+
+def test_authenticated_transactional_email_is_not_promoted_to_phishing(trained_model_path):
+    clf = MLClassifier(model_path=trained_model_path)
+    res = clf.predict_email({
+        "subject": "Your transaction statement is ready",
+        "plain_text": "Your transaction confirmation statement is ready for viewing. You can review account activity through the mobile app.",
+        "html_body": "",
+        "urls": ["https://support.famapp.in"],
+        "attachments": [],
+        "addresses": {"from": {"address": "support@service.famapp.in"}, "reply_to": []},
+        "authentication_headers": {
+            "authentication-results": "mx.google.com; spf=pass; dkim=pass; dmarc=pass",
+        },
+    })
+
+    assert res["label"] == "benign"
+    assert res["authenticated_low_risk_guard"] is True
+
+
 def test_2_phishing_email_inference(trained_model_path):
     """2. Test phishing email classification with urgency/credential triggers."""
     clf = MLClassifier(model_path=trained_model_path)

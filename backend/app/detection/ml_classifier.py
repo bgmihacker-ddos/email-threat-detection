@@ -94,7 +94,26 @@ class MLClassifier:
             THREAT_THRESHOLD = 0.40
             threat_label = "phishing"  # the positive class
             threat_prob = probabilities.get(threat_label, 0.0)
-            if threat_prob >= THREAT_THRESHOLD:
+            structure = features.get("structure", {})
+            observable_threat_signal = any(
+                structure.get(name, 0)
+                for name in (
+                    "has_urgency",
+                    "has_financial",
+                    "reply_to_mismatch",
+                    "has_upi_spoof",
+                    "has_gov_brand",
+                    "has_hindi_urgency",
+                    "url_count",
+                    "attachment_count",
+                )
+            ) or bool(structure.get("has_html") and structure.get("has_cred"))
+
+            # TF-IDF models can assign a high score to an unfamiliar neutral
+            # token. Do not promote that outlier to phishing without a
+            # corroborating message-structure signal.
+            low_signal_guard = threat_prob >= THREAT_THRESHOLD and not observable_threat_signal
+            if threat_prob >= THREAT_THRESHOLD and not low_signal_guard:
                 label = threat_label
                 confidence = threat_prob
             else:
@@ -120,6 +139,8 @@ class MLClassifier:
                 "top_contributing_features": contributions,
                 "decision_threshold": THREAT_THRESHOLD,
                 "threat_probability": threat_prob,
+                "low_signal_guard": low_signal_guard,
+                "observable_threat_signal": observable_threat_signal,
             }
         except Exception:
             return _unavailable(str(self.model.get("model_version", _MODEL_VERSION_FALLBACK)))

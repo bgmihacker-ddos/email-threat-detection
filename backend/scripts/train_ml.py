@@ -519,14 +519,14 @@ def train_and_validate(
     print(f"  ECE:            {main_metrics['expected_calibration_error']:.4f}")
     print(f"  Confusion Matrix (TN, FP, FN, TP): {main_metrics['confusion_matrix']['matrix_2x2']}")
 
-    print("\nHUMAN TEST METRICS (N={human_metrics['sample_count']}):")
+    print(f"\nHUMAN TEST METRICS (N={human_metrics['sample_count']}):")
     print(f"  Accuracy:       {human_metrics['accuracy'] * 100:.2f}%")
     print(f"  Precision:      {human_metrics['precision'] * 100:.2f}%")
     print(f"  Phish Recall:   {human_metrics['phishing_recall'] * 100:.2f}%")
     print(f"  F1-Score:       {human_metrics['f1_score']:.4f}")
     print(f"  ROC-AUC:        {human_metrics['roc_auc']:.4f}")
 
-    print("\nLLM ROBUSTNESS TEST METRICS (N={llm_metrics['sample_count']}):")
+    print(f"\nLLM ROBUSTNESS TEST METRICS (N={llm_metrics['sample_count']}):")
     print(f"  Accuracy:       {llm_metrics['accuracy'] * 100:.2f}%")
     print(f"  Precision:      {llm_metrics['precision'] * 100:.2f}%")
     print(f"  Phish Recall:   {llm_metrics['phishing_recall'] * 100:.2f}%")

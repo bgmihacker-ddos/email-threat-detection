@@ -700,7 +700,7 @@ class ThreatIntelligenceService:
             key = (kind, value.lower())
             if kind in supported and value and key not in seen:
                 seen.add(key)
-                unique.append((kind, value))
+                unique.append((kind, value, ioc))
 
             if len(unique) == 12:  # Bounded item count to prevent abuse
                 break
@@ -708,6 +708,23 @@ class ThreatIntelligenceService:
         # Connection pooling via a shared AsyncClient
         limits = httpx.Limits(max_connections=12, max_keepalive_connections=8)
         async with httpx.AsyncClient(timeout=_TIMEOUT, limits=limits, follow_redirects=True) as client:
-            batches = await asyncio.gather(*(self.enrich_ioc(kind, val, client) for kind, val in unique))
+            batches = await asyncio.gather(*(self.enrich_ioc(kind, val, client) for kind, val, _ in unique))
 
-        return [item for batch in batches for item in batch]
+        annotated = []
+        for batch, (kind, value, ioc) in zip(batches, unique):
+            source = str(ioc.get("source") or "unknown")
+            context = str(ioc.get("context") or "")
+            for item in batch:
+                result = dict(item)
+                metadata = dict(result.get("metadata") or {})
+                metadata.update({
+                    "ioc_source": source,
+                    "ioc_context": context,
+                    "ioc_confidence": int(ioc.get("confidence") or 0),
+                    "ti_scoring_eligible": not (kind == "domain" and source == "header"),
+                })
+                result["metadata"] = metadata
+                result.setdefault("indicator", value)
+                annotated.append(result)
+
+        return annotated

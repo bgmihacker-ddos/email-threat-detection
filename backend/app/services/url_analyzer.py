@@ -3,6 +3,7 @@
 import re
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse, unquote
+import unicodedata
 
 import ipaddress
 
@@ -133,14 +134,39 @@ class URLIntelligence:
             # Punycode / IDNA spoofing
             if host.startswith("xn--") or ".xn--" in host:
                 result["indicators"].append("punycode_domain")
+                # Attempt to decode punycode to find homoglyphs
+                decoded_host = host
+                try:
+                    decoded_host = host.encode('ascii').decode('idna')
+                except Exception:
+                    pass
+                
                 result["findings"].append(URLIntelligence._finding(
                     "url.punycode",
                     "domain_impersonation",
                     "Punycode/IDNA Domain Detected",
-                    "The URL uses internationalized domain encoding (Punycode). While sometimes legitimate, it is frequently used to create visual lookalikes of trusted brands (homograph attacks).",
+                    f"The URL uses internationalized domain encoding (Punycode). Decoded: {decoded_host}",
                     "medium",
                     90,
-                    [host],
+                    [host, decoded_host],
+                    "strong_risk_signal"
+                ))
+
+            # Unicode Homoglyph check
+            # Look for non-ASCII characters that might be confusingly similar
+            unquoted_host = unquote(host)
+            normalized_host = unicodedata.normalize('NFKC', unquoted_host)
+            is_homoglyph_likely = any(ord(c) > 127 for c in unquoted_host)
+            if is_homoglyph_likely:
+                result["indicators"].append("unicode_homoglyph")
+                result["findings"].append(URLIntelligence._finding(
+                    "url.unicode_homoglyph",
+                    "domain_impersonation",
+                    "Unicode Homoglyph / Confusable Characters Detected",
+                    f"The URL contains Unicode characters that may be visually confusing. Normalized: {normalized_host}",
+                    "high",
+                    95,
+                    [unquoted_host, normalized_host],
                     "strong_risk_signal"
                 ))
 
