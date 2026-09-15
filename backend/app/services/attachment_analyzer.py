@@ -1,3 +1,9 @@
+# AUDIT SCRIPT: Attachment Analyzer
+# Importers/Callers: app.api.routes.analysis, app.detection.evidence_correlation
+# Affected API: app.services.attachment_analyzer
+# Data schemas: attachment analysis dicts
+# Verbatim instruction: "Build a production-safe ATTACHMENT STATIC FORENSICS subsystem."
+
 """Phase 6G & Phase 9: Safe Attachment Static & Forensic Analysis.
 
 Inspects attachment metadata, extensions, MIME types, double extensions,
@@ -12,6 +18,12 @@ import zipfile
 import re
 from typing import Any, Dict, List, Optional
 from .ocr_service import OCRIntelligenceService
+from .attachment_forensics.file_identifier import FileIdentifier
+from .attachment_forensics.archive_forensics import ArchiveForensics
+from .attachment_forensics.office_forensics import OfficeForensics
+from .attachment_forensics.pdf_forensics import PdfForensics
+from .attachment_forensics.executable_forensics import ExecutableForensics
+from .attachment_forensics.ioc_extractor import AttachmentIocExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -49,71 +61,24 @@ class AttachmentAnalyzer:
     @staticmethod
     def _inspect_pdf_bytes(raw_bytes: bytes) -> List[str]:
         """Perform static token inspection on PDF byte streams."""
-        pdf_indicators: List[str] = []
-        for pattern, tag in _PDF_SUSPICIOUS_TOKENS:
-            if pattern.search(raw_bytes):
-                pdf_indicators.append(tag)
-        return pdf_indicators
+        return PdfForensics.inspect(raw_bytes)
 
     @staticmethod
     def _inspect_ooxml_bytes(raw_bytes: bytes) -> List[str]:
         """Inspect OOXML (docx, xlsx, pptx, etc.) packages statically via zipfile."""
-        ooxml_indicators: List[str] = []
-        try:
-            with zipfile.ZipFile(io.BytesIO(raw_bytes)) as zf:
-                namelist = zf.namelist()
-                for name in namelist:
-                    lower_name = name.lower()
-                    if "vbaproject.bin" in lower_name:
-                        ooxml_indicators.append("ooxml_embedded_vba_macro")
-                    if "_rels" in lower_name and lower_name.endswith(".rels"):
-                        try:
-                            rel_data = zf.read(name).decode("utf-8", errors="ignore")
-                            if "TargetMode=\"External\"" in rel_data or "targetmode=\"external\"" in rel_data:
-                                if "http" in rel_data:
-                                    ooxml_indicators.append("ooxml_external_template_or_link")
-                        except Exception:
-                            pass
-        except Exception:
-            pass
-        return list(dict.fromkeys(ooxml_indicators))
+        return OfficeForensics.inspect_ooxml(raw_bytes)
 
     @staticmethod
     def _inspect_archive_bytes(raw_bytes: bytes) -> List[str]:
         """Inspect archive safely bounded for decompression bombs and dangerous payloads."""
-        archive_indicators: List[str] = []
-        try:
-            with zipfile.ZipFile(io.BytesIO(raw_bytes)) as zf:
-                infolist = zf.infolist()
-                total_uncompressed = sum(info.file_size for info in infolist)
-                compressed_size = len(raw_bytes) or 1
-
-                # Check for zip bomb ratio
-                if compressed_size > 0 and (total_uncompressed / compressed_size) > 100 and total_uncompressed > 10_000_000:
-                    archive_indicators.append("zip_bomb_ratio_detected")
-
-                nested_execs = [
-                    info.filename for info in infolist
-                    if any(info.filename.lower().endswith(f".{de}") for de in _DANGEROUS_EXTENSIONS)
-                ]
-                if nested_execs:
-                    archive_indicators.append("executable_in_archive")
-
-                # Double extension inside archive
-                for info in infolist:
-                    parts = info.filename.split(".")
-                    if len(parts) >= 3 and parts[-1].lower() in _DANGEROUS_EXTENSIONS:
-                        archive_indicators.append("double_extension_in_archive")
-                        break
-        except Exception:
-            pass
-        return list(dict.fromkeys(archive_indicators))
+        return ArchiveForensics.inspect(raw_bytes, "zip")
 
     @staticmethod
     def analyze(attachments: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Analyze a list of email attachments statically and safely."""
         analyzed_list: List[Dict[str, Any]] = []
         findings: List[Dict[str, Any]] = []
+        extracted_iocs: List[Dict[str, Any]] = []
         high_risk_count = 0
 
         for att in attachments:
@@ -129,16 +94,28 @@ class AttachmentAnalyzer:
             sha256 = att.get("sha256")
             md5 = att.get("md5")
             raw_bytes = att.get("raw_bytes")
-            if raw_bytes and isinstance(raw_bytes, (bytes, bytearray)):
-                if not sha256:
-                    sha256 = hashlib.sha256(raw_bytes).hexdigest()
-                if not md5:
-                    md5 = hashlib.md5(raw_bytes).hexdigest()
-
+            entropy = None
+            is_high_entropy = False
             magic_bytes = str(att.get("magic_bytes") or "")
+
+            if raw_bytes and isinstance(raw_bytes, (bytes, bytearray)):
+                meta = FileIdentifier.get_file_metadata(raw_bytes, filename)
+                sha256 = sha256 or meta["sha256"]
+                md5 = md5 or meta["md5"]
+                magic_bytes = magic_bytes or meta["magic_bytes"]
+                entropy = meta["entropy"]
+                is_high_entropy = meta["is_high_entropy"]
+
+                # Extract IOCs
+                att_iocs = AttachmentIocExtractor.extract_iocs(raw_bytes, filename, sha256 or filename)
+                extracted_iocs.extend(att_iocs)
 
             indicators: List[str] = []
             risk = "safe"
+
+            # Entropy indicator
+            if is_high_entropy:
+                indicators.append("high_entropy_payload")
 
             # 1. RTL / Bidirectional Override Spoofing
             has_bidi = any(c in filename for c in _BIDI_CHARS)
@@ -176,27 +153,33 @@ class AttachmentAnalyzer:
                     risk = "suspicious"
             elif extension in _ARCHIVE_EXTENSIONS:
                 indicators.append("archive_extension")
-                if raw_bytes and extension == "zip":
-                    arch_inds = AttachmentAnalyzer._inspect_archive_bytes(raw_bytes)
+                if raw_bytes:
+                    arch_inds = ArchiveForensics.inspect(raw_bytes, extension)
                     indicators.extend(arch_inds)
-                    if any(i in arch_inds for i in ("executable_in_archive", "zip_bomb_ratio_detected")):
+                    if any(i in arch_inds for i in ("executable_in_archive", "zip_bomb_ratio_detected", "zip_slip_path_traversal")):
                         risk = "malicious"
 
-            # 5. Deep Format Inspection (PDF, OOXML)
+            # 5. Deep Format Inspection (PDF, OOXML, PE, Script)
             if raw_bytes and isinstance(raw_bytes, (bytes, bytearray)):
                 if extension == "pdf" or content_type == "application/pdf":
-                    pdf_inds = AttachmentAnalyzer._inspect_pdf_bytes(raw_bytes)
+                    pdf_inds = PdfForensics.inspect(raw_bytes)
                     indicators.extend(pdf_inds)
                     if "pdf_embedded_javascript" in pdf_inds or "pdf_launch_action" in pdf_inds:
                         risk = "malicious"
                     elif pdf_inds and risk == "safe":
                         risk = "suspicious"
                 elif extension in ("docx", "xlsx", "pptx", "docm", "xlsm", "pptm"):
-                    ooxml_inds = AttachmentAnalyzer._inspect_ooxml_bytes(raw_bytes)
+                    ooxml_inds = OfficeForensics.inspect_ooxml(raw_bytes)
                     indicators.extend(ooxml_inds)
                     if "ooxml_embedded_vba_macro" in ooxml_inds or "ooxml_external_template_or_link" in ooxml_inds:
                         if risk == "safe":
                             risk = "suspicious"
+                elif extension in ("ps1", "vbs", "js", "hta"):
+                    script_inds = ExecutableForensics.inspect_script(raw_bytes, extension)
+                    indicators.extend(script_inds)
+                elif is_executable_magic or extension in ("exe", "dll", "scr"):
+                    pe_inds = ExecutableForensics.inspect_pe(raw_bytes)
+                    indicators.extend(pe_inds)
 
             if risk == "malicious":
                 high_risk_count += 1
@@ -207,15 +190,15 @@ class AttachmentAnalyzer:
                 "size": size,
                 "sha256": sha256,
                 "md5": md5,
+                "entropy": entropy,
                 "extension": extension,
                 "risk_level": risk,
                 "indicators": list(dict.fromkeys(indicators)),
             }
 
-            # --- START OCR INTEGRATION (Phase 14 & 15) ---
+            # --- START OCR INTEGRATION ---
             if content_type.startswith("image/") and raw_bytes and isinstance(raw_bytes, (bytes, bytearray)):
                 try:
-                    from .ocr_service import OCRIntelligenceService
                     ocr_result = OCRIntelligenceService.analyze_image(raw_bytes, filename)
                     analyzed_item["ocr_status"] = ocr_result.get("status")
                     if ocr_result.get("has_qr_codes"):
@@ -223,8 +206,6 @@ class AttachmentAnalyzer:
                         if "qr_code_detected" not in indicators:
                             indicators.append("qr_code_detected")
                             analyzed_item["indicators"] = list(dict.fromkeys(indicators))
-                            # Depending on the threat model, we could flag QR codes as suspicious
-                            # Here we just mark it as an indicator, but if it has URLs it might be Quishing
                     if ocr_result.get("extracted_text"):
                         analyzed_item["extracted_text"] = ocr_result.get("extracted_text")
                 except Exception as e:
@@ -239,6 +220,8 @@ class AttachmentAnalyzer:
                     evidence.append(f"SHA256: {sha256}")
                 if magic_bytes:
                     evidence.append(f"Magic: {magic_bytes}")
+                if entropy is not None:
+                    evidence.append(f"Entropy: {entropy:.2f}")
                 if indicators:
                     evidence.append(f"Indicators: {', '.join(indicators)}")
 
@@ -258,6 +241,7 @@ class AttachmentAnalyzer:
         return {
             "attachments": analyzed_list,
             "findings": findings,
+            "extracted_iocs": extracted_iocs,
             "high_risk_count": high_risk_count,
             "total_count": len(analyzed_list),
         }

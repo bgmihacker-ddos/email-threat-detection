@@ -421,6 +421,21 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
         attachment_timer = StageTimer(analysis_id, "attachment_analysis", len(parsed_email.get("attachments", [])))
         attachment_analysis = AttachmentAnalyzer.analyze(parsed_email.get("attachments", []))
         stage_timings.append(attachment_timer.complete())
+
+        # Merge attachment extracted IOCs into extracted_iocs
+        for att_ioc in attachment_analysis.get("extracted_iocs", []):
+            ioc_type = "ip" if att_ioc.get("type") == "ipv4" else att_ioc.get("type", "unknown")
+            ioc_val = att_ioc.get("value", "")
+            if ioc_val and not any(existing.get("value") == ioc_val for existing in extracted_iocs.get("iocs", [])):
+                extracted_iocs.setdefault("iocs", []).append({
+                    "type": ioc_type,
+                    "value": ioc_val,
+                    "normalized_value": ioc_val.strip().lower(),
+                    "source": "attachment",
+                    "context": f"Found in attachment: {att_ioc.get('parent_filename')}",
+                    "confidence": att_ioc.get("confidence", 85),
+                    "provenance_class": att_ioc.get("provenance_class", "OBSERVED"),
+                })
         content_timer = StageTimer(analysis_id, "content_analysis")
         content_analysis = ContentAnalyzer.analyze(parsed_email)
         stage_timings.append(content_timer.complete())
