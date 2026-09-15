@@ -25,6 +25,8 @@ _CREDENTIAL_KEYWORDS = {
 _KNOWN_BRANDS = [
     "paypal", "apple", "microsoft", "google", "amazon", "netflix",
     "chase", "wells", "bankofamerica", "citi", "yahoo", "facebook",
+    "instagram", "linkedin", "dropbox", "docusign", "adobe",
+    "github", "slack", "stripe", "coinbase", "binance", "metamask",
 ]
 
 _SUSPICIOUS_PORTS = {21, 22, 23, 25, 3389, 8080, 8443, 6667}

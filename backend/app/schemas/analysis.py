@@ -44,3 +44,4 @@ class EmailAnalysisSchema(BaseModel):
     stage_timings: List[Dict[str, Any]] = []
     anomaly_analysis: Dict[str, Any] = {}
     impersonation_analysis: Dict[str, Any] = {}
+    bec_analysis: Dict[str, Any] = {}

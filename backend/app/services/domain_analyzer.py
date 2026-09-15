@@ -21,7 +21,27 @@ _SUSPICIOUS_TLDS = {
 _KNOWN_BRANDS = [
     "paypal", "apple", "microsoft", "google", "amazon", "netflix",
     "chase", "wells", "bankofamerica", "citi", "yahoo", "facebook",
+    "instagram", "linkedin", "dropbox", "docusign", "adobe",
+    "github", "slack", "stripe", "coinbase", "binance", "metamask",
 ]
+
+
+def _levenshtein_distance(s1: str, s2: str) -> int:
+    """Calculate Levenshtein distance between two strings."""
+    if len(s1) < len(s2):
+        return _levenshtein_distance(s2, s1)
+    if len(s2) == 0:
+        return len(s1)
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+    return previous_row[-1]
 
 
 def _shannon_entropy(s: str) -> float:
@@ -147,6 +167,30 @@ class DomainIntelligence:
                 "evidence_class": "strong_risk_signal",
                 "risk_relevance": "risk_contributing"
             })
+
+        # Homoglyphs and Typosquatting (Levenshtein distance)
+        org_base = org_domain.split(".")[0] if "." in org_domain else org_domain
+        if org_base not in _KNOWN_BRANDS:
+            # Check for close matches against known brands (edit distance 1 or 2 depending on length)
+            for brand in _KNOWN_BRANDS:
+                if len(brand) < 4:
+                    continue
+                dist = _levenshtein_distance(org_base, brand)
+                threshold = 1 if len(brand) <= 6 else 2
+                if 0 < dist <= threshold:
+                    result["brand_impersonation_detected"] = True
+                    result["findings"].append({
+                        "finding_id": "domain.typosquatting",
+                        "category": "domain",
+                        "title": "Suspected Typosquatting / Homoglyph",
+                        "description": f"The domain '{org_base}' is visually or structurally very similar to trusted brand '{brand}' (edit distance {dist}).",
+                        "severity": "high",
+                        "confidence": 90,
+                        "evidence": [domain_clean, f"Target brand: {brand}", f"Edit distance: {dist}"],
+                        "evidence_class": "strong_risk_signal",
+                        "risk_relevance": "risk_contributing"
+                    })
+                    break
 
         # Optional DNS resolution if available
         if DNS_AVAILABLE and domain_clean:

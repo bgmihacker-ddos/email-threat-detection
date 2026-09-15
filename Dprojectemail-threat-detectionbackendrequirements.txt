@@ -1,0 +1,9 @@
+
+# Sprint 1-4 SIH26106 Upgrade Requirements
+xgboost
+transformers
+torch
+shap
+pdfplumber
+pillow
+python-magic-bin

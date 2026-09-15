@@ -42,9 +42,6 @@ app.include_router(simulate.router, prefix="/api")
 app.include_router(iocs.router, prefix="/api")
 app.include_router(audit.router, prefix="/api")
 app.include_router(inbox.router, prefix="/api")
-app.include_router(simulate.router, prefix="/api")
-app.include_router(iocs.router, prefix="/api")
-app.include_router(audit.router, prefix="/api")
 
 
 @app.websocket("/ws/alerts")

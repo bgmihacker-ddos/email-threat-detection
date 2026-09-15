@@ -39,6 +39,7 @@ from app.detection.ml_classifier import get_ml_classifier
 from app.detection.bert_classifier import get_bert_classifier
 from app.detection.anomaly_detector import AnomalyDetector
 from app.detection.impersonation import ImpersonationAnalyzer
+from app.detection.bec_detector import BECDetector
 from app.services.sender_intelligence import SenderIntelligenceAnalyzer
 from app.services.india_threat_intel import IndiaThreatIntel
 from app.services.dns_intelligence import DNSIntelligenceService
@@ -435,6 +436,7 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
             sender_address = sender_address.get("address", "")
         sender_domain = str(sender_address).rsplit("@", 1)[-1].strip().lower() if "@" in str(sender_address) else ""
         impersonation_analysis = ImpersonationAnalyzer.analyze(sender_domain, domains)
+        bec_analysis = BECDetector.analyze(parsed_email, header_forensics)
         detector_findings = []
         for index, finding in enumerate(anomaly_analysis.get("anomalies", [])):
             detector_findings.append({
@@ -455,6 +457,17 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
                 "evidence_class": "strong_risk_signal",
                 "risk_relevance": "risk_contributing",
                 "evidence": [finding.get("observed_domain", ""), finding.get("protected_domain", "")],
+            })
+        for index, finding in enumerate(bec_analysis.get("findings", [])):
+            detector_findings.append({
+                "type": finding.get("type", "bec_signal"),
+                "finding_id": f"bec.{finding.get('type', 'signal')}.{index}",
+                "title": finding.get("title", "Business Email Compromise signal"),
+                "source": "bec_detector",
+                "severity": finding.get("severity", "medium"),
+                "evidence_class": finding.get("evidence_class", "strong_risk_signal"),
+                "risk_relevance": "risk_contributing",
+                "evidence": [finding.get("evidence", "")],
             })
 
         _update_job_status(db, analysis_id, "processing", "Correlating intelligence feeds (DNS/WHOIS/ThreatIntel)...", 60)
@@ -587,6 +600,7 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
             ml_analysis=ml_analysis,
             anomaly_analysis=anomaly_analysis,
             impersonation_analysis=impersonation_analysis,
+            bec_analysis=bec_analysis,
             india_threat_intel=india_threat_intel,
             risk_breakdown=risk_result["score_breakdown"],
             evidence_ledger=[
