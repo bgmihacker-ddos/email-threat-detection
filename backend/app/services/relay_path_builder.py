@@ -20,14 +20,21 @@ async def build_relay_path(header_forensics: Dict[str, Any]) -> List[Dict[str, A
         is_private = not bool(ip and GeoEnricher.is_public_ip(ip))
         geo = await GeoEnricher.enrich_ip(ip) if ip and not is_private else None
         result.append({
-            "hop_number": index + 1,
+            "hop_id": hop.get("hop_id"),
+            "hop_index": hop.get("hop_index", index),
+            "hop_number": hop.get("hop_number", index + 1),
             "from_server": hop.get("from_server"),
             "by_server": hop.get("by_server"),
+            "from_domain": hop.get("from_domain"),
+            "by_domain": hop.get("by_domain"),
+            "protocol": hop.get("protocol"),
             "ip": ip,
             "timestamp": hop.get("timestamp"),
             "timestamp_utc": hop.get("timestamp_utc"),
+            "timezone": hop.get("timezone"),
             "geo": geo,
             "is_private": is_private,
             "is_suspicious": bool(geo and (geo.get("is_proxy") or geo.get("is_hosting") or geo.get("is_tor_exit_node"))),
+            "evidence_reference": f"Received hop {index} ({hop.get('hop_id')})",
         })
     return result

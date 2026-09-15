@@ -536,20 +536,36 @@ class HeaderForensicsAnalyzer:
 
             from_server = hop.get("from_server")
             by_server = hop.get("by_server")
+            timestamp_iso = _timestamp_iso(timestamp)
+
+            # Phase 3: Stable deterministic Hop Identity (hop_id)
+            import hashlib
+            hasher = hashlib.sha256()
+            hasher.update(str(index).encode())
+            hasher.update((from_server or "").encode())
+            hasher.update((by_server or "").encode())
+            hasher.update((timestamp_iso or "").encode())
+            hasher.update(str(hop.get("raw") or "").encode())
+            hop_id = "hop_" + hasher.hexdigest()[:16]
+
             normalized_hop = {
+                "hop_id": hop_id,
                 "hop_index": index,
+                "hop_number": index + 1,
                 "raw": hop.get("raw") or "",
                 "from_server": from_server,
                 "by_server": by_server,
                 "from_domain": _normalized_domain(from_server),
                 "by_domain": _normalized_domain(by_server),
+                "protocol": hop.get("protocol"),
                 "ipv4_addresses": ipv4,
                 "ipv6_addresses": ipv6,
                 "ip_classifications": classifications,
                 "timestamp": timestamp_raw,
-                "timestamp_utc": _timestamp_iso(timestamp),
+                "timestamp_utc": timestamp_iso,
                 "timezone": _timezone_label(timestamp_raw),
                 "header_position": "newest_to_oldest",
+                "parse_status": hop.get("parse_status", "ok"),
             }
             hops.append(normalized_hop)
 

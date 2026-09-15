@@ -72,14 +72,17 @@ class CaseTimelineBuilder:
                 pass
 
         # 2. Received hop timestamps (chronological order, oldest first)
-        received_chain = parsed_email.get("received_chain") or []
+        mail_flow = header_forensics.get("mail_flow") if isinstance(header_forensics, dict) else {}
+        analyzed_hops = mail_flow.get("hops", []) if isinstance(mail_flow, dict) else []
+        received_chain = analyzed_hops if analyzed_hops else (parsed_email.get("received_chain") or [])
+
         if isinstance(received_chain, list):
             hops_with_ts: List[Dict[str, Any]] = []
             for hop in received_chain:
                 if not isinstance(hop, dict):
                     continue
                 ts_raw = hop.get("timestamp")
-                ts_iso = hop.get("timestamp_iso")
+                ts_iso = hop.get("timestamp_utc") or hop.get("timestamp_iso")
                 if ts_iso:
                     try:
                         dt = datetime.fromisoformat(ts_iso.replace("Z", "+00:00"))
@@ -91,14 +94,19 @@ class CaseTimelineBuilder:
             hops_with_ts.sort(key=lambda x: x["timestamp"])
             for item in hops_with_ts:
                 hop = item["hop"]
-                self._add_event(
-                    item["timestamp"],
-                    "received_chain",
-                    "mail_hop",
-                    f"Relayed from {hop.get('from_server')} to {hop.get('by_server')}",
-                    confidence=85,
-                    status="observed",
-                )
+                hop_id = hop.get("hop_id")
+                event: Dict[str, Any] = {
+                    "timestamp_utc": item["timestamp"].isoformat() + "Z",
+                    "timestamp_raw": None,
+                    "source": "received_chain",
+                    "event_type": "mail_hop",
+                    "description": f"Relayed from {hop.get('from_server')} to {hop.get('by_server')}",
+                    "status": "observed",
+                    "confidence": 85,
+                }
+                if hop_id:
+                    event["hop_id"] = hop_id
+                self._events.append(event)
 
         # 3. Analysis timestamp
         analysis_time = datetime.now(timezone.utc)
