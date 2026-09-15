@@ -27,14 +27,14 @@ numpy
 scikit-learn
 joblib
 
-# Optional ML + Forensics stack
+# ML + Forensics
 xgboost
 transformers
 torch
 shap
 pdfplumber
 pillow
-python-magic-bin
+python-magic
 
 pytest
 pytest-asyncio
