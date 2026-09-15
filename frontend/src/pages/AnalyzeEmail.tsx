@@ -240,60 +240,60 @@ export default function AnalyzeEmail() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       {/* Header */}
-      <header className="relative overflow-hidden rounded-xl border border-[#29454b] bg-[#101b21]/80 p-6 shadow-[0_20px_60px_rgba(2,12,15,0.22)]">
+      <header className="relative overflow-hidden rounded-xl border border-hairline-strong bg-raised/80 p-6 shadow-[0_20px_60px_rgba(2,12,15,0.22)]">
         <div className="flex items-center gap-2">
-          <span className="flex h-2 w-2 rounded-full bg-[#58d6c0] shadow-[0_0_10px_rgba(88,214,192,0.8)] animate-pulse" />
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[#58d6c0]">INGESTION PIPELINE · FORENSIC INTAKE</p>
+          <span className="flex h-2 w-2 rounded-full bg-accent shadow-[0_0_10px_rgba(88,214,192,0.8)] animate-pulse" />
+          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-accent">INGESTION PIPELINE · FORENSIC INTAKE</p>
         </div>
-        <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-white">Email Investigation Lab</h1>
-        <p className="mt-1 max-w-3xl text-xs text-gray-400 font-mono">
+        <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-ink">Email Investigation Lab</h1>
+        <p className="mt-1 max-w-3xl text-xs text-ink-mute font-mono">
           Submit suspicious messages for deterministic header forensics, authentication verification, macro inspection, and entity relationship graphing.
         </p>
       </header>
 
       <section className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#1b3037] bg-[#101b21]/90 p-2 font-mono text-[10px] uppercase tracking-wider">
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-hairline bg-raised/90 p-2 font-mono text-[10px] uppercase tracking-wider">
           {([
             ['file', 'File Upload (.eml)'],
             ['mime', 'Direct MIME Paste'],
             ['triage', 'Quick URL / Header Triage'],
           ] as [InputMode, string][]).map(([mode, label]) => (
-            <button key={mode} type="button" onClick={() => setInputMode(mode)} className={`rounded px-3 py-2 transition ${inputMode === mode ? 'bg-cyan-400 text-[#071114]' : 'text-gray-500 hover:bg-[#183235] hover:text-cyan-200'}`}>
+            <button key={mode} type="button" onClick={() => setInputMode(mode)} className={`rounded px-3 py-2 transition ${inputMode === mode ? 'bg-accent text-[#071018]' : 'text-ink-mute hover:bg-raised hover:text-ink-dim'}`}>
               {label}
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.18em] text-amber-300">
+        <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.18em] text-medium">
           <Zap size={13} /> Demo attack scenarios · one click to load and scan
         </div>
       </section>
 
-      <section className="rounded-xl border border-[#29454b] bg-[#101b21]/90 p-5 shadow-[0_18px_45px_rgba(2,12,15,0.2)]">
+      <section className="rounded-xl border border-hairline-strong bg-raised/90 p-5 shadow-[0_18px_45px_rgba(2,12,15,0.2)]">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
-            <div className="rounded border border-[#3b5e60] bg-[#142b2d] p-2.5 text-[#58d6c0]"><Inbox size={19} /></div>
+            <div className="rounded border border-hairline-strong bg-accent-soft p-2.5 text-accent"><Inbox size={19} /></div>
             <div>
-              <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-[#58d6c0]">GMAIL INBOX · READ ONLY</p>
-              <h2 className="mt-1 text-base font-semibold text-gray-100">Choose an email to scan</h2>
-              <p className="mt-1 text-xs text-gray-400">Select one message and send its original MIME source to the forensic pipeline.</p>
+              <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-accent">GMAIL INBOX · READ ONLY</p>
+              <h2 className="mt-1 text-base font-semibold text-ink">Choose an email to scan</h2>
+              <p className="mt-1 text-xs text-ink-mute">Select one message and send its original MIME source to the forensic pipeline.</p>
             </div>
           </div>
-          {gmailConnected ? <button type="button" onClick={() => void loadGmailMessages()} disabled={isLoadingGmail} className="inline-flex items-center justify-center gap-2 rounded border border-[#3b5e60] px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-[#8ce2d0] hover:bg-[#183235] disabled:opacity-50">
+          {gmailConnected ? <button type="button" onClick={() => void loadGmailMessages()} disabled={isLoadingGmail} className="inline-flex items-center justify-center gap-2 rounded border border-hairline-strong px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-accent hover:bg-raised disabled:opacity-50">
             <RefreshCw size={13} className={isLoadingGmail ? 'animate-spin' : ''} /> Refresh inbox
-          </button> : <button type="button" onClick={connectGoogle} className="inline-flex items-center justify-center gap-2 rounded bg-[#58d6c0] px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-wider text-[#09201e] hover:bg-[#82e5d2]">
+          </button> : <button type="button" onClick={connectGoogle} className="inline-flex items-center justify-center gap-2 rounded bg-accent px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-wider text-[#071018] hover:brightness-110">
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-bold text-[#4285f4]">G</span> Connect Google &amp; Gmail
           </button>}
         </div>
-        {!gmailConnected && !isLoadingGmail && <p className="mt-4 rounded border border-amber-700/40 bg-amber-950/20 p-3 text-xs font-mono text-amber-200">Connect Google with Gmail read access to choose a message from your inbox.</p>}
-        {gmailConnected && !isLoadingGmail && gmailMessages.length === 0 && <p className="mt-4 rounded border border-[#29454b] bg-[#081216] p-3 text-xs font-mono text-gray-500">No messages are available in the Gmail inbox.</p>}
+        {!gmailConnected && !isLoadingGmail && <p className="mt-4 rounded border border-medium/40 bg-medium/10 p-3 text-xs font-mono text-medium">Connect Google with Gmail read access to choose a message from your inbox.</p>}
+        {gmailConnected && !isLoadingGmail && gmailMessages.length === 0 && <p className="mt-4 rounded border border-hairline-strong bg-sunken p-3 text-xs font-mono text-ink-mute">No messages are available in the Gmail inbox.</p>}
         {gmailMessages.length > 0 && <div className="mt-4 space-y-2">
-          {gmailMessages.map((message) => <div key={message.id} className="flex flex-col gap-3 rounded border border-[#29454b] bg-[#081216] p-3 sm:flex-row sm:items-center sm:justify-between">
+          {gmailMessages.map((message) => <div key={message.id} className="flex flex-col gap-3 rounded border border-hairline-strong bg-sunken p-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <p className="truncate text-xs font-semibold text-gray-100">{message.subject}</p>
-              <p className="mt-1 truncate font-mono text-[10px] text-[#8ce2d0]">{message.sender}</p>
-              <p className="mt-1 truncate text-[11px] text-gray-500">{message.snippet || 'No preview available.'}</p>
+              <p className="truncate text-xs font-semibold text-ink">{message.subject}</p>
+              <p className="mt-1 truncate font-mono text-[10px] text-accent">{message.sender}</p>
+              <p className="mt-1 truncate text-[11px] text-ink-mute">{message.snippet || 'No preview available.'}</p>
             </div>
-            <button type="button" onClick={() => void handleGmailScan(message)} disabled={scanningGmailId !== null || isAnalyzing} className="inline-flex shrink-0 items-center justify-center gap-2 rounded bg-[#58d6c0] px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-wider text-[#09201e] hover:bg-[#82e5d2] disabled:cursor-wait disabled:opacity-50">
+            <button type="button" onClick={() => void handleGmailScan(message)} disabled={scanningGmailId !== null || isAnalyzing} className="inline-flex shrink-0 items-center justify-center gap-2 rounded bg-accent px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-wider text-[#071018] hover:brightness-110 disabled:cursor-wait disabled:opacity-50">
               <ScanSearch size={13} /> {scanningGmailId === message.id ? 'Queueing...' : 'Scan email'}
             </button>
           </div>)}
@@ -303,18 +303,18 @@ export default function AnalyzeEmail() {
       {/* Primary Intake Grid */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
         {/* Upload Box */}
-        <section className="lg:col-span-3 rounded-xl border border-[#1b3037] bg-[#101b21]/90 p-6 shadow-[0_18px_45px_rgba(2,12,15,0.2)] flex flex-col justify-between">
+        <section className="lg:col-span-3 rounded-xl border border-hairline bg-raised/90 p-6 shadow-[0_18px_45px_rgba(2,12,15,0.2)] flex flex-col justify-between">
           <div>
             <div className="flex items-start gap-3">
-              <div className="rounded border border-cyan-500/30 bg-cyan-950/40 p-2.5 text-cyan-400">
+              <div className="rounded border border-hairline bg-surface p-2.5 text-accent">
                 <FileUp size={20} />
               </div>
               <div>
-                <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-cyan-400 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/30">
+                <span className="soc-label !text-accent bg-accent-soft rounded border border-accent/30">
                   RECOMMENDED INTAKE
                 </span>
-                <h2 className="mt-1 text-base font-semibold text-gray-100">Upload RFC 5322 EML File</h2>
-                <p className="mt-0.5 text-xs text-gray-400 font-mono">
+                <h2 className="mt-1 text-base font-semibold text-ink">Upload RFC 5322 EML File</h2>
+                <p className="mt-0.5 text-xs text-ink-mute font-mono">
                   Preserves raw Received headers, boundary delimiters, and binary attachment payloads.
                 </p>
               </div>
@@ -322,9 +322,9 @@ export default function AnalyzeEmail() {
 
             <div className="mt-5 grid gap-2 sm:grid-cols-2">
               {DEMO_SCENARIOS.map((scenario) => (
-                <button key={scenario.name} type="button" onClick={() => loadScenario(scenario)} disabled={isAnalyzing} className={`group rounded border px-3 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${activeScenario === scenario.name ? 'border-cyan-400/70 bg-cyan-950/30' : 'border-[#29454b] bg-[#081216] hover:border-cyan-500/50'}`}>
-                  <span className="flex items-center gap-2 text-xs font-semibold text-gray-200"><span>{scenario.icon}</span>{scenario.name}</span>
-                  <span className="mt-1 block text-[10px] font-mono text-gray-500 group-hover:text-cyan-200">{scenario.description}</span>
+                <button key={scenario.name} type="button" onClick={() => loadScenario(scenario)} disabled={isAnalyzing} className={`group rounded border px-3 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${activeScenario === scenario.name ? 'border-accent/60 bg-accent-soft' : 'border-hairline-strong bg-sunken hover:border-accent/50'}`}>
+                  <span className="flex items-center gap-2 text-xs font-semibold text-ink-dim"><span>{scenario.icon}</span>{scenario.name}</span>
+                  <span className="mt-1 block text-[10px] font-mono text-ink-mute group-hover:text-ink-dim">{scenario.description}</span>
                 </button>
               ))}
             </div>
@@ -333,14 +333,14 @@ export default function AnalyzeEmail() {
               onDragOver={(e) => e.preventDefault()}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className="mt-5 flex min-h-52 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-[#29454b] bg-[#081216] p-6 text-center transition-all hover:border-cyan-500/60 hover:bg-cyan-950/10"
+              className="mt-5 flex min-h-52 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-hairline-strong bg-sunken p-6 text-center transition-all hover:border-accent/60 hover:bg-accent-soft/40"
             >
               {file ? (
-                <div className="flex max-w-full items-center gap-3 rounded-lg border border-cyan-500/40 bg-[#16242a] px-5 py-3.5 shadow-md">
-                  <FileText size={22} className="shrink-0 text-cyan-400" />
+                <div className="flex max-w-full items-center gap-3 rounded-lg border border-accent/40 bg-raised px-5 py-3.5 shadow-md">
+                  <FileText size={22} className="shrink-0 text-accent" />
                   <div className="min-w-0 text-left font-mono">
-                    <p className="truncate text-xs font-bold text-gray-100">{file.name}</p>
-                    <p className="mt-0.5 text-[10px] text-gray-400">
+                    <p className="truncate text-xs font-bold text-ink">{file.name}</p>
+                    <p className="mt-0.5 text-[10px] text-ink-mute">
                       {(file.size / 1024).toFixed(1)} KB • EML Archive Loaded
                     </p>
                   </div>
@@ -350,20 +350,20 @@ export default function AnalyzeEmail() {
                       e.stopPropagation();
                       setFile(null);
                     }}
-                    className="ml-3 rounded p-1 text-gray-500 hover:bg-red-950/60 hover:text-red-400 transition-colors"
+                    className="ml-3 rounded p-1 text-ink-mute hover:bg-critical/10 hover:text-critical transition-colors"
                   >
                     <X size={16} />
                   </button>
                 </div>
               ) : (
                 <>
-                  <div className="rounded-full bg-[#101b21] p-3 border border-[#1b3037] text-gray-500 mb-2">
-                    <FileUp size={26} className="text-cyan-400" />
+                  <div className="rounded-full bg-raised p-3 border border-hairline text-ink-mute mb-2">
+                    <FileUp size={26} className="text-accent" />
                   </div>
-                  <p className="text-xs font-semibold uppercase font-mono tracking-wider text-gray-200">
+                  <p className="text-xs font-semibold uppercase font-mono tracking-wider text-ink-dim">
                     Drop .eml file here to inspect
                   </p>
-                  <p className="mt-1 text-[11px] text-gray-500 font-mono">
+                  <p className="mt-1 text-[11px] text-ink-mute font-mono">
                     or click to select from local forensic storage
                   </p>
                 </>
@@ -378,12 +378,12 @@ export default function AnalyzeEmail() {
             </div>
           </div>
 
-          <div className="mt-4 flex items-center justify-between pt-3 border-t border-[#1b3037]/60 text-[11px] font-mono text-gray-500">
+          <div className="mt-4 flex items-center justify-between pt-3 border-t border-hairline/60 text-[11px] font-mono text-ink-mute">
             <span>Supported: RFC 822, RFC 2822, RFC 5322</span>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="text-xs font-mono text-cyan-400 hover:text-cyan-300 font-semibold"
+              className="text-xs font-mono text-accent hover:text-accent font-semibold"
             >
               Browse Files...
             </button>
@@ -391,47 +391,47 @@ export default function AnalyzeEmail() {
         </section>
 
         {/* Forensic Capabilities Checklist */}
-        <aside className="lg:col-span-2 rounded-xl border border-[#1b3037] bg-[#101b21]/90 p-6 shadow-[0_18px_45px_rgba(2,12,15,0.2)] flex flex-col justify-between">
+        <aside className="lg:col-span-2 rounded-xl border border-hairline bg-raised/90 p-6 shadow-[0_18px_45px_rgba(2,12,15,0.2)] flex flex-col justify-between">
           <div>
-            <p className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] text-gray-500">ENGINE CAPABILITIES</p>
-            <h3 className="mt-1 text-sm font-semibold text-gray-200">Automated Pipeline Coverage</h3>
+            <p className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] text-ink-mute">ENGINE CAPABILITIES</p>
+            <h3 className="mt-1 text-sm font-semibold text-ink-dim">Automated Pipeline Coverage</h3>
 
             <div className="mt-4 space-y-3.5 font-mono text-xs">
               <div className="flex gap-3">
-                <ShieldCheck size={16} className="mt-0.5 shrink-0 text-emerald-400" />
+                <ShieldCheck size={16} className="mt-0.5 shrink-0 text-safe" />
                 <div>
-                  <p className="font-semibold text-gray-200">Cryptographic Auth Verification</p>
-                  <p className="text-[11px] text-gray-500 leading-relaxed">
+                  <p className="font-semibold text-ink-dim">Cryptographic Auth Verification</p>
+                  <p className="text-[11px] text-ink-mute leading-relaxed">
                     Evaluates SPF records, DKIM public key signatures, DMARC policies, and ARC seals.
                   </p>
                 </div>
               </div>
 
               <div className="flex gap-3">
-                <Layers size={16} className="mt-0.5 shrink-0 text-cyan-400" />
+                <Layers size={16} className="mt-0.5 shrink-0 text-accent" />
                 <div>
-                  <p className="font-semibold text-gray-200">Mail Flow Chronology</p>
-                  <p className="text-[11px] text-gray-500 leading-relaxed">
+                  <p className="font-semibold text-ink-dim">Mail Flow Chronology</p>
+                  <p className="text-[11px] text-ink-mute leading-relaxed">
                     Traces every MTA hop, calculating propagation delay and detecting IP divergence.
                   </p>
                 </div>
               </div>
 
               <div className="flex gap-3">
-                <Binary size={16} className="mt-0.5 shrink-0 text-violet-400" />
+                <Binary size={16} className="mt-0.5 shrink-0 text-ink-dim" />
                 <div>
-                  <p className="font-semibold text-gray-200">Deep Attachment Forensics</p>
-                  <p className="text-[11px] text-gray-500 leading-relaxed">
+                  <p className="font-semibold text-ink-dim">Deep Attachment Forensics</p>
+                  <p className="text-[11px] text-ink-mute leading-relaxed">
                     Inspects magic bytes, detects VBA macros/OLE streams, and computes SHA-256 hashes.
                   </p>
                 </div>
               </div>
 
               <div className="flex gap-3">
-                <Globe size={16} className="mt-0.5 shrink-0 text-amber-400" />
+                <Globe size={16} className="mt-0.5 shrink-0 text-medium" />
                 <div>
-                  <p className="font-semibold text-gray-200">Threat Intelligence & MITRE ATT&CK</p>
-                  <p className="text-[11px] text-gray-500 leading-relaxed">
+                  <p className="font-semibold text-ink-dim">Threat Intelligence & MITRE ATT&CK</p>
+                  <p className="text-[11px] text-ink-mute leading-relaxed">
                     Maps indicators to T1566 phishing techniques, extracting structured STIX 2.1 entities.
                   </p>
                 </div>
@@ -439,31 +439,31 @@ export default function AnalyzeEmail() {
             </div>
           </div>
 
-          <div className="mt-6 rounded border border-[#1b3037] bg-[#081216] p-3 text-[10px] font-mono text-gray-500 leading-relaxed">
+          <div className="mt-6 rounded border border-hairline bg-sunken p-3 text-[10px] font-mono text-ink-mute leading-relaxed">
             Data Safety: Local processing mode. No unencrypted content is shared with external parties.
           </div>
         </aside>
       </div>
 
       {/* Raw MIME Paste Option */}
-      <section className="rounded-xl border border-[#1b3037] bg-[#101b21]/90 p-6 shadow-[0_18px_45px_rgba(2,12,15,0.2)]">
+      <section className="rounded-xl border border-hairline bg-raised/90 p-6 shadow-[0_18px_45px_rgba(2,12,15,0.2)]">
         <div className="flex items-start gap-3">
-          <div className="rounded border border-violet-500/30 bg-violet-950/40 p-2.5 text-violet-300">
+          <div className="rounded border border-hairline bg-raised p-2.5 text-ink-dim">
             <MailSearch size={20} />
           </div>
           <div>
-            <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-violet-400 bg-violet-950/40 px-2 py-0.5 rounded border border-violet-800/30">
+            <span className="soc-label !text-accent bg-accent-soft rounded border border-accent/30">
               DIRECT INPUT
             </span>
-            <h2 className="mt-1 text-base font-semibold text-gray-100">{inputMode === 'triage' ? 'Quick URL / Header Triage' : 'Paste Raw MIME / Header Text'}</h2>
-            <p className="mt-0.5 text-xs text-gray-400 font-mono">
+            <h2 className="mt-1 text-base font-semibold text-ink">{inputMode === 'triage' ? 'Quick URL / Header Triage' : 'Paste Raw MIME / Header Text'}</h2>
+            <p className="mt-0.5 text-xs text-ink-mute font-mono">
               {inputMode === 'triage' ? 'Paste a suspicious URL or compact header block for immediate routing and IOC preview.' : 'Alternative ingestion path for clipboard transfers or raw terminal logs.'}
             </p>
           </div>
         </div>
 
         <textarea
-          className="mt-4 h-56 w-full resize-y rounded-lg border border-[#29454b] bg-[#081216] p-4 font-mono text-xs leading-relaxed text-gray-300 outline-none transition-all placeholder:text-gray-700 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
+          className="mt-4 h-56 w-full resize-y rounded-lg border border-hairline-strong bg-sunken p-4 font-mono text-xs leading-relaxed text-ink-dim outline-none transition-all placeholder:text-ink-faint/60 focus:border-accent focus:ring-1 focus:ring-accent/20"
           placeholder={`Delivered-To: victim@enterprise.corp
 Received: from mail.attacker.net (mail.attacker.net [198.51.100.24])
     by mx.google.com with ESMTPS id ...
@@ -486,8 +486,8 @@ Please verify your credentials at http://suspicious-login-portal.com/login`}
       </section>
 
       {previewText.trim() && !isAnalyzing && (
-        <section className="rounded-lg border border-cyan-500/30 bg-[#0b1b20] p-4 font-mono shadow-[0_0_30px_rgba(34,211,238,0.08)]">
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-cyan-300"><Radar size={14} className="animate-pulse" /> Client-side pre-flight summary</div>
+        <section className="rounded-lg border border-accent/30 bg-surface p-4 font-mono shadow-none">
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-accent"><Radar size={14} className="animate-pulse" /> Client-side pre-flight summary</div>
           <div className="mt-3 grid gap-3 sm:grid-cols-4">
             <PreflightItem label="Sender" value={previewSender} />
             <PreflightItem label="Subject" value={previewSubject} />
@@ -499,40 +499,40 @@ Please verify your credentials at http://suspicious-login-portal.com/login`}
 
       {/* Active Pipeline Progress Display */}
       {isAnalyzing && (
-        <div className="rounded-lg border border-cyan-500/40 bg-cyan-950/20 p-5 shadow-lg space-y-3 font-mono">
+        <div className="rounded-lg border border-accent/40 bg-accent-soft p-5 shadow-lg space-y-3 font-mono">
           <div className="flex items-center justify-between text-xs">
-            <span className="flex items-center gap-2 text-cyan-300 font-bold">
-              <Cpu size={15} className="animate-spin text-cyan-400" />
+            <span className="flex items-center gap-2 text-accent font-bold">
+              <Cpu size={15} className="animate-spin text-accent" />
               LIVE SCAN FEED
             </span>
-            <span className="text-gray-400 text-[11px]">
+            <span className="text-ink-mute text-[11px]">
               {Math.min(100, Math.max(0, progressPct))}% COMPLETE
             </span>
           </div>
 
-          <div className="relative h-24 overflow-hidden rounded border border-cyan-500/20 bg-[#061014]">
-            <div className="absolute inset-y-0 left-0 w-1/2 animate-[scan_2.4s_linear_infinite] border-r border-cyan-300/70 bg-gradient-to-r from-transparent via-cyan-400/10 to-cyan-300/20" />
-            <div className="absolute inset-0 flex items-center justify-center"><div className="h-14 w-14 rounded-full border border-cyan-400/40 shadow-[0_0_24px_rgba(34,211,238,0.25)]"><div className="ml-7 h-7 origin-bottom border-l border-cyan-300/80 rotate-45" /></div></div>
-            <div className="absolute bottom-2 left-3 right-3 h-1 overflow-hidden rounded bg-[#183235]"><div className="h-full bg-cyan-300 transition-all duration-500" style={{ width: `${Math.min(100, Math.max(0, progressPct))}%` }} /></div>
+          <div className="relative h-24 overflow-hidden rounded border border-accent/20 bg-sunken">
+            <div className="absolute inset-y-0 left-0 w-1/2 animate-[scan_2.4s_linear_infinite] border-r border-accent/60 bg-gradient-to-r from-transparent via-accent/10 to-accent/20" />
+            <div className="absolute inset-0 flex items-center justify-center"><div className="h-14 w-14 rounded-full border border-accent/40 shadow-[0_0_24px_rgba(76,158,235,0.25)]"><div className="ml-7 h-7 origin-bottom border-l border-accent/80 rotate-45" /></div></div>
+            <div className="absolute bottom-2 left-3 right-3 h-1 overflow-hidden rounded bg-raised"><div className="h-full bg-accent transition-all duration-500" style={{ width: `${Math.min(100, Math.max(0, progressPct))}%` }} /></div>
           </div>
 
-          <p className="border-l-2 border-cyan-500/60 pl-3 text-xs leading-6 text-cyan-200" aria-live="polite">
+          <p className="border-l-2 border-accent/60 pl-3 text-xs leading-6 text-ink-dim" aria-live="polite">
             {stageText}
           </p>
 
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-500">
-            <Clock3 size={13} className="text-cyan-400" />
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-ink-mute">
+            <Clock3 size={13} className="text-accent" />
             <span>Elapsed {String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:{String(elapsedSeconds % 60).padStart(2, '0')}</span>
-            <span className="text-gray-700">·</span>
+            <span className="text-ink-faint/60">·</span>
             <span>Evidence collection active</span>
           </div>
 
-          <div className="grid gap-2 border-t border-cyan-500/20 pt-3 sm:grid-cols-5">
+          <div className="grid gap-2 border-t border-accent/20 pt-3 sm:grid-cols-5">
             {SCAN_STAGES.map((stage, index) => {
               const threshold = [5, 20, 40, 65, 85][index] ?? 85;
               const complete = progressPct > threshold || (index === 0 && progressPct >= threshold);
               const active = !complete && progressPct >= threshold - 10;
-              return <div key={stage} className={`flex items-center gap-2 text-[10px] leading-4 ${complete ? 'text-emerald-300' : active ? 'text-cyan-200' : 'text-gray-600'}`}><span className="shrink-0">{complete ? <CheckCircle2 size={13} /> : <span className={`block h-2 w-2 rounded-full ${active ? 'animate-pulse bg-cyan-400' : 'bg-gray-700'}`} />}</span><span>{stage}</span></div>;
+              return <div key={stage} className={`flex items-center gap-2 text-[10px] leading-4 ${complete ? 'text-safe' : active ? 'text-ink-dim' : 'text-ink-faint'}`}><span className="shrink-0">{complete ? <CheckCircle2 size={13} /> : <span className={`block h-2 w-2 rounded-full ${active ? 'animate-pulse bg-accent' : 'bg-ink-faint'}`} />}</span><span>{stage}</span></div>;
             })}
           </div>
         </div>
@@ -540,15 +540,15 @@ Please verify your credentials at http://suspicious-login-portal.com/login`}
 
       {/* Error Message */}
       {error && (
-        <div role="alert" className="flex items-center gap-2.5 rounded-lg border border-red-800/60 bg-red-950/30 p-4 text-xs font-mono text-red-200 shadow-md">
-          <AlertTriangle size={17} className="shrink-0 text-red-400" />
+        <div role="alert" className="flex items-center gap-2.5 rounded-lg border border-critical/40 bg-critical/10 p-4 text-xs font-mono text-critical shadow-md">
+          <AlertTriangle size={17} className="shrink-0 text-critical" />
           <span>{error}</span>
         </div>
       )}
 
       {/* Action Footer */}
-      <div className="flex flex-col gap-3 border-t border-[#1b3037] pt-5 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-gray-500 font-mono">
+      <div className="flex flex-col gap-3 border-t border-hairline pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-ink-mute font-mono">
           {file
             ? `Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`
             : emailContent.trim()
@@ -559,7 +559,7 @@ Please verify your credentials at http://suspicious-login-portal.com/login`}
         <button
           onClick={handleAnalyze}
           disabled={isAnalyzing}
-          className="btn-primary min-w-56 py-3 shadow-lg shadow-cyan-950/40 disabled:opacity-50 disabled:cursor-not-allowed font-mono"
+          className="btn-primary min-w-56 py-3 disabled:opacity-50 disabled:cursor-not-allowed font-mono"
         >
           {isAnalyzing ? (
             <>
@@ -579,5 +579,5 @@ Please verify your credentials at http://suspicious-login-portal.com/login`}
 }
 
 function PreflightItem({ label, value }: { label: string; value: string }) {
-  return <div className="min-w-0 border-l border-cyan-500/30 pl-3"><p className="text-[9px] uppercase tracking-widest text-gray-500">{label}</p><p className="mt-1 truncate text-xs text-gray-200" title={value}>{value}</p></div>;
+  return <div className="min-w-0 border-l border-accent/30 pl-3"><p className="text-[9px] uppercase tracking-widest text-ink-mute">{label}</p><p className="mt-1 truncate text-xs text-ink-dim" title={value}>{value}</p></div>;
 }

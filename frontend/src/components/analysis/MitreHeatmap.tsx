@@ -49,29 +49,29 @@ export const MitreHeatmap: React.FC<MitreHeatmapProps> = ({ techniques = [] }) =
   const displayTechs = techniques.length > 0 ? techniques : defaultTechniques;
 
   return (
-    <div className="bg-[#0c171c] border border-[#1b3037] rounded-xl p-5 shadow-lg">
+    <div className="bg-surface border border-hairline rounded-xl p-5 shadow-lg">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-[#8ce2d0] uppercase tracking-wider">
+        <h3 className="text-sm font-semibold text-accent uppercase tracking-wider">
           MITRE ATT&CK Matrix Heatmap (All 14 Tactics)
         </h3>
-        <span className="text-xs text-slate-400">Hover/Click cells for evidence & confidence</span>
+        <span className="text-xs text-ink-mute">Hover/Click cells for evidence & confidence</span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {ALL_TACTICS.map((tactic) => {
           const matched = displayTechs.filter((t) => t.tactic.toLowerCase() === tactic.toLowerCase());
           return (
-            <div key={tactic} className="bg-[#080d10] border border-[#1b3037] rounded-lg p-3">
-              <h4 className="text-xs font-bold text-[#58d6c0] uppercase mb-2 border-b border-[#1b3037] pb-1">
+            <div key={tactic} className="bg-sunken border border-hairline rounded-lg p-3">
+              <h4 className="text-xs font-bold text-accent uppercase mb-2 border-b border-hairline pb-1">
                 {tactic}
               </h4>
               {matched.length === 0 ? (
-                <p className="text-[11px] text-slate-600 italic">No techniques triggered</p>
+                <p className="text-[11px] text-ink-faint italic">No techniques triggered</p>
               ) : (
                 <div className="space-y-2">
                   {matched.map((tech) => {
                     const conf = tech.confidence || 80;
-                    const bg = conf > 90 ? "bg-red-950/60 border-red-800 text-red-300" : conf > 75 ? "bg-amber-950/60 border-amber-800 text-amber-300" : "bg-emerald-950/60 border-emerald-800 text-emerald-300";
+                    const bg = conf > 90 ? "bg-critical/20 border-critical/50 text-critical" : conf > 75 ? "bg-medium/15 border-medium/50 text-medium" : "bg-safe/15 border-safe/40 text-safe";
                     return (
                       <div
                         key={tech.technique_id}
@@ -94,12 +94,12 @@ export const MitreHeatmap: React.FC<MitreHeatmapProps> = ({ techniques = [] }) =
       </div>
 
       {activeTech && (
-        <div className="mt-4 p-3 bg-[#183235] border border-[#58d6c0]/40 rounded-lg flex justify-between items-center text-xs text-slate-200">
+        <div className="mt-4 p-3 bg-raised border border-accent/40 rounded-lg flex justify-between items-center text-xs text-ink-dim">
           <div>
-            <strong className="text-[#58d6c0]">{activeTech.technique_id}: {activeTech.name}</strong> ({activeTech.tactic})
-            <p className="text-slate-300 mt-1">Confidence: {activeTech.confidence}% | Evidence: {(activeTech.evidence || []).join(", ") || "N/A"}</p>
+            <strong className="text-accent">{activeTech.technique_id}: {activeTech.name}</strong> ({activeTech.tactic})
+            <p className="text-ink-dim mt-1">Confidence: {activeTech.confidence}% | Evidence: {(activeTech.evidence || []).join(", ") || "N/A"}</p>
           </div>
-          <button onClick={() => setActiveTech(null)} className="text-slate-400 hover:text-white px-2 py-1 bg-black/30 rounded">Close</button>
+          <button onClick={() => setActiveTech(null)} className="text-ink-mute hover:text-ink px-2 py-1 bg-black/30 rounded">Close</button>
         </div>
       )}
     </div>

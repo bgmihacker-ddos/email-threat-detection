@@ -44,32 +44,32 @@ export const EvidenceGraph: React.FC<EvidenceGraphProps> = ({ graph, evidenceGra
       const edges: Edge[] = [];
 
       const emailId = `email:${analysisData.analysis_id || "target"}`;
-      nodes.push({ id: emailId, label: analysisData.subject || "Email Analysis", group: "email", color: "#06b6d4" });
+      nodes.push({ id: emailId, label: analysisData.subject || "Email Analysis", group: "email", color: "#4C9EEB" });
 
       const sender = analysisData.sender?.address || analysisData.from;
       if (sender) {
         const senderId = `sender:${sender}`;
-        nodes.push({ id: senderId, label: sender, group: "sender", color: "#22c55e" });
+        nodes.push({ id: senderId, label: sender, group: "sender", color: "#3ECF8E" });
         edges.push({ from: emailId, to: senderId, label: "sent_by" });
       }
 
       const iocs = analysisData.ioc_extraction || analysisData.iocs || {};
       (iocs.domains || []).forEach((d: string) => {
         const id = `domain:${d}`;
-        nodes.push({ id, label: d, group: "domain", color: "#f59e0b" });
+        nodes.push({ id, label: d, group: "domain", color: "#E8B44A" });
         edges.push({ from: emailId, to: id, label: "mentions_domain" });
       });
 
       (iocs.ip_addresses || iocs.ips || []).forEach((ip: string) => {
         const id = `ip:${ip}`;
-        nodes.push({ id, label: ip, group: "ip", color: "#ef4444" });
+        nodes.push({ id, label: ip, group: "ip", color: "#F4586B" });
         edges.push({ from: emailId, to: id, label: "references_ip" });
       });
 
       (iocs.urls || []).forEach((u: string) => {
         const shortU = u.length > 30 ? u.substring(0, 27) + "..." : u;
         const id = `url:${u}`;
-        nodes.push({ id, label: shortU, title: u, group: "url", color: "#a855f7" });
+        nodes.push({ id, label: shortU, title: u, group: "url", color: "#F0794A" });
         edges.push({ from: emailId, to: id, label: "contains_url" });
       });
 
@@ -100,13 +100,13 @@ export const EvidenceGraph: React.FC<EvidenceGraphProps> = ({ graph, evidenceGra
       nodes: {
         shape: "dot",
         size: 16,
-        font: { color: "#e2e8f0", size: 12 },
+        font: { color: "#E9EDF4", size: 12 },
         borderWidth: 2,
       },
       edges: {
         width: 1.5,
-        color: { color: "#475569", highlight: "#58d6c0" },
-        font: { color: "#94a3b8", size: 10, align: "middle" },
+        color: { color: "#454F60", highlight: "#4C9EEB" },
+        font: { color: "#A6B0C2", size: 10, align: "middle" },
         arrows: { to: { enabled: true, scaleFactor: 0.5 } },
       },
       physics: {
@@ -125,28 +125,28 @@ export const EvidenceGraph: React.FC<EvidenceGraphProps> = ({ graph, evidenceGra
 
   const getColorForType = (type: string) => {
     switch (type) {
-      case "email": return "#06b6d4";
-      case "sender": return "#22c55e";
-      case "domain": return "#f59e0b";
-      case "ip": return "#ef4444";
-      case "url": return "#a855f7";
-      default: return "#64748b";
+      case "email": return "#4C9EEB";
+      case "sender": return "#3ECF8E";
+      case "domain": return "#E8B44A";
+      case "ip": return "#F4586B";
+      case "url": return "#F0794A";
+      default: return "#6B7689";
     }
   };
 
   return (
-    <div className="bg-[#0c171c] border border-[#1b3037] rounded-xl p-4 shadow-lg">
+    <div className="bg-surface border border-hairline rounded-xl p-4 shadow-lg">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-[#8ce2d0] uppercase tracking-wider">
+        <h3 className="text-sm font-semibold text-accent uppercase tracking-wider">
           Interactive Evidence & IOC Network Graph
         </h3>
-        <span className="text-xs text-slate-400">Drag nodes to rearrange • Scroll to zoom</span>
+        <span className="text-xs text-ink-mute">Drag nodes to rearrange • Scroll to zoom</span>
       </div>
-      <div ref={containerRef} className="w-full h-[450px] rounded-lg bg-[#080d10] border border-[#1b3037]" />
+      <div ref={containerRef} className="w-full h-[450px] rounded-lg bg-sunken border border-hairline" />
       {selectedNode && (
-        <div className="mt-2 p-2 bg-[#1b3037] rounded text-xs text-slate-300 flex justify-between items-center">
-          <span>Selected Node: <strong className="text-[#58d6c0]">{selectedNode}</strong></span>
-          <button onClick={() => setSelectedNode(null)} className="text-slate-400 hover:text-white">✕</button>
+        <div className="mt-2 p-2 bg-raised rounded text-xs text-ink-dim flex justify-between items-center">
+          <span>Selected Node: <strong className="text-accent">{selectedNode}</strong></span>
+          <button onClick={() => setSelectedNode(null)} className="text-ink-mute hover:text-ink">✕</button>
         </div>
       )}
     </div>

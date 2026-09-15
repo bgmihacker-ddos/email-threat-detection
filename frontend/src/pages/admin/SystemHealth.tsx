@@ -32,86 +32,86 @@ export default function SystemHealth() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'Operational': return 'bg-green-900/30 text-green-300 border-green-700';
-      case 'Degraded': return 'bg-yellow-900/30 text-yellow-300 border-yellow-700';
-      case 'Offline': return 'bg-red-900/30 text-red-300 border-red-700';
-      default: return 'bg-[#1b3037] text-gray-400 border-[#1E2A3D]';
+      case 'Operational': return 'bg-safe/10 text-safe border-safe/40';
+      case 'Degraded': return 'bg-medium/10 text-medium border-medium/50';
+      case 'Offline': return 'bg-critical/10 text-critical border-critical/50';
+      default: return 'bg-raised text-ink-mute border-hairline-strong';
     }
   };
 
   const getIcon = (serviceName: string) => {
-    if (serviceName.includes('API') || serviceName.includes('Server')) return <Server className="text-cyan-400" />;
-    if (serviceName.includes('Database')) return <Database className="text-green-400" />;
-    if (serviceName.includes('ML')) return <Cpu className="text-purple-400" />;
-    if (serviceName.includes('Auth')) return <Shield className="text-yellow-400" />;
-    return <Activity className="text-gray-400" />;
+    if (serviceName.includes('API') || serviceName.includes('Server')) return <Server className="text-accent" />;
+    if (serviceName.includes('Database')) return <Database className="text-safe" />;
+    if (serviceName.includes('ML')) return <Cpu className="text-accent" />;
+    if (serviceName.includes('Auth')) return <Shield className="text-medium" />;
+    return <Activity className="text-ink-mute" />;
   };
 
   const getUptimeColor = (uptime: number) => {
-    if (uptime >= 99.9) return 'text-green-400';
-    if (uptime >= 99.0) return 'text-yellow-400';
-    return 'text-red-400';
+    if (uptime >= 99.9) return 'text-safe';
+    if (uptime >= 99.0) return 'text-medium';
+    return 'text-critical';
   };
 
   const getErrorColor = (errors: number) => {
-    if (errors === 0) return 'text-green-400';
-    if (errors <= 5) return 'text-yellow-400';
-    return 'text-red-400';
+    if (errors === 0) return 'text-safe';
+    if (errors <= 5) return 'text-medium';
+    return 'text-critical';
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-xl font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <Shield className="text-cyan-400" />
+          <h1 className="text-xl font-bold text-ink uppercase tracking-wider flex items-center gap-2">
+            <Shield className="text-accent" />
             System Health & Monitoring
           </h1>
-          <p className="text-xs text-gray-400">Real‑time monitoring of platform services, uptime, and error rates</p>
+          <p className="text-xs text-ink-mute">Real‑time monitoring of platform services, uptime, and error rates</p>
         </div>
       </div>
 
       {/* Overall Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
-          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">OPERATIONAL SERVICES</p>
-          <p className="text-2xl font-bold text-green-400 mt-2">
+        <div className="bg-raised p-4 rounded border border-hairline">
+          <p className="text-[10px] text-ink-mute font-bold uppercase tracking-widest">OPERATIONAL SERVICES</p>
+          <p className="text-2xl font-bold text-safe mt-2">
             {services.filter(s => s.status === 'Operational').length}
           </p>
         </div>
 
-        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
-          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">AVG UPTIME</p>
-          <p className="text-2xl font-bold text-cyan-400 mt-2">
+        <div className="bg-raised p-4 rounded border border-hairline">
+          <p className="text-[10px] text-ink-mute font-bold uppercase tracking-widest">AVG UPTIME</p>
+          <p className="text-2xl font-bold text-accent mt-2">
             {services.length > 0 ? (services.reduce((acc, s) => acc + s.uptimePct, 0) / services.length).toFixed(2) : 0}%
           </p>
         </div>
 
-        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
-          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">TOTAL ERRORS (24H)</p>
-          <p className="text-2xl font-bold text-red-400 mt-2">
+        <div className="bg-raised p-4 rounded border border-hairline">
+          <p className="text-[10px] text-ink-mute font-bold uppercase tracking-widest">TOTAL ERRORS (24H)</p>
+          <p className="text-2xl font-bold text-critical mt-2">
             {services.reduce((acc, s) => acc + s.errorCount24h, 0)}
           </p>
         </div>
 
-        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
-          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">DEGRADED SERVICES</p>
-          <p className="text-2xl font-bold text-yellow-400 mt-2">
+        <div className="bg-raised p-4 rounded border border-hairline">
+          <p className="text-[10px] text-ink-mute font-bold uppercase tracking-widest">DEGRADED SERVICES</p>
+          <p className="text-2xl font-bold text-medium mt-2">
             {services.filter(s => s.status === 'Degraded').length}
           </p>
         </div>
       </div>
 
       {/* Services Table */}
-      <div className="bg-[#101b21] rounded border border-[#1b3037] overflow-hidden">
+      <div className="bg-raised rounded border border-hairline overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-400 font-mono text-xs animate-pulse">
+          <div className="p-8 text-center text-ink-mute font-mono text-xs animate-pulse">
             LOADING SYSTEM HEALTH STATUS...
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#16242a] text-gray-400 border-b border-[#1b3037]">
+              <thead className="bg-raised text-ink-mute border-b border-hairline">
                 <tr>
                   <th className="p-3 font-semibold">SERVICE</th>
                   <th className="p-3 font-semibold">STATUS</th>
@@ -122,17 +122,17 @@ export default function SystemHealth() {
                   <th className="p-3 font-semibold text-right">ACTIONS</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1b3037]">
+              <tbody className="divide-y divide-hairline">
                 {services.map((service) => (
-                  <tr key={service.id} className="hover:bg-[#1b2b31] transition-colors">
+                  <tr key={service.id} className="hover:bg-surface/50 transition-colors">
                     <td className="p-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-cyan-900/30 flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center">
                           {getIcon(service.service)}
                         </div>
                         <div>
-                          <p className="font-bold text-white">{service.service}</p>
-                          <p className="text-gray-400 text-[11px]">{service.description}</p>
+                          <p className="font-bold text-ink">{service.service}</p>
+                          <p className="text-ink-mute text-[11px]">{service.description}</p>
                         </div>
                       </div>
                     </td>
@@ -143,9 +143,9 @@ export default function SystemHealth() {
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-16 h-1.5 bg-[#1b3037] rounded-full overflow-hidden">
+                        <div className="w-16 h-1.5 bg-raised rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500"
+                            className="h-full bg-gradient-to-r from-critical via-medium to-safe"
                             style={{ width: `${service.uptimePct}%` }}
                           />
                         </div>
@@ -156,7 +156,7 @@ export default function SystemHealth() {
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-2">
-                        <div className={`font-mono ${service.latencyMs < 100 ? 'text-green-400' : service.latencyMs < 300 ? 'text-yellow-400' : 'text-red-400'}`}>
+                        <div className={`font-mono ${service.latencyMs < 100 ? 'text-safe' : service.latencyMs < 300 ? 'text-medium' : 'text-critical'}`}>
                           {service.latencyMs}ms
                         </div>
                       </div>
@@ -167,11 +167,11 @@ export default function SystemHealth() {
                           {service.errorCount24h}
                         </span>
                         {service.errorCount24h > 0 && (
-                          <AlertTriangle className="text-yellow-400" size={12} />
+                          <AlertTriangle className="text-medium" size={12} />
                         )}
                       </div>
                     </td>
-                    <td className="p-3 text-gray-400 font-mono">
+                    <td className="p-3 text-ink-mute font-mono">
                       {new Date(service.lastChecked).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </td>
                     <td className="p-3">
@@ -179,7 +179,7 @@ export default function SystemHealth() {
                         {service.status !== 'Operational' && (
                           <button
                             onClick={() => handleRestartService(service.service)}
-                            className="px-2 py-1 bg-yellow-900/40 hover:bg-yellow-900/70 border border-yellow-700 text-yellow-200 text-xs font-bold rounded"
+                            className="px-2 py-1 bg-medium/15 hover:bg-medium/15 border border-medium/50 text-medium text-xs font-bold rounded"
                           >
                             Verify
                           </button>
@@ -196,56 +196,56 @@ export default function SystemHealth() {
 
       {/* Health Legend */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
-          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Latency Guidelines</h3>
+        <div className="bg-raised p-4 rounded border border-hairline">
+          <h3 className="text-xs font-bold text-ink-mute uppercase tracking-widest mb-3">Latency Guidelines</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-xs">
-              <span className="text-green-400">Optimal</span>
-              <span className="text-gray-400">&lt; 100ms</span>
+              <span className="text-safe">Optimal</span>
+              <span className="text-ink-mute">&lt; 100ms</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-yellow-400">Acceptable</span>
-              <span className="text-gray-400">100‑300ms</span>
+              <span className="text-medium">Acceptable</span>
+              <span className="text-ink-mute">100‑300ms</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-red-400">Degraded</span>
-              <span className="text-gray-400">&gt; 300ms</span>
+              <span className="text-critical">Degraded</span>
+              <span className="text-ink-mute">&gt; 300ms</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
-          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Uptime SLA</h3>
+        <div className="bg-raised p-4 rounded border border-hairline">
+          <h3 className="text-xs font-bold text-ink-mute uppercase tracking-widest mb-3">Uptime SLA</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-xs">
-              <span className="text-green-400">Gold (≥99.9%)</span>
-              <span className="text-gray-400">&lt; 8.8h/year</span>
+              <span className="text-safe">Gold (≥99.9%)</span>
+              <span className="text-ink-mute">&lt; 8.8h/year</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-yellow-400">Silver (99.0‑99.9%)</span>
-              <span className="text-gray-400">&lt; 3.7d/year</span>
+              <span className="text-medium">Silver (99.0‑99.9%)</span>
+              <span className="text-ink-mute">&lt; 3.7d/year</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-red-400">Below SLA (&lt;99.0%)</span>
-              <span className="text-gray-400">&gt; 3.7d/year</span>
+              <span className="text-critical">Below SLA (&lt;99.0%)</span>
+              <span className="text-ink-mute">&gt; 3.7d/year</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-[#101b21] p-4 rounded border border-[#1b3037]">
-          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Error Thresholds</h3>
+        <div className="bg-raised p-4 rounded border border-hairline">
+          <h3 className="text-xs font-bold text-ink-mute uppercase tracking-widest mb-3">Error Thresholds</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-xs">
-              <span className="text-green-400">Normal</span>
-              <span className="text-gray-400">0 errors</span>
+              <span className="text-safe">Normal</span>
+              <span className="text-ink-mute">0 errors</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-yellow-400">Warning</span>
-              <span className="text-gray-400">1‑5 errors</span>
+              <span className="text-medium">Warning</span>
+              <span className="text-ink-mute">1‑5 errors</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-red-400">Critical</span>
-              <span className="text-gray-400">&gt; 5 errors</span>
+              <span className="text-critical">Critical</span>
+              <span className="text-ink-mute">&gt; 5 errors</span>
             </div>
           </div>
         </div>

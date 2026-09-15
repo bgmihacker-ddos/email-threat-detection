@@ -1,7 +1,7 @@
 {
   "model_version": "tfidf-logreg-calibrated-v3",
   "artifact_version": 2,
-  "training_timestamp": "2026-09-15T11:43:35.385417+00:00",
+  "training_timestamp": "2026-09-15T13:11:26.494358+00:00",
   "random_seed": 42,
   "calibrated": true,
   "decision_threshold": 0.4,

@@ -41,14 +41,14 @@ export function RelayPathMap({ hops }: { hops: RelayHop[] }) {
     map.on('load', () => {
       const coordinates = points.map((hop) => [Number(hop.geo?.longitude), Number(hop.geo?.latitude)]);
       map.addSource('relay-path', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates }, properties: {} } });
-      map.addLayer({ id: 'relay-path-line', type: 'line', source: 'relay-path', paint: { 'line-color': '#22d3ee', 'line-width': 2.5, 'line-opacity': 0.8 } });
+      map.addLayer({ id: 'relay-path-line', type: 'line', source: 'relay-path', paint: { 'line-color': '#4C9EEB', 'line-width': 2.5, 'line-opacity': 0.8 } });
       const bounds = new maplibregl.LngLatBounds();
       points.forEach((hop) => {
         const longitude = Number(hop.geo?.longitude);
         const latitude = Number(hop.geo?.latitude);
         bounds.extend([longitude, latitude]);
         const marker = document.createElement('div');
-        marker.className = `flex h-7 w-7 items-center justify-center rounded-full border-2 text-[10px] font-bold text-white shadow ${hop.is_suspicious ? 'border-red-300 bg-red-600' : 'border-cyan-200 bg-cyan-700'}`;
+        marker.className = `flex h-7 w-7 items-center justify-center rounded-full border-2 text-[10px] font-bold text-white shadow ${hop.is_suspicious ? 'border-critical/70 bg-critical' : 'border-accent/70 bg-accent'}`;
         marker.textContent = String(hop.hop_number);
         new maplibregl.Marker({ element: marker })
           .setLngLat([longitude, latitude])
@@ -62,9 +62,9 @@ export function RelayPathMap({ hops }: { hops: RelayHop[] }) {
   }, [hops]);
 
   if (!hops.some((hop) => hop.geo?.latitude !== undefined && hop.geo?.longitude !== undefined)) {
-    return <div className="rounded border border-dashed border-[#29454b] p-6 text-center text-xs text-gray-600">No public relay coordinates are available for mapping.</div>;
+    return <div className="rounded border border-dashed border-hairline-strong p-6 text-center text-xs text-ink-faint">No public relay coordinates are available for mapping.</div>;
   }
-  return <div ref={containerRef} className="h-[360px] w-full overflow-hidden rounded border border-[#29454b]" aria-label="Relay path map" />;
+  return <div ref={containerRef} className="h-[360px] w-full overflow-hidden rounded border border-hairline-strong" aria-label="Relay path map" />;
 }
 
 function escapeHtml(value: string) {

@@ -80,36 +80,36 @@ function LegalPage({
   sections: LegalSection[];
 }) {
   return (
-    <main className="min-h-screen px-5 py-6 text-[#d6e1de] sm:px-8 lg:px-12">
+    <main className="min-h-screen px-5 py-6 text-ink-dim sm:px-8 lg:px-12">
       <div className="mx-auto max-w-4xl">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[#29454b] pb-5">
-          <Link to="/login" className="inline-flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#58d6c0] hover:text-[#9cefe1]">
+        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-hairline-strong pb-5">
+          <Link to="/login" className="inline-flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-accent hover:brightness-125">
             <ArrowLeft size={15} /> Back to sign in
           </Link>
-          <span className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-[#718581]"><ShieldCheck size={14} /> Email Threat Detection</span>
+          <span className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-mute"><ShieldCheck size={14} /> Email Threat Detection</span>
         </header>
 
-        <section className="border-b border-[#29454b] py-14 sm:py-20">
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.24em] text-[#58d6c0]">{label}</p>
-          <h1 className="mt-4 max-w-3xl text-4xl font-semibold tracking-[-0.04em] text-white sm:text-6xl">{title}</h1>
-          <p className="mt-6 max-w-2xl text-base leading-8 text-[#9aadaa]">{intro}</p>
-          <p className="mt-6 font-mono text-[10px] uppercase tracking-[0.16em] text-[#718581]">Effective date: September 13, 2026</p>
+        <section className="border-b border-hairline-strong py-14 sm:py-20">
+          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.24em] text-accent">{label}</p>
+          <h1 className="mt-4 max-w-3xl text-4xl font-semibold tracking-[-0.04em] text-ink sm:text-6xl">{title}</h1>
+          <p className="mt-6 max-w-2xl text-base leading-8 text-ink-dim">{intro}</p>
+          <p className="mt-6 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-mute">Effective date: September 13, 2026</p>
         </section>
 
-        <div className="divide-y divide-[#29454b]">
+        <div className="divide-y divide-hairline">
           {sections.map((section) => (
             <section key={section.title} className="grid gap-5 py-9 sm:grid-cols-[190px_1fr] sm:gap-10">
-              <h2 className="text-lg font-semibold text-white">{section.title}</h2>
-              <div className="space-y-4 text-sm leading-7 text-[#9aadaa]">
+              <h2 className="text-lg font-semibold text-ink">{section.title}</h2>
+              <div className="space-y-4 text-sm leading-7 text-ink-dim">
                 {section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
               </div>
             </section>
           ))}
         </div>
 
-        <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-[#29454b] py-8 text-xs text-[#718581]">
-          <span className="inline-flex items-center gap-2"><LockKeyhole size={14} className="text-[#58d6c0]" /> Protected investigation surface</span>
-          <Link to="/login" className="inline-flex items-center gap-2 text-[#58d6c0] hover:text-[#9cefe1]">Open the application <ExternalLink size={13} /></Link>
+        <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-hairline-strong py-8 text-xs text-ink-mute">
+          <span className="inline-flex items-center gap-2"><LockKeyhole size={14} className="text-accent" /> Protected investigation surface</span>
+          <Link to="/login" className="inline-flex items-center gap-2 text-accent hover:brightness-125">Open the application <ExternalLink size={13} /></Link>
         </footer>
       </div>
     </main>

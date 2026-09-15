@@ -7,6 +7,7 @@ import { MetricCard } from '../components/common/MetricCard';
 import { SecurityEnvironmentBackground } from '../components/common/SecurityEnvironmentBackground';
 import { DashboardSummary, DashboardTrends, getDashboardSummary, getDashboardTrends } from '../services/analysisApi';
 import { useWebSocketAlerts } from '../hooks/useWebSocket';
+import { CHART, chartTick, chartTooltip, severityFill } from '../utils/chartTheme';
 
 const EMPTY_SUMMARY: DashboardSummary = {
   metrics: { total_analyses: 0, flagged_analyses: 0, malicious_analyses: 0, average_risk_score: 0 },
@@ -17,15 +18,6 @@ const EMPTY_SUMMARY: DashboardSummary = {
   top_indicators: [],
   recent_analyses: [],
   data_source: 'persisted_local_analyses',
-};
-
-const tooltipStyle = {
-  backgroundColor: '#151A25',
-  border: '1px solid rgba(255,255,255,0.12)',
-  borderRadius: '5px',
-  color: '#E9EDF4',
-  fontSize: '11px',
-  fontFamily: 'IBM Plex Mono, monospace'
 };
 
 export default function Dashboard() {
@@ -153,10 +145,10 @@ export default function Dashboard() {
             {summary.activity.length ? (
               <ResponsiveContainer width="100%" height={190}>
                 <BarChart data={summary.activity} barGap={4}>
-                  <XAxis dataKey="date" tick={{ fill: '#6B7689', fontSize: 10, fontFamily: 'IBM Plex Mono, monospace' }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-                  <Bar dataKey="analyses" name="Total Ingested" fill="#4C9EEB" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="flagged" name="High Risk Flagged" fill="#E8B44A" radius={[3, 3, 0, 0]} />
+                  <XAxis dataKey="date" tick={chartTick} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={chartTooltip} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                  <Bar dataKey="analyses" name="Total Ingested" fill={CHART.accent} radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="flagged" name="High Risk Flagged" fill={CHART.medium} radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -175,10 +167,10 @@ export default function Dashboard() {
                   <PieChart>
                     <Pie data={summary.distribution} innerRadius={58} outerRadius={84} paddingAngle={4} dataKey="value">
                       {summary.distribution.map((entry) => (
-                        <Cell key={entry.name} fill={entry.color} />
+                        <Cell key={entry.name} fill={severityFill(entry.name, entry.color)} />
                       ))}
                     </Pie>
-                    <Tooltip contentStyle={tooltipStyle} />
+                    <Tooltip contentStyle={chartTooltip} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
@@ -220,13 +212,13 @@ export default function Dashboard() {
       </section>
 
       <section className="relative z-10 grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <div className="soc-panel p-5"><SectionTitle eyebrow="ORIGIN ANALYSIS" title="Top countries" /><ResponsiveContainer width="100%" height={180}><BarChart data={trends?.countries || []} layout="vertical"><XAxis type="number" allowDecimals={false} hide /><YAxis type="category" dataKey="name" width={82} tick={{ fill: '#A6B0C2', fontSize: 10 }} /><Tooltip contentStyle={tooltipStyle} /><Bar dataKey="count" fill="#4C9EEB" radius={[0, 3, 3, 0]} /></BarChart></ResponsiveContainer></div>
+        <div className="soc-panel p-5"><SectionTitle eyebrow="ORIGIN ANALYSIS" title="Top countries" /><ResponsiveContainer width="100%" height={180}><BarChart data={trends?.countries || []} layout="vertical"><XAxis type="number" allowDecimals={false} hide /><YAxis type="category" dataKey="name" width={82} tick={{ fill: '#A6B0C2', fontSize: 10 }} /><Tooltip contentStyle={chartTooltip} /><Bar dataKey="count" fill={CHART.accent} radius={[0, 3, 3, 0]} /></BarChart></ResponsiveContainer></div>
         <div className="soc-panel p-5"><SectionTitle eyebrow="TRUST ANALYSIS" title="Authentication results" /><div className="mt-4 space-y-3">{['spf', 'dkim', 'dmarc'].map((name) => <div key={name} className="flex items-center justify-between border-b border-hairline pb-2 text-xs"><span className="font-mono uppercase text-ink-mute">{name}</span><span className="font-mono text-ink-dim">{Object.entries(trends?.auth_results?.[name] || {}).map(([status, count]) => `${status}: ${count}`).join(' · ') || 'no observations'}</span></div>)}</div></div>
         <div className="soc-panel p-5"><SectionTitle eyebrow="ATTACK TAXONOMY" title="Observed attack types" /><div className="mt-4 space-y-2">{(trends?.attack_types || []).slice(0, 6).map((item) => <div key={item.name} className="flex items-center justify-between rounded bg-sunken px-3 py-2 text-xs"><span className="truncate text-ink-dim">{item.name}</span><span className="font-mono text-accent">{item.count}</span></div>)}{!trends?.attack_types?.length && <EmptyState text="No attack types observed yet." />}</div></div>
       </section>
 
       <section className="relative z-10 grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <div className="soc-panel xl:col-span-8 p-5"><SectionTitle eyebrow="TREND TELEMETRY" title="Thirty-day investigation trend" /><div className="mt-4"><ResponsiveContainer width="100%" height={220}><LineChart data={trends?.daily || []}><XAxis dataKey="date" tick={{ fill: '#6B7689', fontSize: 10 }} /><YAxis allowDecimals={false} tick={{ fill: '#6B7689', fontSize: 10 }} /><Tooltip contentStyle={tooltipStyle} /><Line type="monotone" dataKey="analyses" stroke="#4C9EEB" strokeWidth={2} dot={false} /><Line type="monotone" dataKey="flagged" stroke="#E8B44A" strokeWidth={2} dot={false} /></LineChart></ResponsiveContainer></div></div>
+        <div className="soc-panel xl:col-span-8 p-5"><SectionTitle eyebrow="TREND TELEMETRY" title="Thirty-day investigation trend" /><div className="mt-4"><ResponsiveContainer width="100%" height={220}><LineChart data={trends?.daily || []}><XAxis dataKey="date" tick={chartTick} /><YAxis allowDecimals={false} tick={chartTick} /><Tooltip contentStyle={chartTooltip} /><Line type="monotone" dataKey="analyses" stroke={CHART.accent} strokeWidth={2} dot={false} /><Line type="monotone" dataKey="flagged" stroke={CHART.medium} strokeWidth={2} dot={false} /></LineChart></ResponsiveContainer></div></div>
         <div className="soc-panel xl:col-span-4 p-5"><SectionTitle eyebrow="LIVE ALERTS" title={connected ? 'WebSocket connected' : 'WebSocket unavailable'} /><div className="mt-4 space-y-2">{alerts.length ? alerts.map((alert, index) => <div key={`${alert.analysis_id}-${index}`} className="rounded border border-critical/30 bg-critical/10 p-3 text-xs"><p className="font-mono text-critical">{alert.verdict || 'alert'} · {alert.risk_score ?? '—'}/100</p><p className="mt-1 text-ink-dim">{alert.summary || alert.analysis_id}</p></div>) : <EmptyState text="No live alerts received in this session." />}</div></div>
       </section>
 

@@ -64,30 +64,30 @@ export default function Settings() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-xl font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <Shield className="text-cyan-400" />
+          <h1 className="text-xl font-bold text-ink uppercase tracking-wider flex items-center gap-2">
+            <Shield className="text-accent" />
             Settings & Preferences
           </h1>
-          <p className="text-xs text-gray-400">Manage your account and application configuration</p>
+          <p className="text-xs text-ink-mute">Manage your account and application configuration</p>
         </div>
         <button
           onClick={handleSaveSettings}
-          className="px-4 py-2 bg-cyan-900/40 hover:bg-cyan-900/70 border border-cyan-700 text-cyan-200 text-xs font-bold rounded"
+          className="px-4 py-2 bg-accent/10 hover:bg-accent-soft border border-hairline-strong text-ink-dim text-xs font-bold rounded"
         >
           Save Changes
         </button>
       </div>
 
       {/* Tab Navigation */}
-      <div className="border-b border-[#1b3037] flex gap-1 overflow-x-auto">
+      <div className="border-b border-hairline flex gap-1 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
             className={`flex items-center gap-2 px-4 py-3 text-xs font-bold transition-colors whitespace-nowrap ${
               activeTab === tab.id
-                ? 'border-b-2 border-cyan-500 text-cyan-400'
-                : 'text-gray-400 hover:text-gray-300'
+                ? 'border-b-2 border-accent/60 text-accent'
+                : 'text-ink-mute hover:text-ink-dim'
             }`}
           >
             {tab.icon}
@@ -98,56 +98,56 @@ export default function Settings() {
 
       {/* Profile Tab */}
       {activeTab === 'profile' && (
-        <div className="bg-[#101b21] p-5 rounded border border-[#1b3037] space-y-4">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Personal Information</h2>
+        <div className="bg-raised p-5 rounded border border-hairline space-y-4">
+          <h2 className="text-xs font-bold text-ink-mute uppercase tracking-widest">Personal Information</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 uppercase tracking-wider mb-1">Full Name</label>
+              <label className="block text-xs text-ink-mute uppercase tracking-wider mb-1">Full Name</label>
               <input
                 type="text"
                 value={profile.name}
                 onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-sunken border border-hairline px-3 py-2 text-sm text-ink rounded focus:outline-none focus:border-accent/60"
               />
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 uppercase tracking-wider mb-1">Email Address</label>
+              <label className="block text-xs text-ink-mute uppercase tracking-wider mb-1">Email Address</label>
               <input
                 type="email"
                 value={profile.email}
                 onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-sunken border border-hairline px-3 py-2 text-sm text-ink rounded focus:outline-none focus:border-accent/60"
               />
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 uppercase tracking-wider mb-1">Job Title</label>
+              <label className="block text-xs text-ink-mute uppercase tracking-wider mb-1">Job Title</label>
               <input
                 type="text"
                 value={profile.jobTitle}
                 onChange={(e) => setProfile({ ...profile, jobTitle: e.target.value })}
-                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-sunken border border-hairline px-3 py-2 text-sm text-ink rounded focus:outline-none focus:border-accent/60"
               />
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 uppercase tracking-wider mb-1">Department</label>
+              <label className="block text-xs text-ink-mute uppercase tracking-wider mb-1">Department</label>
               <input
                 type="text"
                 value={profile.department}
                 onChange={(e) => setProfile({ ...profile, department: e.target.value })}
-                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-sunken border border-hairline px-3 py-2 text-sm text-ink rounded focus:outline-none focus:border-accent/60"
               />
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 uppercase tracking-wider mb-1">Timezone</label>
+              <label className="block text-xs text-ink-mute uppercase tracking-wider mb-1">Timezone</label>
               <select
                 value={profile.timezone}
                 onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
-                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-sunken border border-hairline px-3 py-2 text-sm text-ink-dim rounded focus:outline-none focus:border-accent/60"
               >
                 <option value="UTC-05:00">UTC-05:00 (Eastern)</option>
                 <option value="UTC-06:00">UTC-06:00 (Central)</option>
@@ -159,12 +159,12 @@ export default function Settings() {
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 uppercase tracking-wider mb-1">Avatar URL (Optional)</label>
+              <label className="block text-xs text-ink-mute uppercase tracking-wider mb-1">Avatar URL (Optional)</label>
               <input
                 type="text"
                 value={profile.avatarUrl}
                 onChange={(e) => setProfile({ ...profile, avatarUrl: e.target.value })}
-                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-sunken border border-hairline px-3 py-2 text-sm text-ink rounded focus:outline-none focus:border-accent/60"
                 placeholder="https://..."
               />
             </div>
@@ -174,14 +174,14 @@ export default function Settings() {
 
       {/* Security Tab */}
       {activeTab === 'security' && (
-        <div className="bg-[#101b21] p-5 rounded border border-[#1b3037] space-y-4">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Security Settings</h2>
+        <div className="bg-raised p-5 rounded border border-hairline space-y-4">
+          <h2 className="text-xs font-bold text-ink-mute uppercase tracking-widest">Security Settings</h2>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-bold text-white">Two‑Factor Authentication</p>
-                <p className="text-xs text-gray-400">Require an additional verification step at login</p>
+                <p className="text-sm font-bold text-ink">Two‑Factor Authentication</p>
+                <p className="text-xs text-ink-mute">Require an additional verification step at login</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -190,14 +190,14 @@ export default function Settings() {
                   onChange={(e) => setSecurity({ ...security, twoFactorEnabled: e.target.checked })}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+                <div className="w-11 h-6 bg-raised peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-hairline-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
               </label>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-bold text-white">Require Password Change</p>
-                <p className="text-xs text-gray-400">Force password update on next login</p>
+                <p className="text-sm font-bold text-ink">Require Password Change</p>
+                <p className="text-xs text-ink-mute">Force password update on next login</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -206,16 +206,16 @@ export default function Settings() {
                   onChange={(e) => setSecurity({ ...security, passwordChangeRequired: e.target.checked })}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                <div className="w-11 h-6 bg-raised peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-hairline-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-critical"></div>
               </label>
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-white mb-2">Session Timeout (Minutes)</label>
+              <label className="block text-sm font-bold text-ink mb-2">Session Timeout (Minutes)</label>
               <select
                 value={security.sessionTimeout}
                 onChange={(e) => setSecurity({ ...security, sessionTimeout: e.target.value })}
-                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-sunken border border-hairline px-3 py-2 text-sm text-ink-dim rounded focus:outline-none focus:border-accent/60"
               >
                 <option value="15">15 minutes</option>
                 <option value="30">30 minutes</option>
@@ -227,8 +227,8 @@ export default function Settings() {
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-bold text-white">Login Notifications</p>
-                <p className="text-xs text-gray-400">Email alert on new device login</p>
+                <p className="text-sm font-bold text-ink">Login Notifications</p>
+                <p className="text-xs text-ink-mute">Email alert on new device login</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -237,12 +237,12 @@ export default function Settings() {
                   onChange={(e) => setSecurity({ ...security, loginNotifications: e.target.checked })}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                <div className="w-11 h-6 bg-raised peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-hairline-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-safe"></div>
               </label>
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-white mb-2">IP Whitelist (CIDR)</label>
+              <label className="block text-sm font-bold text-ink mb-2">IP Whitelist (CIDR)</label>
               <div className="space-y-2">
                 {security.ipWhitelist.map((ip, idx) => (
                   <div key={idx} className="flex gap-2">
@@ -254,14 +254,14 @@ export default function Settings() {
                         newList[idx] = e.target.value;
                         setSecurity({ ...security, ipWhitelist: newList });
                       }}
-                      className="flex-1 bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-white rounded focus:outline-none focus:border-cyan-500"
+                      className="flex-1 bg-sunken border border-hairline px-3 py-2 text-sm text-ink rounded focus:outline-none focus:border-accent/60"
                     />
                     <button
                       onClick={() => {
                         const newList = security.ipWhitelist.filter((_, i) => i !== idx);
                         setSecurity({ ...security, ipWhitelist: newList });
                       }}
-                      className="px-3 bg-red-900/40 hover:bg-red-900/70 border border-red-700 text-red-200 text-xs font-bold rounded"
+                      className="px-3 bg-critical/15 hover:bg-critical/20 border border-critical/50 text-critical text-xs font-bold rounded"
                     >
                       Remove
                     </button>
@@ -269,7 +269,7 @@ export default function Settings() {
                 ))}
                 <button
                   onClick={() => setSecurity({ ...security, ipWhitelist: [...security.ipWhitelist, ''] })}
-                  className="px-3 py-1 bg-green-900/40 hover:bg-green-900/70 border border-green-700 text-green-200 text-xs font-bold rounded"
+                  className="px-3 py-1 bg-safe/10 hover:bg-safe/15 border border-safe/40 text-safe text-xs font-bold rounded"
                 >
                   + Add IP Range
                 </button>
@@ -281,17 +281,17 @@ export default function Settings() {
 
       {/* Notifications Tab */}
       {activeTab === 'notifications' && (
-        <div className="bg-[#101b21] p-5 rounded border border-[#1b3037] space-y-4">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Notification Preferences</h2>
+        <div className="bg-raised p-5 rounded border border-hairline space-y-4">
+          <h2 className="text-xs font-bold text-ink-mute uppercase tracking-widest">Notification Preferences</h2>
 
           <div className="space-y-6">
             <div>
-              <p className="text-sm font-bold text-white mb-3">Delivery Channels</p>
+              <p className="text-sm font-bold text-ink mb-3">Delivery Channels</p>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-white">Email Alerts</p>
-                    <p className="text-xs text-gray-400">Receive notifications via email</p>
+                    <p className="text-sm text-ink">Email Alerts</p>
+                    <p className="text-xs text-ink-mute">Receive notifications via email</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -300,14 +300,14 @@ export default function Settings() {
                       onChange={(e) => setNotifications({ ...notifications, emailAlerts: e.target.checked })}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+                    <div className="w-11 h-6 bg-raised peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-hairline-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
                   </label>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-white">Push Notifications</p>
-                    <p className="text-xs text-gray-400">Browser and mobile push notifications</p>
+                    <p className="text-sm text-ink">Push Notifications</p>
+                    <p className="text-xs text-ink-mute">Browser and mobile push notifications</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -316,14 +316,14 @@ export default function Settings() {
                       onChange={(e) => setNotifications({ ...notifications, pushAlerts: e.target.checked })}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+                    <div className="w-11 h-6 bg-raised peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-hairline-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
                   </label>
                 </div>
               </div>
             </div>
 
             <div>
-              <p className="text-sm font-bold text-white mb-3">Threat Severity Alerts</p>
+              <p className="text-sm font-bold text-ink mb-3">Threat Severity Alerts</p>
               <div className="space-y-3">
                 {[
                   { key: 'threatCritical', label: 'Critical Threats', desc: 'Immediate action required' },
@@ -332,8 +332,8 @@ export default function Settings() {
                 ].map((item) => (
                   <div key={item.key} className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-white">{item.label}</p>
-                      <p className="text-xs text-gray-400">{item.desc}</p>
+                      <p className="text-sm text-ink">{item.label}</p>
+                      <p className="text-xs text-ink-mute">{item.desc}</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -342,7 +342,7 @@ export default function Settings() {
                         onChange={(e) => setNotifications({ ...notifications, [item.key]: e.target.checked })}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                      <div className="w-11 h-6 bg-raised peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-hairline-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-safe"></div>
                     </label>
                   </div>
                 ))}
@@ -351,8 +351,8 @@ export default function Settings() {
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-bold text-white">Weekly Security Report</p>
-                <p className="text-xs text-gray-400">Summary of weekly threats and metrics</p>
+                <p className="text-sm font-bold text-ink">Weekly Security Report</p>
+                <p className="text-xs text-ink-mute">Summary of weekly threats and metrics</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -361,14 +361,14 @@ export default function Settings() {
                   onChange={(e) => setNotifications({ ...notifications, weeklyReport: e.target.checked })}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <div className="w-11 h-6 bg-raised peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-hairline-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
               </label>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-bold text-white">Audit Event Logs</p>
-                <p className="text-xs text-gray-400">Notify on security‑relevant system changes</p>
+                <p className="text-sm font-bold text-ink">Audit Event Logs</p>
+                <p className="text-xs text-ink-mute">Notify on security‑relevant system changes</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -377,7 +377,7 @@ export default function Settings() {
                   onChange={(e) => setNotifications({ ...notifications, auditEvents: e.target.checked })}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-600"></div>
+                <div className="w-11 h-6 bg-raised peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-hairline-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-medium"></div>
               </label>
             </div>
           </div>
@@ -386,16 +386,16 @@ export default function Settings() {
 
       {/* Application Tab */}
       {activeTab === 'application' && (
-        <div className="bg-[#101b21] p-5 rounded border border-[#1b3037] space-y-4">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Application Configuration</h2>
+        <div className="bg-raised p-5 rounded border border-hairline space-y-4">
+          <h2 className="text-xs font-bold text-ink-mute uppercase tracking-widest">Application Configuration</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-bold text-white mb-2">Theme</label>
+              <label className="block text-sm font-bold text-ink mb-2">Theme</label>
               <select
                 value={application.theme}
                 onChange={(e) => setApplication({ ...application, theme: e.target.value })}
-                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-sunken border border-hairline px-3 py-2 text-sm text-ink-dim rounded focus:outline-none focus:border-accent/60"
               >
                 <option value="dark">Dark (Default)</option>
                 <option value="darker">Darker</option>
@@ -404,11 +404,11 @@ export default function Settings() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-white mb-2">Language</label>
+              <label className="block text-sm font-bold text-ink mb-2">Language</label>
               <select
                 value={application.language}
                 onChange={(e) => setApplication({ ...application, language: e.target.value })}
-                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-sunken border border-hairline px-3 py-2 text-sm text-ink-dim rounded focus:outline-none focus:border-accent/60"
               >
                 <option value="en">English</option>
                 <option value="es">Español</option>
@@ -419,11 +419,11 @@ export default function Settings() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-white mb-2">Date Format</label>
+              <label className="block text-sm font-bold text-ink mb-2">Date Format</label>
               <select
                 value={application.dateFormat}
                 onChange={(e) => setApplication({ ...application, dateFormat: e.target.value })}
-                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-sunken border border-hairline px-3 py-2 text-sm text-ink-dim rounded focus:outline-none focus:border-accent/60"
               >
                 <option value="YYYY-MM-DD">2026-09-05</option>
                 <option value="MM/DD/YYYY">09/05/2026</option>
@@ -433,11 +433,11 @@ export default function Settings() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-white mb-2">Time Format</label>
+              <label className="block text-sm font-bold text-ink mb-2">Time Format</label>
               <select
                 value={application.timeFormat}
                 onChange={(e) => setApplication({ ...application, timeFormat: e.target.value })}
-                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-sunken border border-hairline px-3 py-2 text-sm text-ink-dim rounded focus:outline-none focus:border-accent/60"
               >
                 <option value="24h">24-hour (14:30)</option>
                 <option value="12h">12-hour (2:30 PM)</option>
@@ -447,8 +447,8 @@ export default function Settings() {
             <div className="col-span-2">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p className="text-sm font-bold text-white">Show Threat Counts</p>
-                  <p className="text-xs text-gray-400">Display threat counters in sidebar and headers</p>
+                  <p className="text-sm font-bold text-ink">Show Threat Counts</p>
+                  <p className="text-xs text-ink-mute">Display threat counters in sidebar and headers</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -457,14 +457,14 @@ export default function Settings() {
                     onChange={(e) => setApplication({ ...application, showThreatCounts: e.target.checked })}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+                  <div className="w-11 h-6 bg-raised peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-hairline-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
                 </label>
               </div>
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-bold text-white">Auto‑Refresh Dashboard</p>
-                  <p className="text-xs text-gray-400">Automatically update dashboard data</p>
+                  <p className="text-sm font-bold text-ink">Auto‑Refresh Dashboard</p>
+                  <p className="text-xs text-ink-mute">Automatically update dashboard data</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -473,17 +473,17 @@ export default function Settings() {
                     onChange={(e) => setApplication({ ...application, autoRefresh: e.target.checked })}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+                  <div className="w-11 h-6 bg-raised peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-hairline-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
                 </label>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-white mb-2">Refresh Interval (Seconds)</label>
+              <label className="block text-sm font-bold text-ink mb-2">Refresh Interval (Seconds)</label>
               <select
                 value={application.refreshInterval}
                 onChange={(e) => setApplication({ ...application, refreshInterval: e.target.value })}
-                className="w-full bg-[#081216] border border-[#1b3037] px-3 py-2 text-sm text-gray-300 rounded focus:outline-none focus:border-cyan-500"
+                className="w-full bg-sunken border border-hairline px-3 py-2 text-sm text-ink-dim rounded focus:outline-none focus:border-accent/60"
               >
                 <option value="15">15 seconds</option>
                 <option value="30">30 seconds</option>

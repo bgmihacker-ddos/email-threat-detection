@@ -12,10 +12,10 @@ interface BatchEntry {
 }
 
 const statusStyles: Record<BatchEntry['status'], string> = {
-  queued: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
-  processing: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300',
-  completed: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
-  failed: 'border-red-500/30 bg-red-500/10 text-red-300',
+  queued: 'border-medium/30 bg-medium/10 text-medium',
+  processing: 'border-accent/30 bg-accent/10 text-accent',
+  completed: 'border-safe/30 bg-safe/10 text-safe',
+  failed: 'border-critical/30 bg-critical/10 text-critical',
 };
 
 export default function BatchAnalysis() {
@@ -115,33 +115,33 @@ export default function BatchAnalysis() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <header className="rounded-xl border border-[#29454b] bg-[#101b21]/80 p-6 shadow-[0_20px_60px_rgba(2,12,15,0.22)]">
+      <header className="rounded-xl border border-hairline-strong bg-raised/80 p-6 shadow-[0_20px_60px_rgba(2,12,15,0.22)]">
         <div className="flex items-center gap-2">
-          <span className="flex h-2 w-2 rounded-full bg-[#58d6c0] shadow-[0_0_10px_rgba(88,214,192,0.8)] animate-pulse" />
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[#58d6c0]">BATCH FORENSIC INTAKE</p>
+          <span className="flex h-2 w-2 rounded-full bg-accent shadow-[0_0_10px_rgba(88,214,192,0.8)] animate-pulse" />
+          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-accent">BATCH FORENSIC INTAKE</p>
         </div>
-        <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-white">Bulk Email Analysis Queue</h1>
-        <p className="mt-1 max-w-3xl text-xs text-gray-400 font-mono">
+        <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-ink">Bulk Email Analysis Queue</h1>
+        <p className="mt-1 max-w-3xl text-xs text-ink-mute font-mono">
           Submit multiple RFC 5322 message samples into the same investigative workflow for serial triage, scoring, and evidence aggregation.
         </p>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <section className="rounded-xl border border-[#1b3037] bg-[#101b21]/90 p-6">
+        <section className="rounded-xl border border-hairline bg-raised/90 p-6">
           <div
             onDragOver={(event) => event.preventDefault()}
             onDrop={(event) => {
               event.preventDefault();
               onFilesSelected(event.dataTransfer.files);
             }}
-            className="flex min-h-56 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-[#29454b] bg-[#081216] p-5 text-center transition-all hover:border-cyan-500/60 hover:bg-cyan-950/10"
+            className="flex min-h-56 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-hairline-strong bg-sunken p-5 text-center transition-all hover:border-accent/60 hover:bg-accent/5"
             onClick={() => inputRef.current?.click()}
           >
-            <div className="mb-3 rounded-full border border-[#1b3037] bg-[#101b21] p-3 text-cyan-400">
+            <div className="mb-3 rounded-full border border-hairline bg-raised p-3 text-accent">
               <FileUp size={26} />
             </div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-200 font-mono">Drop email files here</p>
-            <p className="mt-1 text-[11px] text-gray-500 font-mono">or click to select .eml, .msg, .zip, or .mbox samples</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-dim font-mono">Drop email files here</p>
+            <p className="mt-1 text-[11px] text-ink-mute font-mono">or click to select .eml, .msg, .zip, or .mbox samples</p>
             <input
               ref={inputRef}
               type="file"
@@ -156,12 +156,12 @@ export default function BatchAnalysis() {
             {files.length ? (
               <div className="space-y-2">
                 {files.map((file) => (
-                  <div key={`${file.name}-${file.size}`} className="flex items-center justify-between rounded-lg border border-[#1b3037] bg-[#09171b] px-3 py-2.5">
+                  <div key={`${file.name}-${file.size}`} className="flex items-center justify-between rounded-lg border border-hairline bg-surface px-3 py-2.5">
                     <div className="flex min-w-0 items-center gap-3">
-                      <FileText size={16} className="text-cyan-400" />
+                      <FileText size={16} className="text-accent" />
                       <div className="min-w-0">
-                        <p className="truncate text-xs font-medium text-gray-100">{file.name}</p>
-                        <p className="text-[10px] text-gray-500 font-mono">{(file.size / 1024).toFixed(1)} KB</p>
+                        <p className="truncate text-xs font-medium text-ink">{file.name}</p>
+                        <p className="text-[10px] text-ink-mute font-mono">{(file.size / 1024).toFixed(1)} KB</p>
                       </div>
                     </div>
                     <button
@@ -170,7 +170,7 @@ export default function BatchAnalysis() {
                         event.stopPropagation();
                         removeFile(file.name);
                       }}
-                      className="rounded p-1 text-gray-500 hover:bg-red-950/60 hover:text-red-400"
+                      className="rounded p-1 text-ink-mute hover:bg-critical/20 hover:text-critical"
                       aria-label={`Remove ${file.name}`}
                     >
                       <X size={16} />
@@ -179,28 +179,28 @@ export default function BatchAnalysis() {
                 ))}
               </div>
             ) : (
-              <div className="rounded-lg border border-dashed border-[#29454b] bg-[#0c171c] px-4 py-3 text-[11px] font-mono text-gray-500">
+              <div className="rounded-lg border border-dashed border-hairline-strong bg-surface px-4 py-3 text-[11px] font-mono text-ink-mute">
                 No files selected yet.
               </div>
             )}
           </div>
 
           {error && (
-            <div className="mt-5 flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-950/20 p-3 text-sm text-red-300">
+            <div className="mt-5 flex items-start gap-2 rounded-lg border border-critical/30 bg-critical/10 p-3 text-sm text-critical">
               <AlertTriangle size={16} className="mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
-          <div className="mt-6 flex items-center justify-between border-t border-[#1b3037] pt-4">
-            <div className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-mono">
+          <div className="mt-6 flex items-center justify-between border-t border-hairline pt-4">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-ink-mute font-mono">
               {files.length ? `${files.length} file(s) queued` : 'Awaiting intake'}
             </div>
             <button
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting || !files.length}
-              className="inline-flex items-center gap-2 rounded-lg border border-[#58d6c0] bg-[#58d6c0]/10 px-4 py-2 text-sm font-medium text-[#9ae7db] transition hover:bg-[#58d6c0]/20 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg border border-accent bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition hover:bg-accent/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ShieldCheck size={16} />
               {isSubmitting ? 'Queuing...' : 'Start batch analysis'}
@@ -208,14 +208,14 @@ export default function BatchAnalysis() {
           </div>
         </section>
 
-        <aside className="rounded-xl border border-[#1b3037] bg-[#101b21]/90 p-5">
+        <aside className="rounded-xl border border-hairline bg-raised/90 p-5">
           <div className="flex items-center gap-2">
-            <Clock3 size={16} className="text-cyan-400" />
-            <h2 className="text-sm font-semibold text-gray-100">Live queue</h2>
+            <Clock3 size={16} className="text-accent" />
+            <h2 className="text-sm font-semibold text-ink">Live queue</h2>
           </div>
 
           {batchId && (
-            <div className="mt-4 rounded-lg border border-[#29454b] bg-[#0b171b] p-3 text-[10px] uppercase tracking-[0.14em] text-cyan-300 font-mono">
+            <div className="mt-4 rounded-lg border border-hairline-strong bg-surface p-3 text-[10px] uppercase tracking-[0.14em] text-accent font-mono">
               Batch ID: {batchId}
             </div>
           )}
@@ -223,32 +223,32 @@ export default function BatchAnalysis() {
           <div className="mt-4 space-y-3">
             {entries.length ? (
               entries.map((entry) => (
-                <div key={entry.analysis_id} className="rounded-lg border border-[#1b3037] bg-[#0c171c] p-3">
+                <div key={entry.analysis_id} className="rounded-lg border border-hairline bg-surface p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-medium text-gray-100">{entry.filename}</p>
-                      <p className="mt-1 text-[10px] text-gray-500 font-mono">{entry.analysis_id.slice(0, 8)}…</p>
+                      <p className="truncate text-xs font-medium text-ink">{entry.filename}</p>
+                      <p className="mt-1 text-[10px] text-ink-mute font-mono">{entry.analysis_id.slice(0, 8)}…</p>
                     </div>
                     <span className={`inline-flex rounded-full border px-2 py-1 text-[9px] uppercase tracking-[0.12em] font-mono ${statusStyles[entry.status]}`}>
                       {entry.status}
                     </span>
                   </div>
                   {entry.stage && (
-                    <p className="mt-2 text-[11px] text-gray-300">{entry.stage}</p>
+                    <p className="mt-2 text-[11px] text-ink-dim">{entry.stage}</p>
                   )}
                   {typeof entry.progress_pct === 'number' && (
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#122428]">
-                      <div className="h-full rounded-full bg-[#58d6c0]" style={{ width: `${Math.min(Math.max(entry.progress_pct, 0), 100)}%` }} />
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-raised">
+                      <div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(Math.max(entry.progress_pct, 0), 100)}%` }} />
                     </div>
                   )}
                   {entry.error && (
-                    <div className="mt-2 flex items-start gap-2 text-[11px] text-red-300">
+                    <div className="mt-2 flex items-start gap-2 text-[11px] text-critical">
                       <AlertTriangle size={12} className="mt-0.5" />
                       <span>{entry.error}</span>
                     </div>
                   )}
                   {entry.status === 'completed' && (
-                    <div className="mt-3 flex items-center gap-1.5 text-[11px] text-emerald-300">
+                    <div className="mt-3 flex items-center gap-1.5 text-[11px] text-safe">
                       <CheckCircle2 size={12} />
                       <span>Result ready for review</span>
                     </div>
@@ -256,7 +256,7 @@ export default function BatchAnalysis() {
                 </div>
               ))
             ) : (
-              <div className="rounded-lg border border-dashed border-[#29454b] bg-[#0b171b] px-3 py-4 text-[11px] text-gray-500 font-mono">
+              <div className="rounded-lg border border-dashed border-hairline-strong bg-surface px-3 py-4 text-[11px] text-ink-mute font-mono">
                 Queue is empty until a batch is submitted.
               </div>
             )}

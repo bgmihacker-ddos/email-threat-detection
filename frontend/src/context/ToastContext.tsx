@@ -38,10 +38,10 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           <div
             key={toast.id}
             className={`px-4 py-3 rounded shadow-lg border text-sm font-bold flex items-center transition-all ${
-              toast.type === 'success' ? 'bg-[#0B1A15] border-green-800 text-green-400' :
-              toast.type === 'error' ? 'bg-[#1A0B0B] border-red-800 text-red-400' :
-              toast.type === 'warning' ? 'bg-[#1A1A0B] border-yellow-800 text-yellow-400' :
-              'bg-[#101b21] border-cyan-800 text-cyan-400'
+              toast.type === 'success' ? 'bg-safe/10 border-safe/40 text-safe' :
+              toast.type === 'error' ? 'bg-critical/10 border-critical/50 text-critical' :
+              toast.type === 'warning' ? 'bg-medium/10 border-medium/50 text-medium' :
+              'bg-accent/10 border-accent/40 text-accent'
             }`}
           >
             {toast.message}
