@@ -11,12 +11,14 @@ def _pdf_escape(value: Any) -> str:
     return text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
 
+# PDF report generator updating with verification link
 def _lines(analysis: Dict[str, Any]) -> Iterable[str]:
     yield "Email Threat Detection - Forensic Report"
     yield f"Analysis ID: {analysis.get('analysis_id', 'unknown')}"
     yield f"Verdict: {analysis.get('verdict', 'unknown')}"
     yield f"Risk score: {analysis.get('risk_score', 'unknown')} / 100"
     yield f"Severity: {analysis.get('severity', 'unknown')}"
+    yield f"Verify at: /api/analysis/{analysis.get('analysis_id', 'unknown')}/verify-qr"
     yield ""
     yield "Executive summary"
     yield str(analysis.get("summary") or "No summary available.")

@@ -27,5 +27,14 @@ numpy
 scikit-learn
 joblib
 
+# Optional ML + Forensics stack
+xgboost
+transformers
+torch
+shap
+pdfplumber
+pillow
+python-magic-bin
+
 pytest
 pytest-asyncio

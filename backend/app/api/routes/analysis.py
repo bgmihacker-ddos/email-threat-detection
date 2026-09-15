@@ -210,21 +210,30 @@ def _render_report_html(analysis_id: str, payload: Dict[str, Any], created_at: d
   <title>Forensic Report {report_id}</title>
   <style>
     body {{ font-family: Arial, sans-serif; color: #172033; margin: 2rem; line-height: 1.45; }}
-    header {{ border-bottom: 2px solid #0e7490; margin-bottom: 1.5rem; padding-bottom: .75rem; }}
+    header {{ border-bottom: 2px solid #0e7490; margin-bottom: 1.5rem; padding-bottom: .75rem; display: flex; justify-content: space-between; align-items: center; }}
     h1 {{ margin: 0; font-size: 1.5rem; }}
     .meta {{ color: #526070; font-size: .85rem; }}
     .grid {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1rem 0; }}
     .card {{ border: 1px solid #d7dee8; border-radius: .4rem; padding: .8rem; }}
     .label {{ color: #526070; font-size: .75rem; font-weight: bold; text-transform: uppercase; }}
     .value {{ font-size: 1.15rem; font-weight: bold; margin-top: .25rem; }}
+    .qr-box {{ text-align: center; border: 1px solid #d7dee8; border-radius: .4rem; padding: .5rem; background: #fff; }}
+    .qr-box img {{ width: 96px; height: 96px; }}
+    .qr-desc {{ font-size: 0.7rem; color: #526070; margin-top: 0.2rem; }}
     pre {{ background: #f6f8fa; border: 1px solid #d7dee8; border-radius: .4rem; overflow-wrap: anywhere; padding: 1rem; white-space: pre-wrap; }}
     @media print {{ body {{ margin: .5in; }} }}
   </style>
 </head>
 <body>
   <header>
-    <h1>Email Threat Detection — Forensic Analysis Report</h1>
-    <div class=\"meta\">Analysis ID: {report_id} · Generated: {generated_at}</div>
+    <div>
+      <h1>Email Threat Detection — Forensic Analysis Report</h1>
+      <div class=\"meta\">Analysis ID: {report_id} · Generated: {generated_at}</div>
+    </div>
+    <div class=\"qr-box\">
+      <img src=\"/api/analysis/{report_id}/qr-image\" alt=\"Forensic Evidence Verification QR\">
+      <div class=\"qr-desc\">Scan to Verify Integrity</div>
+    </div>
   </header>
   <div class=\"grid\">
     <section class=\"card\"><div class=\"label\">Verdict</div><div class=\"value\">{verdict}</div></section>
@@ -418,6 +427,7 @@ async def _execute_analysis_pipeline(raw_email: bytes, analysis_id: str, db: Ses
         ml_timer = StageTimer(analysis_id, "ml_inference")
         ml_analysis = get_ml_classifier().predict_email(parsed_email)
         bert_analysis = get_bert_classifier().predict_email(parsed_email)
+        ml_analysis["transformer"] = bert_analysis
         if bert_analysis.get("status") == "available":
             ml_analysis["transformer_backup"] = bert_analysis
             ml_analysis["feature_families"] = list(dict.fromkeys(

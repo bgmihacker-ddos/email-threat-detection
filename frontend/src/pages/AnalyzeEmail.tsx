@@ -20,28 +20,34 @@ type DemoScenario = { name: string; icon: string; description: string; content: 
 
 const DEMO_SCENARIOS: DemoScenario[] = [
   {
-    name: 'Indian Bank KYC Phish',
-    icon: '🇮🇳',
-    description: 'SBI / HDFC lookalike domain',
-    content: `From: "SBI KYC Desk" <support@sbi-co-in-update.net>\nTo: customer@example.com\nSubject: Action Required: Update PAN and Aadhaar KYC\nDate: Tue, 13 Sep 2026 09:15:00 +0000\nReceived: from kyc-gateway.sbi-co-in-update.net (185.220.101.5) by mx.example.com\nAuthentication-Results: mx.example.com; spf=fail; dkim=fail; dmarc=fail\nContent-Type: text/plain; charset="UTF-8"\n\nYour PAN and Aadhaar KYC will be suspended today. Confirm your details at https://sbi-kyc-verify.net/update within 24 hours.`,
+    name: 'Clean Corporate Memo',
+    icon: '🟢',
+    description: 'Legitimate SPF/DKIM/DMARC pass',
+    content: `From: "IT Support" <it.admin@example.com>\nTo: engineering-team@example.com\nSubject: Notice: Scheduled GitHub Enterprise Maintenance on Friday\nDate: Tue, 13 Sep 2026 12:00:00 +0000\nMessage-ID: <clean-business-12345@example.com>\nReceived: from mail.example.com (10.0.0.12) by mx.example.com\nAuthentication-Results: mx.example.com; spf=pass (mx.example.com: domain of it.admin@example.com designates 10.0.0.12 as permitted sender) smtp.mailfrom=it.admin@example.com; dkim=pass header.i=@example.com; dmarc=pass (p=reject sp=reject dis=none) header.from=example.com\nContent-Type: text/plain; charset="UTF-8"\n\nHi Team,\n\nJust a quick reminder that we will have scheduled maintenance on our internal GitHub Enterprise instance this Friday at 10:00 PM EST.\n\nThe system will be read-only for approximately 2 hours while we apply the latest security patches.\n\nPlease make sure to push any pending work before the maintenance window begins.\n\nBest,\nIT Infrastructure Team`,
   },
   {
     name: 'CEO Urgent Wire Transfer (BEC)',
     icon: '💼',
-    description: 'Payroll fraud without links',
-    content: `From: "Chief Executive Officer" <ceo@enterprise-corp.co>\nTo: payroll@example.com\nSubject: Urgent Confidential Payroll Transfer\nDate: Tue, 13 Sep 2026 10:20:00 +0000\nReceived: from mail.enterprise-corp.co (203.0.113.44) by mx.example.com\nAuthentication-Results: mx.example.com; spf=softfail; dkim=none; dmarc=none\nContent-Type: text/plain; charset="UTF-8"\n\nI am in a confidential meeting. Process the attached payroll wire of $48,500 immediately and do not call me to confirm.`,
+    description: 'Executive impersonation without links',
+    content: `From: "Chief Executive Officer" <ceo@enterprise-corp.co>\nTo: vp.finance@example.com\nSubject: Urgent Confidential Payroll Wire Transfer Required\nDate: Tue, 13 Sep 2026 10:20:00 +0000\nMessage-ID: <bec-alert-999@enterprise-corp.co>\nReceived: from mail.enterprise-corp.co (203.0.113.44) by mx.example.com\nAuthentication-Results: mx.example.com; spf=softfail; dkim=none; dmarc=none\nContent-Type: text/plain; charset="UTF-8"\n\nSarah,\n\nI am currently in a confidential offsite meeting with potential partners and cannot be reached by phone.\n\nWe need to process an urgent vendor payment of $48,500 immediately to secure our negotiations before the afternoon cutoff.\n\nPlease process the wire transfer to the following account details right away. Do not call me to confirm as I cannot take calls right now. I will explain everything when I return to the office.\n\nSend me the confirmation screen as soon as it is done.\n\nRegards,\nCEO`,
   },
   {
-    name: 'Invoice with Macro Attachment',
+    name: 'Bank Credential Harvesting Phish',
+    icon: '🏦',
+    description: 'Suspended account credential lure',
+    content: `From: "Chase Bank Compliance" <alert@chase-secure-update-net.com>\nTo: customer@example.com\nSubject: ACTION REQUIRED: Unusual sign-in activity detected on your account\nDate: Tue, 13 Sep 2026 09:15:00 +0000\nMessage-ID: <phish-chase-888@chase-secure-update-net.com>\nReceived: from proxy.chase-secure-update-net.com (185.220.101.5) by mx.example.com\nAuthentication-Results: mx.example.com; spf=fail; dkim=fail; dmarc=fail\nContent-Type: text/plain; charset="UTF-8"\n\nDear Customer,\n\nWe detected unusual login activity on your Chase online banking account from a new location (IP Address: 45.33.22.11).\n\nFor your security, we have temporarily suspended your account functionalities.\n\nTo restore your access and prevent permanent account closure, please verify your identity immediately:\nhttps://chase-secure-update-net.com/verify-identity/\n\nIf you do not complete this verification within 24 hours, your account will remain locked.\n\nSincerely,\nChase Fraud Prevention Team`,
+  },
+  {
+    name: 'Typosquat / Lookalike Domain',
+    icon: '🎯',
+    description: 'Microsoft lookalike impersonation',
+    content: `From: "Microsoft Support" <support@micosoft-service.com>\nTo: security@example.com\nSubject: Critical Security Alert: Your Microsoft 365 Password Expires Today\nDate: Tue, 13 Sep 2026 14:30:00 +0000\nMessage-ID: <typosquat-777@micosoft-service.com>\nReceived: from mailout.micosoft-service.com (198.51.100.123) by mx.example.com\nAuthentication-Results: mx.example.com; spf=pass (mx.example.com: domain of support@micosoft-service.com designates 198.51.100.123 as permitted sender) smtp.mailfrom=support@micosoft-service.com; dkim=pass header.i=@micosoft-service.com; dmarc=pass header.from=micosoft-service.com\nContent-Type: text/plain; charset="UTF-8"\n\nHello,\n\nYour Microsoft 365 Exchange password for security@example.com is set to expire in 2 hours.\n\nYou must retain your current password to continue using Outlook, OneDrive, and Teams without interruption.\n\nPlease click the secure Microsoft portal link below to keep your current password active:\nhttps://login.micosoft-service.com/auth/login?user=security@example.com\n\nIf this action is not completed, your email services will be disconnected globally.\n\nMicrosoft Security Team`,
+  },
+  {
+    name: 'Weaponized Macro Invoice Attachment',
     icon: '📎',
-    description: 'Weaponized invoice intake',
-    content: `From: "Accounts Payable" <billing@vendor-invoice-mail.com>\nTo: finance@example.com\nSubject: Invoice 88421 - Payment Required\nDate: Tue, 13 Sep 2026 11:05:00 +0000\nReceived: from invoice-host.vendor-invoice-mail.com (198.51.100.77) by mx.example.com\nMIME-Version: 1.0\nContent-Type: multipart/mixed; boundary="invoice-boundary"\n\n--invoice-boundary\nContent-Type: text/plain\n\nPlease review the attached invoice and enable content to view the protected document.\n--invoice-boundary\nContent-Type: application/vnd.ms-excel; name="Invoice_88421.xlsm"\nContent-Disposition: attachment; filename="Invoice_88421.xlsm"\n\nVBA macro-enabled invoice attachment.\n--invoice-boundary--`,
-  },
-  {
-    name: 'Clean Internal IT Memo',
-    icon: '🟢',
-    description: 'Legitimate SPF / DKIM mail',
-    content: `From: "Internal IT" <it@example.com>\nTo: all-staff@example.com\nSubject: Scheduled VPN Maintenance\nDate: Tue, 13 Sep 2026 12:00:00 +0000\nReceived: from mail.example.com (10.0.0.12) by mx.example.com\nAuthentication-Results: mx.example.com; spf=pass; dkim=pass; dmarc=pass\nContent-Type: text/plain; charset="UTF-8"\n\nThe corporate VPN will undergo scheduled maintenance from 22:00 to 23:00 UTC tonight. No action is required.`,
+    description: 'Invoice with executable XLSM payload',
+    content: `From: "Accounts Payable" <billing@vendor-invoice-mail.com>\nTo: finance@example.com\nSubject: OVERDUE: Invoice Inv-88421 - Immediate Payment Required\nDate: Tue, 13 Sep 2026 11:05:00 +0000\nMessage-ID: <malware-555@vendor-invoice-mail.com>\nReceived: from invoice-host.vendor-invoice-mail.com (198.51.100.77) by mx.example.com\nMIME-Version: 1.0\nContent-Type: multipart/mixed; boundary="invoice-boundary"\n\n--invoice-boundary\nContent-Type: text/plain; charset="UTF-8"\n\nDear Finance,\n\nAttached is the overdue invoice relative to the services provided last month.\nPlease kindly review the attached document and process the payment at your earliest convenience to avoid late fees.\n\nNote: Since this is a protected document, you will need to "Enable Content" or "Enable Macros" upon opening it to view the full billing details.\n\nThank you,\nAccounts Payable Department\n\n--invoice-boundary\nContent-Type: application/vnd.ms-excel; name="Invoice_88421.xlsm"\nContent-Transfer-Encoding: base64\nContent-Disposition: attachment; filename="Invoice_88421.xlsm"\n\nUEsDBBQAAAAIAAAAAAAAAAAAAAAAAAAAAAAIAAAAZXhsL3ZjUHJvamVjdC5iaW5VAgAA\nc29tZW1hbHdhcmVwYXlsb2FkYmFzZTY0ZHVtbXltYWNyb2NvZGVoZXJlCg==\n--invoice-boundary--`,
   },
 ];
 

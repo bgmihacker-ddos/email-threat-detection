@@ -1,10 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { ArrowLeft, Ban, Check, ChevronDown, ChevronRight, CircleAlert, Copy, Download, ExternalLink, FileSearch, Fingerprint, Globe2, Mail, MapPin, Radio, ShieldAlert, ShieldCheck, Timer, TriangleAlert, Zap } from 'lucide-react';
+import { ArrowLeft, Ban, Check, ChevronDown, ChevronRight, CircleAlert, Copy, Download, ExternalLink, FileSearch, Fingerprint, Globe2, Cpu, Mail, MapPin, Radio, ShieldAlert, ShieldCheck, Timer, TriangleAlert, Zap } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { downloadReport, exportCertinReport, getAnalysisById, verifyBlockchainEvidence, type BlockchainVerification } from '../services/analysisApi';
 import { RelayPathMap } from '../components/analysis/RelayPathMap';
 import { EvidenceGraph } from '../components/analysis/EvidenceGraph';
 import { MitreHeatmap } from '../components/analysis/MitreHeatmap';
+import { RelatedInvestigations } from '../components/analysis/RelatedInvestigations';
 
 type RecordValue = Record<string, any>;
 
@@ -63,8 +64,10 @@ export default function AnalysisResult() {
     <nav className="flex flex-wrap gap-2 border-b border-[#1b3037] pb-4 font-mono text-[10px] uppercase tracking-widest text-gray-500">{['Verdict', 'Why flagged', 'Mail flow', 'Authentication', 'Headers', 'Content', 'Email preview', 'Infrastructure', 'Raw email'].map((item, index) => <a key={item} href={`#${item === 'Why flagged' ? 'findings' : slug(item)}`} className="rounded border border-[#29454b] px-2.5 py-1.5 hover:border-cyan-700 hover:text-cyan-300"><span className="mr-1.5 text-cyan-500">{String(index + 1).padStart(2, '0')}</span>{item}</a>)}</nav>
     <section id="verdict" className={`grid gap-6 rounded-lg border p-6 lg:grid-cols-[1fr_auto] ${verdictBorder(verdict)}`}><div><p className="report-kicker">Investigation complete · {subject}.eml</p><div className="mt-3 flex flex-wrap items-center gap-3"><h2 className={`text-4xl font-bold uppercase ${verdictTone(verdict)}`}>{displayVerdict(verdict)}</h2><span className="rounded border border-[#3b5e60] px-2 py-1 font-mono text-[10px] uppercase text-gray-400">{analysis.severity || 'unknown'} severity</span></div><p className="mt-4 max-w-3xl text-sm leading-7 text-gray-300">{analysis.summary || 'No executive summary was returned.'}</p><div className="mt-5 flex flex-wrap gap-3 text-xs text-gray-400"><Metric icon={<Timer size={14} />} label="Status" value={analysis.status || 'completed'} /><Metric icon={<FileSearch size={14} />} label="Confidence" value={analysis.confidence !== undefined ? `${analysis.confidence}%` : 'unavailable'} /><Metric icon={<Globe2 size={14} />} label="Observed IOCs" value={String(iocs.length)} /></div></div><div className="min-w-[190px] border-l border-[#3b5e60] pl-6 lg:self-center"><p className="report-kicker">Composite risk</p><p className={`mt-1 font-mono text-5xl font-bold ${verdictTone(verdict)}`}>{risk}<span className="text-lg text-gray-600">/100</span></p><div className="mt-3 h-2 overflow-hidden rounded-full bg-[#1b3037]"><div className={`h-full ${risk >= 70 ? 'bg-red-500' : risk >= 40 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${Math.min(100, Math.max(0, risk))}%` }} /></div></div></section>
     <TacticalAlertBanner analysis={analysis} verdict={verdict} risk={risk} subject={subject} certDraft={certDraft} evidenceHash={evidenceHash} ledger={ledger} id={id} />
+    <DetectionLayerConsensusPanel analysis={analysis} />
     <DetectionEvidencePanel analysis={analysis} />
     <TriangulatedVerdict analysis={analysis} risk={risk} auth={auth} />
+    <RelatedInvestigations related={analysis.related_investigations || []} />
     <section id="findings" className="grid scroll-mt-6 gap-5 border-b border-[#29454b] pb-6 lg:grid-cols-[1.15fr_0.85fr]"><div><p className="report-kicker">Plain-language explanation</p><h2 className="mt-1 text-xl font-semibold text-white">Why did we flag this?</h2><div className="mt-4 space-y-2">{riskFindings.slice(0, 4).map((item: RecordValue, index: number) => <div key={`${item.finding_id || item.title || 'signal'}-${index}`} className="flex items-start gap-3 border-l-2 border-red-400/70 bg-red-950/10 px-3 py-2.5 text-sm text-gray-200"><span className="font-mono text-[10px] text-red-300">{String(index + 1).padStart(2, '0')}</span><span>{item.reason || item.title || 'Risk signal observed'} <strong className="font-mono text-red-300">+{item.points || 0}</strong></span></div>)}{!riskFindings.length && <Empty text="No priority risk evidence returned." />}</div></div><div><p className="report-kicker">Recommended response</p><h2 className="mt-1 text-xl font-semibold text-white">Containment guidance</h2><ul className="mt-4 space-y-2 text-sm leading-6 text-gray-300">{(Array.isArray(analysis.recommendations) ? analysis.recommendations : []).slice(0, 4).map((item: string, index: number) => <li key={`${item}-${index}`} className="border-l-2 border-cyan-400/60 pl-3">{item}</li>)}{!analysis.recommendations?.length && <li className="text-gray-500">No additional response guidance was returned.</li>}</ul></div></section>
     <section className="border-b border-[#29454b] pb-6"><p className="report-kicker">Attack path</p><h2 className="mt-1 text-xl font-semibold text-white">Observed delivery sequence</h2><div className="mt-4 flex flex-wrap items-center gap-2">{(Array.isArray(analysis.attack_chain_steps) ? analysis.attack_chain_steps : Array.isArray(analysis.attack_chain) ? analysis.attack_chain : []).slice(0, 6).map((step: RecordValue, index: number) => <div key={`${step.stage || step.name || 'step'}-${index}`} className="flex items-center gap-2"><span className="rounded border border-[#29454b] bg-[#0b171c] px-3 py-2 font-mono text-xs text-gray-200">{step.stage || step.name || step.title || 'Observed signal'}</span>{index < 5 && <span className="text-cyan-500">→</span>}</div>)}{!analysis.attack_chain_steps?.length && !analysis.attack_chain?.length && <Empty text="No attack path was reconstructed." />}</div></section>
     <ReportSection id="findings" title="Key findings" subtitle="Signal review"><div className="grid gap-5 lg:grid-cols-2"><EvidenceGroup title="Risk-contributing evidence" icon={<TriangleAlert size={16} />} tone="red" items={riskFindings.map((item: RecordValue) => `${item.reason || item.title || 'Observed risk signal'} · +${item.points} points`)} empty="No strong risk-contributing evidence was returned." /><EvidenceGroup title="Contextual and informational evidence" icon={<CircleAlert size={16} />} tone="amber" items={contextFindings.map((item: RecordValue) => item.title || item.description)} empty="No contextual or informational findings were returned." /></div></ReportSection>
@@ -106,6 +109,65 @@ function TacticalAlertBanner({ analysis, verdict, risk, subject, certDraft, evid
       <button type="button" onClick={() => navigator.clipboard?.writeText(evidenceHash || subject)} className="btn-secondary"><Ban size={14} /> Contain & Block Sender IP</button>
     </div>
   </section>;
+}
+
+function DetectionLayerConsensusPanel({ analysis }: { analysis: RecordValue }) {
+  const ml = analysis.ml_analysis || {};
+  const transformer = ml.transformer || ml.transformer_backup || {};
+  const isTransformerActive = transformer.status === 'available' || transformer.inference_active;
+
+  const auth = analysis.authentication || {};
+  const trust = trustRisk(auth);
+
+  const becScore = analysis.bec_analysis?.attack_chain?.length ? 85 : 0;
+
+  const urlScore = (analysis.url_analysis?.results || []).some((u: RecordValue) => (u.findings || []).some((f: RecordValue) => f.severity === 'high')) ? 90 : 0;
+  const domainScore = analysis.domain_analysis?.results?.some((d: RecordValue) => (d.findings || []).some((f: RecordValue) => f.severity === 'high')) ? 90 : 0;
+
+  const attachmentScore = analysis.attachment_analysis?.attachments?.some((a: RecordValue) => a.verdict === 'malicious' || (a.findings || []).some((f: RecordValue) => f.severity === 'high')) ? 95 : 0;
+
+  const intelScore = analysis.threat_intelligence?.some((i: RecordValue) => i.status === 'malicious') ? 100 : 0;
+
+  const getStatus = (score: number, highThreshold: number) => score >= highThreshold ? { statusText: 'MALICIOUS', color: 'text-red-400' } : score > 30 ? { statusText: 'SUSPICIOUS', color: 'text-amber-400' } : { statusText: 'CLEAN', color: 'text-emerald-400' };
+
+  const panels = [
+    { name: 'ML Classifier', label: isTransformerActive ? 'DistilBERT — ACTIVE' : 'DistilBERT — FALLBACK (TF-IDF/Heuristics)', score: ml.confidence ? ml.confidence * 100 : 0, ...getStatus(ml.confidence ? ml.confidence * 100 : 0, 70), icon: <Cpu size={14} /> },
+    { name: 'BEC Engine', label: 'Behavioral Analysis', score: becScore, ...getStatus(becScore, 70), icon: <Zap size={14} /> },
+    { name: 'Header/Auth', label: 'SPF/DKIM/DMARC', score: trust, ...getStatus(trust, 70), icon: <Fingerprint size={14} /> },
+    { name: 'URL/Domain', label: 'Lexical & Phishing', score: Math.max(urlScore, domainScore), ...getStatus(Math.max(urlScore, domainScore), 70), icon: <Globe2 size={14} /> },
+    { name: 'Attachments', label: 'Static Analysis', score: attachmentScore, ...getStatus(attachmentScore, 70), icon: <FileSearch size={14} /> },
+    { name: 'Threat Intel', label: 'IP & Graph Feeds', score: intelScore, ...getStatus(intelScore, 70), icon: <ShieldAlert size={14} /> },
+  ];
+
+  const maliciousCount = panels.filter(p => p.statusText === 'MALICIOUS' || p.score >= 70).length;
+
+  return (
+    <section className="rounded-lg border border-[#29454b] bg-[#0b171c] p-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="report-kicker">Multi-Pillar Consensus</p>
+          <h2 className="mt-1 text-xl font-semibold text-white">Detection Layer Agreement</h2>
+        </div>
+        <span className={`font-mono text-[10px] uppercase tracking-widest px-2 py-1 rounded border ${maliciousCount >= 3 ? 'border-red-500/50 text-red-400 bg-red-950/30' : maliciousCount >= 1 ? 'border-amber-500/50 text-amber-400 bg-amber-950/30' : 'border-emerald-500/50 text-emerald-400 bg-emerald-950/30'}`}>
+          {maliciousCount}/6 Detection Layers Agree{maliciousCount > 0 ? ': MALICIOUS' : ': CLEAN'}
+        </span>
+      </div>
+      <div className="mt-5 grid grid-cols-2 lg:grid-cols-3 gap-3">
+        {panels.map((p, i) => (
+          <div key={i} className="rounded border border-[#1b3037] bg-[#101b21] p-3 flex flex-col justify-between">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2 text-gray-400 text-sm">
+                {p.icon}
+                <span className="font-semibold text-gray-200">{p.name}</span>
+              </div>
+              <span className={`font-mono text-[10px] uppercase font-bold ${p.color}`}>{p.score >= 70 ? 'MALICIOUS' : p.score > 30 ? 'SUSPICIOUS' : 'CLEAN'}</span>
+            </div>
+            <div className="mt-2 text-[10px] text-gray-500 uppercase tracking-wider">{p.label}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function TriangulatedVerdict({ analysis, risk, auth }: { analysis: RecordValue; risk: number; auth: RecordValue }) {
