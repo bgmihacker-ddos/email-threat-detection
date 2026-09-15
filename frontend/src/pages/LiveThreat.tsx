@@ -25,161 +25,161 @@ export default function LiveThreat() {
   const sourceCount = new Set(threatEvents.map(event => event.source).filter(Boolean)).size;
 
   return (
-    <div className="mx-auto max-w-[1680px] space-y-6 font-sans">
+    <div className="mx-auto max-w-[1680px] space-y-5 font-sans">
       <SecurityEnvironmentBackground profile="live_threat" intensity="moderate" />
 
-      <header className="relative z-10 flex flex-col gap-4 overflow-hidden rounded-xl border border-[#29454b] bg-[#101b21]/80 p-6 shadow-[0_20px_60px_rgba(2,12,15,0.22)] lg:flex-row lg:items-end lg:justify-between">
+      <header className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-           <div className="flex items-center gap-2">
-            <span className="flex h-2 w-2 rounded-full bg-[#58d6c0] shadow-[0_0_10px_rgba(88,214,192,0.8)] animate-pulse" />
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[#58d6c0]">TELEMETRY & GEOSPATIAL CENTER</p>
+          <div className="flex items-center gap-2">
+            <span className="animate-live-dot h-2 w-2 rounded-full bg-critical text-critical" />
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-critical">TELEMETRY & GEOSPATIAL CENTER</p>
           </div>
-          <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-white">Live Threat Intelligence Feed</h1>
-          <p className="mt-1 text-xs text-gray-400 font-mono">Real-time geospatial infrastructure attribution and threat campaign telemetry.</p>
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-ink">Live Threat Intelligence Feed</h1>
+          <p className="mt-1.5 font-mono text-xs text-ink-mute">Real-time geospatial infrastructure attribution and threat campaign telemetry.</p>
         </div>
-        <div className="flex items-center gap-2 rounded border border-red-500/20 bg-red-950/20 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-red-300 font-mono">
-          <span className="h-2 w-2 rounded-full bg-red-400 animate-pulse" /> Live Telemetry Active
+        <div className="flex items-center gap-2 rounded-md border border-critical/25 bg-critical/10 px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-critical">
+          <span className="animate-pulse-slow h-2 w-2 rounded-full bg-critical" /> Live Telemetry Active
         </div>
       </header>
 
-      <div className="relative z-10 flex items-start gap-3 rounded-lg border border-yellow-800/40 bg-yellow-950/10 px-4 py-3 text-xs leading-relaxed text-yellow-200 font-mono">
-        <AlertTriangle size={15} className="mt-0.5 shrink-0 text-yellow-400" />
+      <div className="relative z-10 flex items-start gap-3 rounded-md border border-medium/30 bg-medium/5 px-4 py-3 font-mono text-xs leading-relaxed text-medium">
+        <AlertTriangle size={15} className="mt-0.5 shrink-0" />
         <p><strong>Infrastructure attribution notice:</strong> Map pins visualize observed infrastructure or reporting gateways. Location points reflect reported telemetry metadata, not inherently verified attacker locations.</p>
       </div>
 
       {error && (
-        <div className="relative z-10 flex items-center justify-between rounded-lg border border-red-800/60 bg-red-950/30 px-4 py-3 text-xs text-red-200 font-mono">
+        <div className="relative z-10 flex items-center justify-between rounded-md border border-critical/40 bg-critical/10 px-4 py-3 font-mono text-xs text-critical">
           <span>{error}</span>
-          <button onClick={loadThreats} className="inline-flex items-center gap-1.5 rounded border border-red-700/50 px-2 py-1 hover:bg-red-900/40 transition-colors">
+          <button onClick={loadThreats} className="btn-secondary !py-1 hover:!border-critical/50 hover:!text-critical">
             <RefreshCw size={12} /> Retry
           </button>
         </div>
       )}
 
       {/* Stats Grid */}
-      <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="relative z-10 grid grid-cols-2 gap-3 md:grid-cols-4">
         <HudMetric label="Observed Events" value={loading ? '—' : threatEvents.length} icon={Radio} />
-        <HudMetric label="Elevated Severity" value={loading ? '—' : highCount} icon={ShieldAlert} tone="text-red-400" />
-        <HudMetric label="Intelligence Sources" value={loading ? '—' : sourceCount} icon={Globe2} tone="text-violet-300" />
-        <HudMetric label="Feed Status" value={loading ? 'Loading' : error ? 'Degraded' : 'Operational'} icon={Activity} tone={error ? 'text-yellow-400' : 'text-emerald-400'} />
+        <HudMetric label="Elevated Severity" value={loading ? '—' : highCount} icon={ShieldAlert} tone="text-critical" />
+        <HudMetric label="Intelligence Sources" value={loading ? '—' : sourceCount} icon={Globe2} tone="text-ink-dim" />
+        <HudMetric label="Feed Status" value={loading ? 'Loading' : error ? 'Degraded' : 'Operational'} icon={Activity} tone={error ? 'text-medium' : 'text-safe'} />
       </div>
 
-      <div className="relative z-10 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        {/* Map Section */}
-        <section className="flex min-h-[650px] flex-col overflow-hidden rounded-xl border border-[#214d57] bg-[#020b10]/80 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
-           <div className="mb-4 flex items-center justify-between">
-             <div className='flex items-center gap-2'>
-                <Terminal size={15} className='text-cyan-400'/>
-                <div>
-                   <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-gray-600 font-mono">Geospatial Intelligence</p>
-                   <h2 className="mt-1 text-sm font-semibold text-gray-200">Observed infrastructure surface area</h2>
-                </div>
-             </div>
-             <div className="hidden items-center gap-4 text-[10px] text-gray-500 sm:flex font-mono">
-               <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-red-400" /> High</span>
-               <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-yellow-400" /> Medium</span>
-               <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-cyan-400" /> Low</span>
-             </div>
-           </div>
-           <div className="flex-1 overflow-hidden bg-[#020b10]">
-             {loading ? (
-                <div className="flex h-full items-center justify-center font-mono text-xs text-cyan-400 animate-pulse">
-                  CALIBRATING GEOSPATIAL TELEMETRY...
-                </div>
-             ) : (
-                <ThreatMap threatEvents={threatEvents} />
-             )}
-           </div>
+      <div className="relative z-10 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        {/* Map Section — dominant war-room surface */}
+        <section className="soc-panel flex min-h-[650px] flex-col overflow-hidden !bg-deck/60">
+          <div className="mb-4 flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <Terminal size={15} className="text-accent" />
+              <div>
+                <p className="soc-label">Geospatial Intelligence</p>
+                <h2 className="mt-1 text-sm font-semibold text-ink-dim">Observed infrastructure surface area</h2>
+              </div>
+            </div>
+            <div className="hidden items-center gap-4 font-mono text-[10px] text-ink-mute sm:flex">
+              <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-critical" /> High</span>
+              <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-medium" /> Medium</span>
+              <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-low" /> Low</span>
+            </div>
+          </div>
+          <div className="flex-1 overflow-hidden rounded-md border border-hairline bg-sunken">
+            {loading ? (
+              <div className="flex h-full animate-pulse items-center justify-center font-mono text-xs text-accent">
+                CALIBRATING GEOSPATIAL TELEMETRY…
+              </div>
+            ) : (
+              <ThreatMap threatEvents={threatEvents} />
+            )}
+          </div>
         </section>
 
-        {/* Aside Feed */}
-        <aside className="flex flex-col rounded-xl border border-[#1b3037] bg-[#101b21]/90 p-6 shadow-[0_18px_45px_rgba(2,12,15,0.2)] min-h-[650px]">
-          <div className="flex items-start justify-between border-b border-[#1b3037] pb-4">
+        {/* Aside Feed — dense mono list */}
+        <aside className="soc-panel flex min-h-[650px] flex-col p-5">
+          <div className="flex items-start justify-between border-b border-hairline pb-4">
             <div>
-               <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-gray-600 font-mono">Live Ingestion</p>
-               <h2 className="mt-1 text-sm font-semibold text-gray-200">Event Feed <span className="font-mono text-gray-500 font-normal">({threatEvents.length})</span></h2>
+              <p className="soc-label">Live Ingestion</p>
+              <h2 className="mt-1 text-sm font-semibold text-ink-dim">Event Feed <span className="font-mono text-[11px] font-normal text-ink-mute">({threatEvents.length})</span></h2>
             </div>
             <button
-               onClick={loadThreats}
-               title="Refresh feed"
-               className="rounded p-1.5 text-gray-500 transition-colors hover:bg-[#1b3037] hover:text-cyan-300"
+              onClick={loadThreats}
+              title="Refresh feed"
+              className="rounded p-1.5 text-ink-mute transition-colors hover:bg-raised hover:text-accent"
             >
-               <RefreshCw size={14} />
+              <RefreshCw size={14} />
             </button>
           </div>
 
           <div className="mt-4 flex-1 space-y-2 overflow-y-auto pr-1">
-             {!loading && !threatEvents.length && (
-                <p className="rounded border border-dashed border-[#3b5e60] p-4 text-center font-mono text-xs text-gray-600">No live threat events available.</p>
-             )}
-             {threatEvents.map(event => (
-               <button
-                 key={event.id}
-                 onClick={() => setSelectedId(event.id)}
-                 className={`w-full rounded border p-3 text-left transition-all hover:border-[#3b5e60] ${selectedId === event.id ? 'border-cyan-500/40 bg-cyan-950/20' : 'border-[#1b3037] bg-[#0b171c]'}`}
-               >
-                 <div className="flex items-center justify-between gap-2 mb-2">
-                    <SeverityBadge severity={event.severity} />
-                    <span className="font-mono text-[9px] text-gray-500">{event.confidence}% Conf.</span>
-                 </div>
-                 <p className="text-xs font-semibold text-gray-200 truncate font-mono">{event.threatType}</p>
-                 <p className="mt-0.5 truncate text-[10px] text-gray-500 font-mono">{event.country} · {event.city !== 'Not reported' ? `${event.city} · ` : ''}{event.source || 'Unknown source'}</p>
-                 <p className="mt-2 break-all text-[10px] text-cyan-300/80 font-mono">{event.indicator || 'Indicator not reported'}</p>
-                 <div className="mt-2 grid grid-cols-2 gap-2 border-t border-[#1b3037] pt-2 text-[9px] font-mono text-gray-500">
-                   <span>Malware: <strong className="font-normal text-gray-300">{event.malware || 'None reported'}</strong></span>
-                   <span>Status: <strong className="font-normal uppercase text-gray-300">{event.status || 'Unknown'}</strong></span>
-                   <span>First: <strong className="font-normal text-gray-300">{formatDate(event.first_seen || event.timestamp)}</strong></span>
-                   <span>Last: <strong className="font-normal text-gray-300">{formatDate(event.last_seen || event.timestamp)}</strong></span>
-                 </div>
-                 {!!event.tags?.length && <div className="mt-2 flex flex-wrap gap-1">{event.tags.slice(0, 3).map((tag) => <span key={tag} className="rounded border border-[#29454b] px-1.5 py-0.5 text-[9px] text-gray-400">{tag}</span>)}</div>}
-               </button>
-             ))}
+            {!loading && !threatEvents.length && (
+              <p className="rounded border border-dashed border-hairline-strong p-4 text-center font-mono text-xs text-ink-faint">No live threat events available.</p>
+            )}
+            {threatEvents.map(event => (
+              <button
+                key={event.id}
+                onClick={() => setSelectedId(event.id)}
+                className={`w-full rounded-md border p-3 text-left transition-colors ${selectedId === event.id ? 'border-accent/40 bg-accent-soft' : 'border-hairline bg-sunken hover:border-hairline-strong'}`}
+              >
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <SeverityBadge severity={event.severity} />
+                  <span className="font-mono text-[9px] text-ink-mute">{event.confidence}% Conf.</span>
+                </div>
+                <p className="truncate font-mono text-xs font-semibold text-ink-dim">{event.threatType}</p>
+                <p className="mt-0.5 truncate font-mono text-[10px] text-ink-mute">{event.country} · {event.city !== 'Not reported' ? `${event.city} · ` : ''}{event.source || 'Unknown source'}</p>
+                <p className="mt-2 break-all font-mono text-[10px] text-accent">{event.indicator || 'Indicator not reported'}</p>
+                <div className="mt-2 grid grid-cols-2 gap-2 border-t border-hairline pt-2 font-mono text-[9px] text-ink-mute">
+                  <span>Malware: <strong className="font-normal text-ink-dim">{event.malware || 'None reported'}</strong></span>
+                  <span>Status: <strong className="font-normal uppercase text-ink-dim">{event.status || 'Unknown'}</strong></span>
+                  <span>First: <strong className="font-normal text-ink-dim">{formatDate(event.first_seen || event.timestamp)}</strong></span>
+                  <span>Last: <strong className="font-normal text-ink-dim">{formatDate(event.last_seen || event.timestamp)}</strong></span>
+                </div>
+                {!!event.tags?.length && <div className="mt-2 flex flex-wrap gap-1">{event.tags.slice(0, 3).map((tag) => <span key={tag} className="rounded border border-hairline-strong px-1.5 py-0.5 text-[9px] text-ink-mute">{tag}</span>)}</div>}
+              </button>
+            ))}
           </div>
 
           {selected && (
-            <div className="mt-4 rounded-lg border border-cyan-500/20 bg-[#081216]/95 p-4 font-mono text-[11px] text-gray-300 space-y-2">
-              <div className="flex items-center justify-between border-b border-[#1b3037] pb-2">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-cyan-400">Selected Event Telemetry</p>
-                <span className="text-[9px] text-gray-500">{selected.source}</span>
+            <div className="mt-4 space-y-2 rounded-md border border-accent/25 bg-sunken p-4 font-mono text-[11px] text-ink-dim">
+              <div className="flex items-center justify-between border-b border-hairline pb-2">
+                <p className="soc-label !text-accent">Selected Event Telemetry</p>
+                <span className="text-[9px] text-ink-mute">{selected.source}</span>
               </div>
               <div>
-                <p className="text-[9px] text-gray-500 uppercase">Indicator</p>
-                <p className="break-all text-cyan-300 font-semibold mt-0.5">{selected.indicator || selected.id}</p>
+                <p className="text-[9px] uppercase text-ink-mute">Indicator</p>
+                <p className="mt-0.5 break-all font-semibold text-accent">{selected.indicator || selected.id}</p>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <p className="text-[9px] text-gray-500 uppercase">Threat Type</p>
-                  <p className="text-gray-200 mt-0.5">{selected.threat_type || selected.threatType}</p>
+                  <p className="text-[9px] uppercase text-ink-mute">Threat Type</p>
+                  <p className="mt-0.5 text-ink-dim">{selected.threat_type || selected.threatType}</p>
                 </div>
                 <div>
-                  <p className="text-[9px] text-gray-500 uppercase">Malware / Payload</p>
-                  <p className="text-gray-200 mt-0.5">{selected.malware || 'None reported'}</p>
+                  <p className="text-[9px] uppercase text-ink-mute">Malware / Payload</p>
+                  <p className="mt-0.5 text-ink-dim">{selected.malware || 'None reported'}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <p className="text-[9px] text-gray-500 uppercase">Location</p>
-                  <p className="text-gray-200 mt-0.5">{selected.city !== 'Not reported' && selected.city ? `${selected.city}, ${selected.country}` : selected.country}</p>
+                  <p className="text-[9px] uppercase text-ink-mute">Location</p>
+                  <p className="mt-0.5 text-ink-dim">{selected.city !== 'Not reported' && selected.city ? `${selected.city}, ${selected.country}` : selected.country}</p>
                 </div>
                 <div>
-                  <p className="text-[9px] text-gray-500 uppercase">Status</p>
-                  <p className="text-gray-200 mt-0.5 uppercase font-semibold">{selected.status || 'Unknown'}</p>
+                  <p className="text-[9px] uppercase text-ink-mute">Status</p>
+                  <p className="mt-0.5 font-semibold uppercase text-ink-dim">{selected.status || 'Unknown'}</p>
                 </div>
               </div>
               <div>
-                <p className="text-[9px] text-gray-500 uppercase">First Seen / Timestamp</p>
-                <p className="text-gray-300 mt-0.5">{formatDate(selected.first_seen || selected.timestamp)}</p>
+                <p className="text-[9px] uppercase text-ink-mute">First Seen / Timestamp</p>
+                <p className="mt-0.5 text-ink-dim">{formatDate(selected.first_seen || selected.timestamp)}</p>
               </div>
               {selected.reporter && (
                 <div>
-                  <p className="text-[9px] text-gray-500 uppercase">Reporter</p>
-                  <p className="text-gray-300 mt-0.5">{selected.reporter}</p>
+                  <p className="text-[9px] uppercase text-ink-mute">Reporter</p>
+                  <p className="mt-0.5 text-ink-dim">{selected.reporter}</p>
                 </div>
               )}
               {selected.reference_url && (
                 <div>
-                  <p className="text-[9px] text-gray-500 uppercase">Reference</p>
-                  <a href={selected.reference_url} target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline truncate block mt-0.5">
+                  <p className="text-[9px] uppercase text-ink-mute">Reference</p>
+                  <a href={selected.reference_url} target="_blank" rel="noreferrer" className="mt-0.5 block truncate text-accent hover:underline">
                     {selected.reference_url}
                   </a>
                 </div>
@@ -192,11 +192,11 @@ export default function LiveThreat() {
   );
 }
 
-function HudMetric({ label, value, icon: Icon, tone = 'text-cyan-400' }: { label: string; value: string | number; icon: typeof Activity; tone?: string }) {
+function HudMetric({ label, value, icon: Icon, tone = 'text-accent' }: { label: string; value: string | number; icon: typeof Activity; tone?: string }) {
   return (
-    <div className="rounded-lg border border-[#1b3037] bg-[#101b21]/90 p-4 shadow-lg">
+    <div className="metric-card">
       <div className="flex items-center justify-between">
-        <p className="text-[9px] font-bold uppercase tracking-wider text-gray-600 font-mono">{label}</p>
+        <p className="soc-label">{label}</p>
         <Icon size={14} className={tone} />
       </div>
       <p className={`mt-2 font-mono text-xl font-semibold ${tone}`}>{value}</p>
