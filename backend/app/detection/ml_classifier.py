@@ -106,7 +106,8 @@ class MLClassifier:
                 )
                 confidence = probabilities.get(label, float(probabilities_array[int(np.argmax(probabilities_array))]))
             predicted_index = classes.index(label) if label in classes else int(np.argmax(probabilities_array))
-            contributions = self._contributions(vector, classifier, vectorizer, structural_names, predicted_index)
+            explain_clf = self.model.get("base_classifier", classifier)
+            contributions = self._contributions(vector, explain_clf, vectorizer, structural_names, predicted_index)
             return {
                 "status": "available",
                 "label": label,

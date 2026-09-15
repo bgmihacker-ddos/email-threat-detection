@@ -1,9 +1,31 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, User, Search, X, ExternalLink, Shield, FileText, Mail, Activity, Wifi, Server, Eye } from 'lucide-react';
+import { Bell, User, Search, X, ExternalLink, Shield, FileText, Mail, Activity, Wifi, Server, Eye, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { globalSearch, SearchResult } from '../../services/searchApi';
+import { useWebSocketAlerts } from '../../hooks/useWebSocket';
 import { useNavigate } from 'react-router-dom';
+
+/* ── Threat-Level Rail (signature element) ─────────────────────
+ * Global posture computed from the live WebSocket alert feed.
+ * SEVERE / ELEVATED / GUARDED / LOW — the whole room glances here. */
+type Posture = { level: string; color: string; glow: string; bg: string; border: string };
+
+function computePosture(alerts: { severity?: string; risk_score?: number }[], connected: boolean): Posture {
+  const weight = (a: { severity?: string; risk_score?: number }) => {
+    const sev = String(a.severity || '').toLowerCase();
+    if (sev === 'critical' || (a.risk_score ?? 0) >= 80) return 4;
+    if (sev === 'high' || (a.risk_score ?? 0) >= 60) return 3;
+    if (sev === 'medium' || (a.risk_score ?? 0) >= 40) return 2;
+    if (sev) return 1;
+    return 2; // unclassified alert counts as medium
+  };
+  const total = alerts.reduce((sum, a) => sum + weight(a), 0);
+  if (total >= 10) return { level: 'SEVERE', color: 'text-critical', glow: 'var(--alert-critical)', bg: 'rgba(244,88,107,0.10)', border: 'rgba(244,88,107,0.45)' };
+  if (total >= 5) return { level: 'ELEVATED', color: 'text-high', glow: 'var(--alert-high)', bg: 'rgba(240,121,74,0.10)', border: 'rgba(240,121,74,0.45)' };
+  if (total >= 1 || !connected) return { level: 'GUARDED', color: 'text-medium', glow: 'var(--alert-medium)', bg: 'rgba(232,180,74,0.08)', border: 'rgba(232,180,74,0.4)' };
+  return { level: 'LOW', color: 'text-safe', glow: 'var(--alert-safe)', bg: 'rgba(62,207,142,0.08)', border: 'rgba(62,207,142,0.4)' };
+}
 
 export function TopBar() {
   const { user } = useAuth();
@@ -14,6 +36,8 @@ export function TopBar() {
   const [showResults, setShowResults] = useState(false);
   const [searching, setSearching] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const { alerts, connected } = useWebSocketAlerts();
+  const posture = computePosture(alerts, connected);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -45,15 +69,15 @@ export function TopBar() {
 
   const getResultIcon = (type: SearchResult['type']) => {
     switch (type) {
-      case 'Threat': return <Shield className="text-red-400" size={14} />;
-      case 'Indicator': return <Activity className="text-amber-400" size={14} />;
-      case 'EmailScan': return <Mail className="text-cyan-400" size={14} />;
-      case 'Report': return <FileText className="text-emerald-400" size={14} />;
-      case 'User': return <User className="text-violet-400" size={14} />;
-      case 'IntelProvider': return <Wifi className="text-blue-400" size={14} />;
-      case 'SystemService': return <Server className="text-orange-400" size={14} />;
-      case 'AuditLog': return <Eye className="text-gray-400" size={14} />;
-      default: return <Search className="text-gray-400" size={14} />;
+      case 'Threat': return <Shield className="text-critical" size={14} />;
+      case 'Indicator': return <Activity className="text-medium" size={14} />;
+      case 'EmailScan': return <Mail className="text-low" size={14} />;
+      case 'Report': return <FileText className="text-safe" size={14} />;
+      case 'User': return <User className="text-ink-dim" size={14} />;
+      case 'IntelProvider': return <Wifi className="text-low" size={14} />;
+      case 'SystemService': return <Server className="text-high" size={14} />;
+      case 'AuditLog': return <Eye className="text-ink-mute" size={14} />;
+      default: return <Search className="text-ink-mute" size={14} />;
     }
   };
 
@@ -105,36 +129,56 @@ export function TopBar() {
   };
 
   return (
-    <header className="relative z-20 flex h-16 items-center justify-between border-b border-[#1b3037] bg-[#0b171b]/95 px-4 md:px-6">
-      {/* Breadcrumb / Page Title */}
-      <div className="flex items-center gap-3 text-xs">
-        <span className="hidden items-center gap-1.5 text-[#8aa49d] sm:flex">
-          <Shield size={13} className="text-[#58d6c0]" />
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em]">SOC / LOCAL NODE</span>
+    <header className="relative z-20 flex h-14 shrink-0 items-center justify-between border-b border-hairline bg-surface/90 px-4 backdrop-blur-md md:px-6">
+      {/* Breadcrumb / Location */}
+      <div className="flex items-center gap-2.5 text-xs">
+        <span className="flex h-6 items-center gap-1.5 rounded border border-hairline bg-sunken px-2 font-mono text-[9px] uppercase tracking-[0.18em] text-ink-mute">
+          <Shield size={11} className="text-accent" />
+          SOC / LOCAL NODE
         </span>
-        <span className="text-[#3b5e60]"><ArrowRight size={12} /></span>
-        <h2 className="hidden text-sm font-medium tracking-wide text-[#d6e1de] md:block">
+        <ChevronRight size={12} className="text-ink-faint" />
+        <h2 className="hidden text-[13px] font-medium text-ink md:block">
           Security operations
         </h2>
       </div>
 
-      <div className="flex items-center gap-4 md:gap-6">
+      <div className="flex items-center gap-3 md:gap-5">
+        {/* ── Threat-Level Rail ── */}
+        <div
+          className="animate-posture flex h-8 items-center gap-2.5 rounded-md border px-3"
+          style={{ background: posture.bg, borderColor: posture.border }}
+          title={`Live posture from ${alerts.length} recent alert${alerts.length !== 1 ? 's' : ''} · feed ${connected ? 'connected' : 'offline'}`}
+        >
+          <span
+            className="h-2 w-2 rounded-full"
+            style={{ background: posture.glow, boxShadow: `0 0 8px ${posture.glow}` }}
+          />
+          <span className={`font-mono text-[10px] font-bold uppercase tracking-[0.16em] ${posture.color}`}>
+            {posture.level}
+          </span>
+          {alerts.length > 0 && (
+            <span className="border-l pl-2.5 font-mono text-[10px] text-ink-dim" style={{ borderColor: posture.border }}>
+              {alerts.length} live
+            </span>
+          )}
+        </div>
+
         {/* Global Search */}
         <div className="relative hidden lg:block" ref={searchRef}>
           <div className="relative">
-            <Search className="absolute left-3 top-2.5 text-gray-600" size={14} />
+            <Search className="absolute left-3 top-2.5 text-ink-faint" size={14} />
             <input
               type="text"
-              placeholder="Search: threats, IOCs, scans, reports, domains..."
+              placeholder="Search threats, IOCs, scans, reports, domains…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => searchQuery.trim().length > 2 && setShowResults(true)}
-              className="w-80 rounded-md border border-[#29454b] bg-[#101b21] py-2 pl-10 pr-8 text-xs text-[#d6e1de] transition-all placeholder:text-[#718581] focus:border-[#58d6c0] focus:outline-none focus:ring-1 focus:ring-[#58d6c0]/20"
+              className="soc-input w-72 !py-2 !pl-9 !pr-8 !text-xs"
             />
             {searchQuery && (
               <button
                 onClick={handleClearSearch}
-                className="absolute right-2 top-2 text-gray-500 hover:text-white transition-colors"
+                className="absolute right-2 top-2 text-ink-faint transition-colors hover:text-ink"
               >
                 <X size={14} />
               </button>
@@ -143,52 +187,47 @@ export function TopBar() {
 
           {/* Search Results Dropdown */}
           {showResults && (
-            <div className="absolute left-0 top-full z-50 mt-2 max-h-[60vh] w-[400px] overflow-y-auto rounded-lg border border-[#29454b] bg-[#101b21] shadow-2xl">
-              <div className="border-b border-[#1b3037] bg-[#0c171c] p-3">
-                <p className="text-xs text-gray-400 font-bold uppercase">
-                  {searching ? 'Searching threat intelligence...' : `${searchResults.length} results found`}
+            <div className="soc-panel-elevated absolute left-0 top-full z-50 mt-2 max-h-[60vh] w-[400px] overflow-y-auto">
+              <div className="border-b border-hairline px-3 py-2.5">
+                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-mute">
+                  {searching ? 'Searching threat intelligence…' : `${searchResults.length} results found`}
                 </p>
               </div>
 
               {searching ? (
-                <div className="p-4 text-center text-gray-400 text-xs animate-pulse">
-                  Querying index...
+                <div className="animate-pulse p-4 text-center font-mono text-xs text-ink-mute">
+                  Querying index…
                 </div>
               ) : searchResults.length === 0 ? (
-                <div className="p-6 text-center text-gray-600 text-xs">
-                  <Search size={24} className="mx-auto mb-2 text-gray-700" />
+                <div className="p-6 text-center font-mono text-xs text-ink-faint">
+                  <Search size={22} className="mx-auto mb-2 text-ink-faint/60" />
                   No matches found for "{searchQuery}"
-                  <p className="mt-2 text-[10px] text-gray-700">Try searching for: threat ID, domain, IP, or hash</p>
+                  <p className="mt-2 text-[10px] text-ink-faint/70">Try: threat ID, domain, IP, or hash</p>
                 </div>
               ) : (
-                <div className="divide-y divide-[#1b3037]">
+                <div className="divide-y divide-hairline">
                   {searchResults.map((result) => (
                     <button
                       key={result.id}
                       onClick={() => handleResultClick(result)}
-                      className="w-full p-3 text-left hover:bg-[#1b2b31] transition-colors flex items-start gap-3"
+                      className="flex w-full items-start gap-3 p-3 text-left transition-colors hover:bg-raised"
                     >
-                      <div className="flex-shrink-0 mt-0.5">
+                      <div className="mt-0.5 flex-shrink-0">
                         {getResultIcon(result.type)}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-semibold text-white truncate">{result.title}</span>
-                          <span className={`px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded ${
-                            result.type === 'Threat' ? 'bg-red-950/40 text-red-400 border border-red-800/40' :
-                            result.type === 'Indicator' ? 'bg-amber-950/40 text-amber-400 border border-amber-800/40' :
-                            result.type === 'EmailScan' ? 'bg-cyan-950/40 text-cyan-400 border border-cyan-800/40' :
-                            'bg-[#1b3037] text-gray-300'
-                          }`}>
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1 flex items-center gap-2">
+                          <span className="truncate text-xs font-semibold text-ink">{result.title}</span>
+                          <span className="rounded border border-hairline bg-sunken px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-ink-mute">
                             {formatResultType(result.type)}
                           </span>
-                          <span className="text-[9px] text-cyan-400 font-mono ml-auto">
-                            {result.relevance}% match
+                          <span className="ml-auto font-mono text-[9px] text-accent">
+                            {result.relevance}%
                           </span>
                         </div>
-                        <p className="text-xs text-gray-500 line-clamp-2">{result.description}</p>
+                        <p className="line-clamp-2 text-xs text-ink-mute">{result.description}</p>
                       </div>
-                      <ExternalLink size={12} className="text-gray-600 flex-shrink-0 mt-0.5" />
+                      <ExternalLink size={12} className="mt-0.5 flex-shrink-0 text-ink-faint" />
                     </button>
                   ))}
                 </div>
@@ -197,32 +236,28 @@ export function TopBar() {
           )}
         </div>
 
-        {/* System Status */}
+        {/* Live feed + Notifications + User */}
         <div className="flex items-center gap-3">
-          {/* Live feed indicator */}
-          <div className="hidden items-center gap-2 border-l border-[#31514e] pl-3 text-[10px] font-bold uppercase tracking-wider text-emerald-300 md:flex">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-            </span>
-            Investigation Services Online
+          <div className="hidden items-center gap-2 border-l border-hairline pl-3 font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-safe md:flex">
+            <span className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-safe animate-live-dot text-safe' : 'bg-medium'}`} />
+            {connected ? 'Feed live' : 'Feed offline'}
           </div>
 
-          {/* Notification bell */}
-          <button className="relative flex h-9 w-9 items-center justify-center rounded-md border border-[#29454b] text-[#8aa49d] transition-colors hover:border-[#58d6c0] hover:text-[#d6e1de]">
-            <Bell size={16} />
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+          <button className="relative flex h-8 w-8 items-center justify-center rounded-md border border-hairline text-ink-mute transition-colors hover:border-hairline-strong hover:text-ink" aria-label="Notifications">
+            <Bell size={15} />
+            {alerts.length > 0 && (
+              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-critical" />
+            )}
           </button>
 
-          {/* User Menu */}
-          <div className="flex items-center gap-2.5 border-l border-[#1b3037] pl-3">
+          <div className="flex items-center gap-2.5 border-l border-hairline pl-3">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#3b5e60] bg-[#183235] text-xs font-bold text-[#8ce2d0]">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-hairline-strong bg-raised font-mono text-[11px] font-semibold text-accent">
                 {user?.name?.charAt(0) || '?'}
               </div>
               <div className="hidden lg:block">
-                <p className="text-xs font-semibold text-gray-200">{user?.name || 'Analyst'}</p>
-                <p className="text-[9px] font-bold uppercase tracking-wider text-cyan-500">
+                <p className="text-xs font-medium text-ink">{user?.name || 'Analyst'}</p>
+                <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-ink-mute">
                   {user?.role === 'admin' ? 'Administrator' : 'Security Analyst'}
                 </p>
               </div>
@@ -232,11 +267,4 @@ export function TopBar() {
       </div>
     </header>
   );
-}
-
-function ArrowRight({ size = 16 }: { size?: number }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M5 12h14" />
-    <path d="m12 5 7 7-7 7" />
-  </svg>;
 }

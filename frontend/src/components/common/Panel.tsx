@@ -14,7 +14,7 @@ export function Panel({ title, open = true, onToggle, children, className = '' }
     <section className={`soc-panel p-5 ${className}`}>
       <button
         onClick={onToggle}
-        className="w-full flex items-center gap-2 text-left text-xs font-bold text-[#58d6c0] uppercase tracking-[0.14em] disabled:cursor-default"
+        className="soc-label flex w-full items-center gap-2 text-left disabled:cursor-default"
         disabled={!onToggle}
       >
         {onToggle && (open ? <ChevronDown size={14} /> : <ChevronRight size={14} />)}

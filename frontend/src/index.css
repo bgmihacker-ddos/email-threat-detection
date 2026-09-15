@@ -1,54 +1,47 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ============================================
-   DESIGN TOKENS - Email Threat Intelligence
-   ============================================ */
+/* ============================================================
+   SENTINEL SOC DESIGN TOKENS
+   Depth model: deck (page) > surface (panel) > raised (card);
+   sunken carves below deck for code, table headers, wells.
+   Color carries status only. One interactive accent.
+   ============================================================ */
 @layer base {
   :root {
-    /* Base palette - near-black security operations */
-    --color-bg-deep: #071014;
-    --color-bg-primary: #0a1217;
-    --color-bg-surface: #101b21;
-    --color-bg-elevated: #16242a;
-    --color-bg-hover: #1b2b31;
-    --color-bg-active: #21343a;
+    /* Depth layers */
+    --deck: #0A0D13;
+    --surface: #0F131B;
+    --raised: #151A25;
+    --sunken: #07090E;
 
-    /* Border colors */
-    --color-border-subtle: #102027;
-    --color-border-default: #1b3037;
-    --color-border-muted: #29454b;
-    --color-border-strong: #3b5e60;
+    /* Structure */
+    --hairline: rgba(255, 255, 255, 0.06);
+    --hairline-strong: rgba(255, 255, 255, 0.12);
+    --ink: #E9EDF4;
+    --ink-dim: #A6B0C2;
+    --ink-mute: #6B7689;
+    --ink-faint: #454F60;
 
-    /* Text colors */
-    --color-text-primary: #f3f7f5;
-    --color-text-secondary: #d6e1de;
-    --color-text-muted: #9aadaa;
-    --color-text-subtle: #718581;
-    --color-text-disabled: #516963;
+    /* Single interactive accent */
+    --accent: #4C9EEB;
+    --accent-soft: rgba(76, 158, 235, 0.14);
 
-    /* Accent colors - restrained cybersecurity palette */
-    --color-cyan: #58d6c0;
-    --color-cyan-muted: #2eaa9d;
-    --color-cyan-subtle: #1f615f;
-    --color-blue: #3B82F6;
-    --color-violet: #9a8ed3;
-    --color-purple: #b1a8df;
-    --color-green: #10B981;
-    --color-green-muted: #059669;
-    --color-amber: #f0b35a;
-    --color-amber-muted: #c8812f;
-    --color-red: #ed756d;
-    --color-red-muted: #c45450;
+    /* Severity language — status only */
+    --alert-critical: #F4586B;
+    --alert-high: #F0794A;
+    --alert-medium: #E8B44A;
+    --alert-low: #4C9EEB;
+    --alert-safe: #3ECF8E;
 
     /* Typography */
-    --font-sans: 'Space Grotesk', system-ui, sans-serif;
+    --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
     --font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
-    /* Spacing */
+    /* Spacing rhythm */
     --space-1: 0.25rem;
     --space-2: 0.5rem;
     --space-3: 0.75rem;
@@ -59,201 +52,214 @@
     --space-10: 2.5rem;
     --space-12: 3rem;
 
-    /* Border radius */
-    --radius-sm: 4px;
-    --radius-md: 6px;
-    --radius-lg: 8px;
-    --radius-xl: 12px;
+    /* Radius — tight, instrument-like */
+    --radius-sm: 3px;
+    --radius-md: 5px;
+    --radius-lg: 7px;
+    --radius-xl: 10px;
   }
 
   html {
-    background: var(--color-bg-primary);
+    background: var(--deck);
     scroll-behavior: smooth;
   }
+
   body {
     min-width: 320px;
-    background:
-      linear-gradient(rgba(22, 47, 51, 0.15) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(22, 47, 51, 0.15) 1px, transparent 1px),
-      radial-gradient(circle at 10% 0%, rgba(49, 126, 116, 0.14), transparent 32rem),
-      radial-gradient(circle at 92% 18%, rgba(125, 93, 70, 0.1), transparent 28rem),
-      var(--color-bg-primary);
-    background-size: 44px 44px, 44px 44px, auto, auto, auto;
-    background-attachment: fixed;
-    color: var(--color-text-secondary);
+    background: var(--deck);
+    color: var(--ink-dim);
     font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
   }
 
-  /* Custom scrollbar */
-  * { scrollbar-width: thin; scrollbar-color: #263449 #080D14; }
+  /* Custom scrollbar — near-invisible until needed */
+  * { scrollbar-width: thin; scrollbar-color: #1E2532 var(--deck); }
   ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-track { background: #080D14; }
-  ::-webkit-scrollbar-thumb { background: #263449; border-radius: 999px; }
-  ::-webkit-scrollbar-thumb:hover { background: #3A506B; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #1E2532; border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #2A3344; }
 
-  /* Selection */
-  ::selection { background: rgba(8, 145, 178, 0.35); color: #ECFEFF; }
+  ::selection { background: rgba(76, 158, 235, 0.28); color: #F2F7FD; }
 
-  /* Focus styles */
   :focus-visible {
-    outline: 2px solid var(--color-cyan);
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
 }
 
-/* ============================================
+/* ============================================================
    COMPONENT CLASSES
-   ============================================ */
+   ============================================================ */
 @layer components {
-  /* SOC Panel - primary container */
+  /* Primary container — surface sits one layer above deck */
   .soc-panel {
-    @apply rounded-lg border border-[#1b3037] bg-[#101b21]/90;
-    box-shadow: 0 18px 50px rgba(2, 12, 15, 0.22), inset 0 1px 0 rgba(207, 255, 243, 0.035);
+    @apply rounded-lg border bg-surface;
+    border-color: var(--hairline);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
   }
 
   .soc-panel-elevated {
-    @apply rounded-lg border border-[#29454b] bg-[#16242a] shadow-lg;
-    box-shadow: 0 22px 65px rgba(2, 12, 15, 0.3), inset 0 1px 0 rgba(207, 255, 243, 0.05);
+    @apply rounded-lg border bg-raised;
+    border-color: var(--hairline-strong);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      0 8px 24px rgba(2, 6, 12, 0.35);
   }
 
-  /* Labels */
+  /* Section labels — quiet, mono, wide-tracked */
   .soc-label {
-    @apply text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500;
+    @apply font-mono text-[10px] font-semibold uppercase tracking-[0.16em];
+    color: var(--ink-mute);
   }
 
   .report-kicker {
-    @apply font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500;
+    @apply font-mono text-[10px] font-semibold uppercase tracking-[0.16em];
+    color: var(--ink-mute);
   }
 
-  /* Technical/monospace text */
+  /* Technical/monospace data */
   .font-tech {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
 
-  /* Evidence chip */
+  /* Evidence chips — severity-tinted, never decorative */
   .evidence-chip {
-    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider;
+    @apply inline-flex items-center gap-1.5 rounded border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider;
   }
 
-  .evidence-chip-high {
-    @apply bg-red-950/40 text-red-400 border border-red-800/40;
-  }
+  .evidence-chip-high   { @apply bg-sunken font-semibold; border-color: rgba(244, 88, 107, 0.3);  color: var(--alert-critical); }
+  .evidence-chip-medium { @apply bg-sunken font-semibold; border-color: rgba(232, 180, 74, 0.3);  color: var(--alert-medium); }
+  .evidence-chip-low    { @apply bg-sunken font-semibold; border-color: rgba(76, 158, 235, 0.3);  color: var(--alert-low); }
+  .evidence-chip-info   { @apply bg-sunken font-semibold; border-color: rgba(62, 207, 142, 0.3);  color: var(--alert-safe); }
 
-  .evidence-chip-medium {
-    @apply bg-amber-950/40 text-amber-400 border border-amber-800/40;
-  }
+  /* Severity badges — the color language of the platform */
+  .severity-critical { @apply bg-sunken font-semibold; border-color: rgba(244, 88, 107, 0.35); color: var(--alert-critical); }
+  .severity-high     { @apply bg-sunken font-semibold; border-color: rgba(240, 121, 74, 0.35); color: var(--alert-high); }
+  .severity-medium   { @apply bg-sunken font-semibold; border-color: rgba(232, 180, 74, 0.35); color: var(--alert-medium); }
+  .severity-low      { @apply bg-sunken font-semibold; border-color: rgba(76, 158, 235, 0.35); color: var(--alert-low); }
+  .severity-safe     { @apply bg-sunken font-semibold; border-color: rgba(62, 207, 142, 0.35); color: var(--alert-safe); }
 
-  .evidence-chip-low {
-    @apply bg-cyan-950/40 text-cyan-400 border border-cyan-800/40;
-  }
+  /* Verdict badges — slightly stronger fills; these ARE the call to attention */
+  .verdict-malicious  { @apply bg-sunken font-semibold; border-color: rgba(244, 88, 107, 0.5);  color: #FF8B98; }
+  .verdict-suspicious { @apply bg-sunken font-semibold; border-color: rgba(232, 180, 74, 0.5);  color: #F5CE7E; }
+  .verdict-benign     { @apply bg-sunken font-semibold; border-color: rgba(62, 207, 142, 0.5);  color: #6FE3AC; }
+  .verdict-unknown    { @apply bg-sunken font-semibold; border-color: var(--hairline-strong);  color: var(--ink-dim); }
 
-  .evidence-chip-info {
-    @apply bg-green-950/40 text-green-400 border border-green-800/40;
-  }
-
-  /* Severity badges */
-  .severity-critical { @apply bg-red-950/50 text-red-400 border border-red-800/50; }
-  .severity-high { @apply bg-orange-950/50 text-orange-400 border border-orange-800/50; }
-  .severity-medium { @apply bg-amber-950/50 text-amber-400 border border-amber-800/50; }
-  .severity-low { @apply bg-cyan-950/50 text-cyan-400 border border-cyan-800/50; }
-  .severity-safe { @apply bg-green-950/50 text-green-400 border border-green-800/50; }
-
-  /* Verdict badges */
-  .verdict-malicious { @apply bg-red-900/60 text-red-200 border border-red-700/50; }
-  .verdict-suspicious { @apply bg-amber-900/60 text-amber-200 border border-amber-700/50; }
-  .verdict-benign { @apply bg-green-900/60 text-green-200 border border-green-700/50; }
-  .verdict-unknown { @apply bg-gray-800/60 text-gray-300 border border-gray-700/50; }
-
-  /* Metric card */
+  /* Metric card — raised with a quiet inner highlight */
   .metric-card {
-    @apply soc-panel p-4 transition-colors hover:border-[#1C2A3D];
+    @apply rounded-lg border bg-raised p-4 transition-colors;
+    border-color: var(--hairline);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   }
+  .metric-card:hover { border-color: var(--hairline-strong); }
 
-  /* Table styles */
+  /* Dense professional tables */
   .soc-table {
     @apply w-full text-left text-xs;
   }
-
   .soc-table th {
-    @apply px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-[#060A10] border-b border-[#151D28];
+    @apply border-b px-4 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em];
+    color: var(--ink-mute);
+    background: var(--sunken);
+    border-color: var(--hairline);
   }
-
   .soc-table td {
-    @apply px-4 py-3 border-b border-[#151D28]/70;
+    @apply border-b px-4 py-3;
+    border-color: var(--hairline);
   }
-
   .soc-table tbody tr {
-    @apply transition-colors hover:bg-[#0D1520];
+    @apply transition-colors hover:bg-raised;
   }
 
-  /* Input styles */
+  /* Inputs — carved into the surface */
   .soc-input {
-    @apply w-full bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-white rounded-md;
-    @apply focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20;
-    @apply placeholder:text-gray-600;
+    @apply w-full rounded-md border px-3 py-2 text-sm text-ink focus:outline-none;
+    background: var(--sunken);
+    border-color: var(--hairline-strong);
   }
+  .soc-input:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-soft); }
+  .soc-input::placeholder { color: var(--ink-faint); }
 
   .soc-select {
-    @apply bg-[#05080D] border border-[#151D28] px-3 py-2 text-sm text-gray-300 rounded-md;
-    @apply focus:outline-none focus:border-cyan-500;
+    @apply rounded-md border px-3 py-2 text-sm focus:outline-none;
+    color: var(--ink-dim);
+    background: var(--sunken);
+    border-color: var(--hairline-strong);
   }
+  .soc-select:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-soft); }
 
   .soc-checkbox {
-    @apply w-4 h-4 rounded border-[#151D28] bg-[#05080D] text-cyan-500;
-    @apply focus:ring-cyan-500 focus:ring-offset-0;
+    @apply h-4 w-4 rounded border;
+    background: var(--sunken);
+    border-color: var(--hairline-strong);
   }
 
-  /* Button variants */
+  /* Buttons */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md;
-    @apply bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold uppercase tracking-wider;
-    @apply transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400/50;
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.1em] transition-all focus:outline-none;
+    background: var(--accent);
+    color: #071018;
   }
+  .btn-primary:hover { filter: brightness(1.12); }
+  .btn-primary:focus { box-shadow: 0 0 0 2px var(--accent-soft); }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md;
-    @apply border border-[#263449] text-gray-300 text-xs font-medium;
-    @apply hover:border-cyan-500/60 hover:text-cyan-300 transition-colors;
+    @apply inline-flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-xs font-medium transition-colors;
+    border-color: var(--hairline-strong);
+    color: var(--ink-dim);
+    background: transparent;
   }
+  .btn-secondary:hover { border-color: rgba(76, 158, 235, 0.5); color: var(--accent); }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md;
-    @apply bg-red-900/40 hover:bg-red-900/60 border border-red-800/50 text-red-300 text-xs font-medium;
-    @apply transition-colors;
+    @apply inline-flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-xs font-medium transition-colors;
+    border-color: rgba(244, 88, 107, 0.35);
+    color: #FF8B98;
+    background: rgba(244, 88, 107, 0.08);
   }
+  .btn-danger:hover { background: rgba(244, 88, 107, 0.16); }
 
   /* Skeleton loader */
   .skeleton {
-    @apply animate-pulse bg-[#151D28] rounded;
+    @apply animate-pulse rounded;
+    background: #131926;
   }
 
   /* Empty state */
   .empty-state {
     @apply flex flex-col items-center justify-center p-12 text-center;
   }
-
   .empty-state-icon {
-    @apply text-gray-600 mb-4;
+    @apply mb-4;
+    color: var(--ink-faint);
   }
-
   .empty-state-title {
-    @apply text-sm font-semibold text-gray-300 mb-2;
+    @apply mb-2 text-sm font-medium;
+    color: var(--ink-dim);
   }
-
   .empty-state-text {
-    @apply text-xs text-gray-500 font-mono;
+    @apply font-mono text-xs;
+    color: var(--ink-mute);
   }
 }
 
-/* ============================================
-   UTILITY ANIMATIONS
-   ============================================ */
+/* ============================================================
+   UTILITY ANIMATIONS — functional state signals only
+   ============================================================ */
 @layer utilities {
   .animate-pulse-slow { animation: pulse-slow 2.8s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
   @keyframes pulse-slow { 50% { opacity: .45; } }
 
-  /* Telemetry pulse */
+  /* Threat-level breathing glow (signature rail) */
+  .animate-posture {
+    animation: posture-breathe 3.2s ease-in-out infinite;
+  }
+  @keyframes posture-breathe {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+
   .animate-telemetry {
     animation: telemetry-pulse 3s ease-in-out infinite;
   }
@@ -262,7 +268,6 @@
     50% { opacity: 0.6; }
   }
 
-  /* Scan line effect */
   .animate-scanline {
     animation: scanline 4s linear infinite;
   }
@@ -271,7 +276,6 @@
     100% { transform: translateY(100%); }
   }
 
-  /* Data flow */
   .animate-dataflow {
     animation: dataflow 2s ease-in-out infinite;
   }
@@ -280,7 +284,6 @@
     50% { opacity: 0.4; transform: translateX(10px); }
   }
 
-  /* Grid pulse */
   .animate-gridpulse {
     animation: gridpulse 4s ease-in-out infinite;
   }
@@ -288,16 +291,24 @@
     0%, 100% { opacity: 0.03; }
     50% { opacity: 0.06; }
   }
+
+  /* Live feed dot — single ping then settle */
+  .animate-live-dot { animation: live-dot 1.8s cubic-bezier(0, 0, 0.2, 1) infinite; }
+  @keyframes live-dot {
+    0% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+    70% { box-shadow: 0 0 0 6px transparent; opacity: 1; }
+    100% { box-shadow: 0 0 0 0 transparent; opacity: 1; }
+  }
 }
 
-/* ============================================
-   PROCEDURAL BACKGROUND LAYER
-   ============================================ */
+/* ============================================================
+   AMBIENT DEPTH BACKGROUND — CSS-only layered field
+   ============================================================ */
 .bg-security-grid {
   background-image:
-    linear-gradient(rgba(6, 182, 212, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(6, 182, 212, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
+    linear-gradient(rgba(255, 255, 255, 0.016) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.016) 1px, transparent 1px);
+  background-size: 48px 48px;
 }
 
 .bg-telemetry {
@@ -309,9 +320,20 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 20% 50%, rgba(6, 182, 212, 0.05) 0%, transparent 50%),
-    radial-gradient(circle at 80% 50%, rgba(139, 92, 246, 0.03) 0%, transparent 50%);
+    radial-gradient(ellipse 60% 45% at 18% 0%, rgba(76, 158, 235, 0.045) 0%, transparent 100%),
+    radial-gradient(ellipse 50% 40% at 88% 12%, rgba(76, 158, 235, 0.02) 0%, transparent 100%);
   pointer-events: none;
+}
+
+/* Chart tooltip — shared by recharts across pages */
+.chart-tooltip {
+  background: var(--raised) !important;
+  border: 1px solid var(--hairline-strong) !important;
+  border-radius: 5px !important;
+  color: var(--ink) !important;
+  font-size: 11px !important;
+  font-family: var(--font-mono) !important;
+  box-shadow: 0 8px 24px rgba(2, 6, 12, 0.4) !important;
 }
 
 /* Reduced motion support */

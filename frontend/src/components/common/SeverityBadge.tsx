@@ -9,36 +9,36 @@ interface SeverityBadgeProps {
 export function SeverityBadge({ severity, className = '', dotOnly = false }: SeverityBadgeProps) {
   const sev = String(severity).toLowerCase();
 
-  let colors = 'bg-gray-500/10 text-gray-400 border-gray-500/20'; // default
-  let dotColor = 'bg-gray-400';
+  let colors = 'bg-sunken text-ink-dim border-hairline-strong'; // default
+  let dotColor = 'bg-ink-mute';
 
   if (sev === 'critical') {
-    colors = 'bg-[#3b2424] text-[#f2aaa2] border-[#ed756d]/30';
-    dotColor = 'bg-[#ed756d]';
+    colors = 'severity-critical';
+    dotColor = 'bg-critical';
   } else if (sev === 'high' || sev === 'malicious') {
-    colors = 'bg-red-950/40 text-red-400 border-red-500/30';
-    dotColor = 'bg-red-400';
+    colors = 'severity-high';
+    dotColor = 'bg-high';
   } else if (sev === 'medium' || sev === 'suspicious') {
-    colors = 'bg-yellow-900/30 text-yellow-400 border-yellow-500/30';
-    dotColor = 'bg-yellow-400';
+    colors = 'severity-medium';
+    dotColor = 'bg-medium';
   } else if (sev === 'low') {
-    colors = 'bg-cyan-950/40 text-cyan-400 border-cyan-500/30';
-    dotColor = 'bg-cyan-400';
+    colors = 'severity-low';
+    dotColor = 'bg-low';
   } else if (sev === 'safe' || sev === 'benign' || sev === 'clean') {
-    colors = 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30';
-    dotColor = 'bg-emerald-400';
+    colors = 'severity-safe';
+    dotColor = 'bg-safe';
   } else if (sev === 'info') {
-    colors = 'bg-blue-950/40 text-blue-400 border-blue-500/30';
-    dotColor = 'bg-blue-400';
+    colors = 'severity-low';
+    dotColor = 'bg-low';
   }
 
   if (dotOnly) {
-    return <span className={`inline-block w-2.5 h-2.5 rounded-full ${dotColor} ${className}`} title={String(severity).toUpperCase()} />;
+    return <span className={`inline-block h-2.5 w-2.5 rounded-full ${dotColor} ${className}`} title={String(severity).toUpperCase()} />;
   }
 
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${colors} ${className}`}>
-      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${dotColor} animate-pulse-slow`}></span>
+    <span className={`inline-flex items-center rounded border px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider ${colors} ${className}`}>
+      <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${dotColor} animate-pulse-slow`}></span>
       {severity}
     </span>
   );
