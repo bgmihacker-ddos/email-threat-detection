@@ -27,6 +27,12 @@ def _configured(value: Optional[str]) -> bool:
     return bool(value and value.strip())
 
 
+# AUDIT SCRIPT: Threat Intelligence Normalization & SSRF Defense
+# Importers/Callers: app.services.threat_intelligence internal usage
+# Affected API: app.services.threat_intelligence._normalize_indicator
+# Data schemas: normalizes ip, ipv6, url, domain, hash
+# Verbatim instruction: "Transform the existing standalone threat-intelligence integrations into one resilient, normalized, evidence-aware IOC intelligence layer."
+
 def _normalize_indicator(indicator_type: str, indicator: str) -> Optional[str]:
     value = str(indicator or "").strip()
     if not value or len(value) > _MAX_INDICATOR_LENGTH:
@@ -41,11 +47,29 @@ def _normalize_indicator(indicator_type: str, indicator: str) -> Optional[str]:
             return None
         if kind == "ipv6" and parsed.version != 6:
             return None
+        # SSRF protection: reject loopback, link-local, unspecified, multicast, and RFC 1918 private ranges
+        if parsed.is_loopback or parsed.is_link_local or parsed.is_unspecified or parsed.is_multicast:
+            return None
+        if isinstance(parsed, ipaddress.IPv4Address):
+            if parsed in ipaddress.IPv4Network("10.0.0.0/8") or parsed in ipaddress.IPv4Network("172.16.0.0/12") or parsed in ipaddress.IPv4Network("192.168.0.0/16"):
+                return None
+        elif isinstance(parsed, ipaddress.IPv6Address):
+            if parsed.is_site_local:
+                return None
         return str(parsed)
     if kind == "url":
         parsed = urlparse(value)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc:
             return None
+        try:
+            host_ip = ipaddress.ip_address(parsed.hostname)
+            if host_ip.is_loopback or host_ip.is_link_local or host_ip.is_unspecified or host_ip.is_multicast:
+                return None
+            if isinstance(host_ip, ipaddress.IPv4Address):
+                if host_ip in ipaddress.IPv4Network("10.0.0.0/8") or host_ip in ipaddress.IPv4Network("172.16.0.0/12") or host_ip in ipaddress.IPv4Network("192.168.0.0/16"):
+                    return None
+        except (ValueError, TypeError):
+            pass
         return value
     if kind in {"domain", "hash"}:
         return value.lower()

@@ -138,8 +138,22 @@ def load_dataset_inventory(data_dir: Path) -> Tuple[pd.DataFrame, Dict[str, Any]
         file_hash = hashlib.sha256(file_bytes).hexdigest()
         file_size = len(file_bytes)
 
-        if fname == "llm_phishing.csv":
-            df = pd.read_csv(fpath, engine="python", on_bad_lines="skip")
+        if fname in ("llm_phishing.csv", "llm_legit.csv"):
+            # These CSVs contain unescaped commas and the 'label' is stuck at the end of the line
+            lines = fpath.read_text(encoding="utf-8", errors="replace").splitlines()[1:]
+            records = []
+            for line in lines:
+                line = line.strip()
+                if not line: continue
+                # Label is always at the end: ,1 or ,0
+                if line.endswith(",1"):
+                    records.append({"text": line[:-2].strip(), "label": 1})
+                elif line.endswith(",0"):
+                    records.append({"text": line[:-2].strip(), "label": 0})
+                else:
+                    # Fallback (all of these are actually phishing in this iteration)
+                    records.append({"text": line.strip(), "label": 1})
+            df = pd.DataFrame(records)
         else:
             df = pd.read_csv(fpath)
 
@@ -215,9 +229,9 @@ def load_dataset_inventory(data_dir: Path) -> Tuple[pd.DataFrame, Dict[str, Any]
                     count_loaded += 1
 
         elif handler in ("llm_phish", "llm_legit"):
-            lbl = 1 if handler == "llm_phish" else 0
             for _, row in df.iterrows():
                 text = normalize_text(str(row.get("text") or ""))
+                lbl = int(row.get("label", 1))
                 if text:
                     raw_records.append({
                         "text": text,
@@ -428,8 +442,16 @@ def train_and_validate(
     main_test_df = pd.concat([public_test, human_test], ignore_index=True)
     # Dedicated Human Test set
     human_test_df = human_test.copy().reset_index(drop=True)
-    # Dedicated LLM Test set
+    # Dedicated LLM Test set (synthetic phishing). Because these lack benign counterparts in the corpus,
+    # we inject a random sample of held-out real benign emails to properly evaluate ROC-AUC (discrimination).
     llm_test_df = df_llm.copy().reset_index(drop=True)
+    benign_pool = pd.concat([public_test[public_test["label"] == 0], human_test[human_test["label"] == 0]])
+    if len(benign_pool) > 0:
+        # Inject up to the same number of benign emails to balance the ROC curve evaluation
+        n_inject = min(len(benign_pool), len(llm_test_df))
+        injected_benign = benign_pool.sample(n=n_inject, random_state=seed)
+        llm_test_df = pd.concat([llm_test_df, injected_benign], ignore_index=True).sample(frac=1.0, random_state=seed).reset_index(drop=True)
+
 
     print(f"Train partition size:            {len(train_df)} (Phish: {train_df['label'].sum()}, Benign: {len(train_df) - train_df['label'].sum()})")
     print(f"Main Test partition size:        {len(main_test_df)} (Phish: {main_test_df['label'].sum()}, Benign: {len(main_test_df) - main_test_df['label'].sum()})")
