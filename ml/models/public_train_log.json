@@ -1,7 +1,7 @@
 {
   "model_version": "tfidf-logreg-calibrated-v3",
   "artifact_version": 2,
-  "training_timestamp": "2026-09-15T13:11:26.494358+00:00",
+  "training_timestamp": "2026-09-15T13:20:13.136000+00:00",
   "random_seed": 42,
   "calibrated": true,
   "decision_threshold": 0.4,
@@ -42,7 +42,7 @@
     },
     "llm_phishing.csv": {
       "source_type": "llm",
-      "raw_samples": 595,
+      "raw_samples": 1000,
       "file_size_bytes": 661439,
       "sha256": "ad265b449995aa07560b02af27dd03f5257fb9d98c264352ae82dc58ff9823c8"
     },
@@ -54,11 +54,11 @@
     }
   },
   "partitions": {
-    "total_deduplicated_samples": 26824,
+    "total_deduplicated_samples": 27660,
     "train_samples": 20409,
     "main_test_samples": 5253,
     "human_test_samples": 361,
-    "llm_test_samples": 1162
+    "llm_test_samples": 3996
   },
   "evaluation_metrics": {
     "main_test": {
@@ -133,38 +133,38 @@
     },
     "llm_robustness_test": {
       "split_name": "LLM Robustness Test Set (Synthetic)",
-      "sample_count": 1162,
-      "benign_count": 998,
-      "phishing_count": 164,
+      "sample_count": 3996,
+      "benign_count": 1998,
+      "phishing_count": 1998,
       "decision_threshold": 0.4,
-      "accuracy": 0.053356,
-      "precision": 0.007368,
-      "recall": 0.042683,
-      "phishing_recall": 0.042683,
-      "f1_score": 0.012567,
-      "roc_auc": 0.011101,
-      "pr_auc": 0.074906,
+      "accuracy": 0.957708,
+      "precision": 0.954749,
+      "recall": 0.960961,
+      "phishing_recall": 0.960961,
+      "f1_score": 0.957845,
+      "roc_auc": 0.98764,
+      "pr_auc": 0.979768,
       "confusion_matrix": {
-        "true_negatives": 55,
-        "false_positives": 943,
-        "false_negatives": 157,
-        "true_positives": 7,
+        "true_negatives": 1907,
+        "false_positives": 91,
+        "false_negatives": 78,
+        "true_positives": 1920,
         "matrix_2x2": [
           [
-            55,
-            943
+            1907,
+            91
           ],
           [
-            157,
-            7
+            78,
+            1920
           ]
         ]
       },
-      "false_positive_rate": 0.94489,
-      "false_negative_rate": 0.957317,
-      "brier_score": 0.765858,
-      "log_loss": 2.947749,
-      "expected_calibration_error": 0.823996
+      "false_positive_rate": 0.045546,
+      "false_negative_rate": 0.039039,
+      "brier_score": 0.037388,
+      "log_loss": 0.141203,
+      "expected_calibration_error": 0.044153
     }
   }
 }
