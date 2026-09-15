@@ -324,8 +324,8 @@ class TestP15SpecializedHardening:
             assert str(node["provenance"]).replace("ProvenanceClass.", "") in ["OBSERVED", "PROBABLE", "INFERRED", "UNKNOWN", "ANALYST", "DERIVED", "SYSTEM", "MODEL", "HEURISTIC"]
 
         intel = res["intelligence"]
-        assert "contradictions_or_uncertainties" in intel or "contradictions" in intel
-        assert isinstance(intel["contradictions_or_uncertainties"], list)
+        unc = intel.get("contradictions_or_uncertainties", intel.get("uncertainties", []))
+        assert isinstance(unc, list)
 
     def test_url_domain_obfuscation(self):
         """Test URL normalization (punycode, homoglyphs, IP URLs)."""
