@@ -53,6 +53,10 @@ ml/models/*.pkl
 ml/models/*.joblib
 ml/models/*.h5
 ml/models/*.pt
+ml/models/*.safetensors
+ml/models/*.bin
+ml/models/distilbert_email_classifier/*
+!ml/models/distilbert_email_classifier/.gitkeep
 ml/datasets/raw/*
 ml/datasets/processed/*
 !ml/datasets/raw/.gitkeep

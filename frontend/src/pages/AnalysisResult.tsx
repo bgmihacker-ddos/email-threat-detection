@@ -140,18 +140,30 @@ function DetectionLayerConsensusPanel({ analysis }: { analysis: RecordValue }) {
   ];
 
   const maliciousCount = panels.filter(p => p.statusText === 'MALICIOUS' || p.score >= 70).length;
+  const suspiciousCount = panels.filter(p => p.statusText === 'SUSPICIOUS' || (p.score >= 30 && p.score < 70)).length;
+  const cleanCount = panels.filter(p => p.statusText === 'CLEAN' || p.score < 30).length;
+  
+  const mlPanel = panels.find(p => p.name === 'ML Classifier');
+  const mlIsOutlier = mlPanel && (mlPanel.statusText !== 'CLEAN' || mlPanel.score >= 30) && (maliciousCount + suspiciousCount === 1);
+  const isDissent = mlIsOutlier || (maliciousCount + suspiciousCount > 0 && cleanCount > 0 && cleanCount >= 4);
 
   return (
     <section className="rounded-lg border border-[#29454b] bg-[#0b171c] p-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="report-kicker">Multi-Pillar Consensus</p>
-          <h2 className="mt-1 text-xl font-semibold text-white">Detection Layer Agreement</h2>
+          <h2 className="mt-1 flex items-center gap-2 text-xl font-semibold text-white">
+            Detection Layer Agreement
+            {isDissent && <span className="text-sm font-normal text-amber-400 flex items-center gap-1 ml-2"><TriangleAlert size={14} /> MODEL DISSENT</span>}
+          </h2>
         </div>
-        <span className={`font-mono text-[10px] uppercase tracking-widest px-2 py-1 rounded border ${maliciousCount >= 3 ? 'border-red-500/50 text-red-400 bg-red-950/30' : maliciousCount >= 1 ? 'border-amber-500/50 text-amber-400 bg-amber-950/30' : 'border-emerald-500/50 text-emerald-400 bg-emerald-950/30'}`}>
-          {maliciousCount}/6 Detection Layers Agree{maliciousCount > 0 ? ': MALICIOUS' : ': CLEAN'}
-        </span>
+        <div className="flex flex-wrap gap-2 text-[10px] font-mono uppercase tracking-widest">
+          {cleanCount > 0 && <span className="rounded border border-emerald-500/50 bg-emerald-950/30 px-2 py-1 text-emerald-400">{cleanCount}/6 layers → CLEAN</span>}
+          {suspiciousCount > 0 && <span className="rounded border border-amber-500/50 bg-amber-950/30 px-2 py-1 text-amber-400">{suspiciousCount}/6 layers → SUSPICIOUS</span>}
+          {maliciousCount > 0 && <span className="rounded border border-red-500/50 bg-red-950/30 px-2 py-1 text-red-400">{maliciousCount}/6 layers → MALICIOUS</span>}
+        </div>
       </div>
+      {isDissent && <p className="mt-3 text-xs text-amber-300">⚠️ Fusion analysis notes a strong divergence among forensic engines. ML layer identifies latent risk patterns that static heuristics did not surface.</p>}
       <div className="mt-5 grid grid-cols-2 lg:grid-cols-3 gap-3">
         {panels.map((p, i) => (
           <div key={i} className="rounded border border-[#1b3037] bg-[#101b21] p-3 flex flex-col justify-between">
